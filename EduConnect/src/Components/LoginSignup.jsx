@@ -145,13 +145,13 @@ const LoginSignup = () => {
     try {
       let response;
       if (mode === "login") {
-        response = await fetch("/api/login", {
+        response = await fetch("https://neuraliftx.onrender.com/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: form.email, password: form.password }),
         });
       } else if (mode === "signup") {
-        response = await fetch("/api/signup", {
+        response = await fetch("https://neuraliftx.onrender.com/api/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -165,7 +165,7 @@ const LoginSignup = () => {
           }),
         });
       } else if (mode === "forgot") {
-        response = await fetch("/api/forgot-password", {
+        response = await fetch("https://neuraliftx.onrender.com/api/forgot-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: form.email }),
