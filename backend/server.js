@@ -205,13 +205,18 @@ const isDisposableEmail = async (email) => {
   }
 };
 
-const validateEmailExistence = async (email) => {
-  try {
-    return await deepEmailValidator.validate({ email });
-  } catch {
-    return { valid: false, reason: "smtp_check_failed" };
-  }
-};
+const existenceCheck = await validateEmailExistence(data.email);
+
+// Only block if not valid and not a typical SMTP check failure
+if (
+  !existenceCheck.valid &&
+  existenceCheck.reason !== "smtp" &&
+  existenceCheck.reason !== "smtp_check_failed" &&
+  existenceCheck.reason !== "timeout"
+) {
+  errors.email = "This email does not exist or cannot receive mail.";
+}
+
 
 // Send verification email
 const sendVerificationEmail = async (user, token) => {
