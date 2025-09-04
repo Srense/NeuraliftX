@@ -1,0 +1,180 @@
+body, html, #root {
+  min-height: 100vh;
+  width: 100vw;
+  background: #0f172a;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden !important;
+}
+.vanta-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  min-width: 100vw;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none; /* Allows interacting with content above */
+}
+
+.main-content {
+  position: relative;
+  z-index: 2;
+}
+.container-fluid {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+.educonnect-hero {
+  text-align: center;
+  margin: 1rem 0 2.5rem 0;
+}
+.educonnect-logo {
+  height: 64px;
+  margin-bottom: 0.75rem;
+  border-radius: 50%;
+  filter: drop-shadow(0 2px 16px #0006);
+}
+.educonnect-title {
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #fff;
+  text-shadow: 0 2px 24px #1e293b88, 0 1px 4px #0006;
+  margin-bottom: 0.5rem;
+}
+.educonnect-subtitle {
+  font-size: 1.4rem;
+  color: #7fffd4;
+  text-shadow: 0 1px 8px #222a;
+  font-weight: 500;
+  margin-bottom: 0;
+}
+.row.g-4 {
+  row-gap: 2.5rem !important;
+  column-gap: 2.5rem !important;
+  justify-content: center;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+.card {
+  background: rgba(30, 41, 59, 0.97) !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 0 8px 32px #0008, inset 0 1.5px 0 #38bdf833;
+  border: 2.5px solid transparent !important;
+  transition: transform 0.25s cubic-bezier(.4,2,.3,1), box-shadow 0.25s, border 0.2s;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.card:hover {
+  transform: translateY(-10px) scale(1.035);
+  box-shadow: 0 16px 48px #38bdf833, 0 8px 32px #0008;
+  border: 2.5px solid #38bdf8 !important;
+}
+.card-img-top, .card-img {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 1.5rem auto 0 auto;
+  background: #fff;
+  border: 5px solid #fff;
+  box-shadow: 0 4px 24px #0ea5e944, 0 1px 2px #0003;
+  object-fit: cover;
+  display: block;
+}
+.card-title {
+  color: #fff !important;
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.2rem !important;
+  text-align: center;
+  text-shadow: 0 1px 8px #222a;
+}
+.card-body {
+  padding-top: 0.5rem !important;
+  padding-bottom: 1.2rem !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+}
+ul.list-unstyled {
+  padding-left: 0;
+  margin-bottom: 0;
+  width: 100%;
+}
+ul.list-unstyled li {
+  color: #b3eaff;
+  font-size: 1.12rem;
+  margin-bottom: 0.7rem;
+  font-weight: 500;
+  position: relative;
+  padding-left: 1.5em;
+  letter-spacing: 0.2px;
+}
+ul.list-unstyled li::before {
+  content: '';
+  display: inline-block;
+  position: absolute;
+  left: 0.2em;
+  top: 0.6em;
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8 60%, #a7f3d0 100%);
+  box-shadow: 0 1px 4px #38bdf866;
+}
+.bg-primary { box-shadow: 0 0 0 4px #2563eb33 inset !important; }
+.bg-success { box-shadow: 0 0 0 4px #22c55e33 inset !important; }
+.bg-warning { box-shadow: 0 0 0 4px #eab30833 inset !important; }
+.bg-danger  { box-shadow: 0 0 0 4px #ef444433 inset !important; }
+.card .btn-primary {
+  background: linear-gradient(90deg, #2563eb 70%, #60a5fa 100%);
+  border: none;
+  border-radius: 2rem;
+  font-weight: 600;
+  font-size: 1.08rem;
+  margin-top: 1rem;
+  box-shadow: 0 2px 12px #2563eb22;
+  padding: 0.6rem 2.2rem;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.card .btn-primary:hover {
+  background: linear-gradient(90deg, #60a5fa 70%, #2563eb 100%);
+  box-shadow: 0 4px 16px #2563eb44;
+}
+@media (max-width: 1400px) {
+  .container-fluid { max-width: 98vw; padding-left: 10px !important; padding-right: 10px !important; }
+}
+@media (max-width: 1200px) {
+  .card { min-height: 410px; }
+  .container-fluid { max-width: 100vw; }
+}
+@media (max-width: 992px) { .card { min-height: 370px; } }
+@media (max-width: 768px) {
+  .educonnect-title { font-size: 2.1rem; }
+  .educonnect-hero { margin-bottom: 1.5rem; }
+  .card { min-height: 320px; }
+  .card-img-top, .card-img { width: 90px; height: 90px; }
+  .row.g-4 { column-gap: 1rem !important; }
+}
+@media (max-width: 600px) {
+  .educonnect-title { font-size: 1.2rem; }
+  .educonnect-logo { height: 32px; }
+  .card { min-height: 220px; padding: 0.7rem 0.3rem; }
+  .card-img-top, .card-img { width: 60px; height: 60px; }
+  .row.g-4 { row-gap: 1rem !important; }
+}

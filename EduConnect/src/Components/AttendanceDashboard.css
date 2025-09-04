@@ -1,0 +1,91 @@
+.attendance-dashboard {
+  padding: 18px 6vw;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: #fafaff;
+}
+
+.attendance-table-responsive {
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  box-shadow: 0 0 2px #aaa;
+  background: #fff;
+}
+
+.attendance-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 900px;
+  background: #fff;
+  font-size: 15px;
+}
+
+.attendance-table th,
+.attendance-table td {
+  border: 1px solid #e8e8e8;
+  padding: 8px 8px;
+  text-align: center;
+}
+
+.attendance-table th {
+  background: #f4f7ff;
+  color: #324c7a;
+  font-weight: 600;
+}
+
+.view-btn {
+  background: #f44336;
+  color: #fff;
+  padding: 5px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.view-btn:hover {
+  background: #a32028;
+}
+
+.attendance-leave-types {
+  margin-top: 16px;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #333;
+}
+
+/* Download button style */
+.download-pdf-btn {
+  background: #f44336;
+  color: #fff;
+  padding: 10px 28px;
+  border: none;
+  border-radius: 7px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.download-pdf-btn:hover {
+  background: #b81f2e;
+}
+
+@media (max-width: 900px) {
+  .attendance-table {
+    font-size: 13px;
+    min-width: 600px;
+  }
+}
+@media (max-width: 600px) {
+  .attendance-dashboard {
+    padding: 4vw 2vw;
+  }
+  .attendance-table {
+    font-size: 11px;
+    min-width: 500px;
+  }
+  .download-pdf-btn {
+    font-size: 16px;
+    padding: 8px 16px;
+  }
+}
