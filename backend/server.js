@@ -39,11 +39,15 @@ const {
 const app = express();
 
 
-// Enable CORS
 app.use(cors({
-  origin: "https://neuralift-x-lfrc.vercel.app/",  // frontend URL
+  origin: "https://neuralift-x-lfrc.vercel.app",
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+// This helps with preflight requests too.
+app.options('*', cors()); // Added to handle preflights
+
 
 app.use(express.json());
 
