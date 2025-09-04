@@ -41,7 +41,7 @@ const app = express();
 
 // Enable CORS
 app.use(cors({
-  origin: "http://localhost:5173",  // frontend URL
+  origin: "https://neuralift-x-lfrc.vercel.app/",  // frontend URL
   credentials: true,
 }));
 
