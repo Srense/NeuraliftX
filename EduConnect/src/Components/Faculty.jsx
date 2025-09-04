@@ -17,7 +17,7 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
     formData.append("pdf", selectedFile);
 
     try {
-      const res = await fetch("http://localhost:4000/api/assignments", {
+      const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -51,7 +51,7 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(user.profilePicUrl ? `http://localhost:4000${user.profilePicUrl}` : "");
+  const [previewUrl, setPreviewUrl] = useState(user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : "");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -68,7 +68,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     formData.append("profilePic", selectedFile);
 
     try {
-      const res = await fetch("http://localhost:4000/api/profile/picture", {
+      const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -78,7 +78,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
       onUpdateProfilePic(data.profilePicUrl);
       alert("Profile picture updated");
       setSelectedFile(null);
-      setPreviewUrl(`http://localhost:4000${data.profilePicUrl}`);
+      setPreviewUrl(`https://neuraliftx.onrender.com${data.profilePicUrl}`);
     } catch {
       alert("Failed to upload profile picture");
     } finally {
@@ -141,7 +141,7 @@ export default function Faculty() {
     async function fetchUser() {
       if (!token) return navigate("/login");
       try {
-        const res = await fetch("http://localhost:4000/api/profile", {
+        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch user");
@@ -181,7 +181,7 @@ export default function Faculty() {
 
   async function fetchAssignments() {
     try {
-      const res = await fetch("http://localhost:4000/api/assignments", {
+      const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch assignments");
@@ -199,7 +199,7 @@ export default function Faculty() {
   const handleDeleteAssignment = async (id) => {
     if (!window.confirm("Delete this assignment?")) return;
     try {
-      const res = await fetch(`http://localhost:4000/api/assignments/${id}`, {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/assignments/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -261,7 +261,7 @@ export default function Faculty() {
           <span className="profile-name">{user?.firstName} {user?.lastName}</span>
           <span className="profile-uid">{user?.roleIdValue}</span>
           <img
-            src={user?.profilePicUrl ? `http://localhost:4000${user.profilePicUrl}` : "https://via.placeholder.com/40"}
+            src={user?.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : "https://via.placeholder.com/40"}
             alt="Profile"
             className="profile-pic"
           />
@@ -309,7 +309,7 @@ export default function Faculty() {
                 {assignments.map(({ _id, originalName, fileUrl }) => (
                   <li key={_id} style={{ marginBottom: 12 }}>
                     <a
-                      href={`http://localhost:4000${fileUrl}`}
+                      href={`https://neuraliftx.onrender.com${fileUrl}`}
                       target="_blank"
                       rel="noreferrer"
                       style={{ marginRight: "1rem", fontWeight: 500 }}

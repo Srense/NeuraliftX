@@ -7,7 +7,7 @@ import AttendanceDashboard from "./AttendanceDashboard";
 import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 const getProfileImageUrl = (profilePicUrl) =>
-  profilePicUrl ? `http://localhost:4000${profilePicUrl}` : "https://via.placeholder.com/40";
+  profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
 
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -29,7 +29,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     formData.append("profilePic", selectedFile);
 
     try {
-      const res = await fetch("http://localhost:4000/api/profile/picture", {
+      const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -122,14 +122,14 @@ export default function Student() {
         return;
       }
       try {
-        const res = await fetch("http://localhost:4000/api/profile", {
+        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch user profile");
         const data = await res.json();
         setUser(data.user);
       } catch (err) {
-        setError("Could not load user data. Please log in again.");
+        setError("Could not load user data. Please log in again.",err);
         localStorage.removeItem("token_student");
         navigate("/login");
       } finally {
@@ -148,14 +148,14 @@ export default function Student() {
 
   async function fetchAssignments() {
     try {
-      const res = await fetch("http://localhost:4000/api/assignments", {
+      const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch assignments");
       const data = await res.json();
       setAssignments(data);
     } catch (e) {
-      alert("Failed to load assignments");
+      alert("Failed to load assignments",e);
     }
   }
 
@@ -236,7 +236,7 @@ export default function Student() {
           {assignments.map(({ _id, originalName, fileUrl }) => (
             <div key={_id} className="assignment-card">
               <a
-                href={`http://localhost:4000${fileUrl}`}
+                href={`https://neuraliftx.onrender.com${fileUrl}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="assignment-link"

@@ -23,7 +23,7 @@ export default function HomeDashboard() {
 
   useEffect(() => {
     async function fetchData(lat, lon) {
-      const BACKEND_URL = "http://localhost:4000";
+      const BACKEND_URL = "https://neuraliftx.onrender.com";
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 

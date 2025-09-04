@@ -14,7 +14,7 @@ const QuizPerformanceChart = () => {
           localStorage.getItem("token_faculty") ||
           localStorage.getItem("token_admin") ||
           localStorage.getItem("token_alumni");
-        const res = await fetch("http://localhost:4000/api/student/quiz-performance", {
+        const res = await fetch("https://neuraliftx.onrender.com/api/student/quiz-performance", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

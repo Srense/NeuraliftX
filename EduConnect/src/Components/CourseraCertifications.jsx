@@ -18,7 +18,7 @@ const CourseraCertifications = () => {
   useEffect(() => {
     async function fetchCourses() {
       try {
-        const res = await fetch("http://localhost:4000/api/coursera-courses");
+        const res = await fetch("https://neuraliftx.onrender.com/api/coursera-courses");
         if (!res.ok) throw new Error("Failed to load Coursera courses");
         const data = await res.json();
         setCourses(data.courses);

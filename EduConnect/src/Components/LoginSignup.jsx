@@ -214,7 +214,7 @@ const LoginSignup = () => {
         }
       }
     } catch (error) {
-      setStatusMessage({ type: "danger", text: "Server unreachable. Please try again later." });
+      setStatusMessage({ type: "danger", text: "Server unreachable. Please try again later." },error);
     }
     setIsSubmitting(false);
   };

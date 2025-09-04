@@ -29,7 +29,7 @@ const QuizPage = () => {
         const token = getStoredToken();
         if (!token) throw new Error("User not authenticated");
 
-        const response = await fetch("http://localhost:4000/api/generate-quiz", {
+        const response = await fetch("https://neuraliftx.onrender.com/api/generate-quiz", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -83,7 +83,7 @@ const QuizPage = () => {
       const token = getStoredToken();
       if (!token) throw new Error("User not authenticated");
 
-      const response = await fetch("http://localhost:4000/api/submit-quiz", {
+      const response = await fetch("https://neuraliftx.onrender.com/api/submit-quiz", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -225,7 +225,7 @@ const QuizPage = () => {
   onClick={() => {
     const { pdfUrl, page, highlightText } = results.suggestions[i];
     const highlightParam = highlightText ? encodeURIComponent(highlightText) : "";
-    const viewerUrl = `http://localhost:4000/pdf-viewer?file=${encodeURIComponent(
+    const viewerUrl = `https://neuraliftx.onrender.com/pdf-viewer?file=${encodeURIComponent(
       pdfUrl
     )}&page=${page}&highlight=${highlightParam}`;
     window.open(viewerUrl, "_blank");

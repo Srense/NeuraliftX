@@ -4,7 +4,7 @@ export default function FacultyQuizComponent() {
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfList, setPdfList] = useState([]);
 
-  const BACKEND_URL = "http://localhost:4000"; // Your backend server URL
+  const BACKEND_URL = "https://neuraliftx.onrender.com"; // Your backend server URL
 
   // Fetch PDFs from backend
   const fetchPdfs = async () => {
