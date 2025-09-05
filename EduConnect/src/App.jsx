@@ -7,6 +7,7 @@ import LoginSignup from "./Components/LoginSignup";
 import Student from './Components/Student';
 import Faculty from './Components/Faculty';
 import QuizPage from "./Components/QuizPage";
+import VerifyEmail from "./Components/VerifyEmail";
 
 // Role-based protected route for multi-session support
 const RoleBasedRoute = ({ allowedRoles }) => {
@@ -69,6 +70,7 @@ const App = () => {
         <Route path="/alumni-login" element={<LoginSignup />} />
         <Route path="/admin-login" element={<LoginSignup />} />
         <Route path="/quiz/:assignmentId" element={<QuizPage />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Protected routes per role */}
         <Route element={<RoleBasedRoute allowedRoles={['student']} />}>
