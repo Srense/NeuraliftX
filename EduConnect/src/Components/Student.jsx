@@ -6,6 +6,8 @@ import HomeDashboard from "./HomeDashboard";
 import AttendanceDashboard from "./AttendanceDashboard";
 import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
+import IndividualLeaderboard from "./IndividualLeaderboard";
+
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
 
@@ -263,6 +265,10 @@ export default function Student() {
   } else if (activeMain === "Certifications") {
   contentArea = <CourseraCertifications />;
 }
+else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") {
+  contentArea = <IndividualLeaderboard />;
+}
+
 
   else {
     contentArea = <div>Select a menu item to view its content.</div>;

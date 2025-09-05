@@ -827,6 +827,53 @@ app.get("/api/assignments", authenticateJWT, async (req, res) => {
   res.json(assignments);
 });
 
+// Individual Leaderboard API - Top Rankers by Average Quiz Score
+
+app.get("/api/leaderboard/individual", async (req, res) => {
+  try {
+    // Aggregate average score per student from QuizAttempt collection
+    const students = await QuizAttempt.aggregate([
+      {
+        $group: {
+          _id: "$userId",                 // Group by student ID
+          avgScore: { $avg: "$score" },   // Calculate average score
+          attempts: { $sum: 1 }           // Total quiz attempts
+        }
+      },
+      // Lookup user details (first name, last name, email)
+      {
+        $lookup: {
+          from: "users",                  // Your users collection
+          localField: "_id",
+          foreignField: "_id",
+          as: "userData"
+        }
+      },
+      { $unwind: "$userData" },
+      // Choose which fields to return
+      {
+        $project: {
+          studentId: "$_id",
+          avgScore: 1,
+          attempts: 1,
+          firstName: "$userData.firstName",
+          lastName: "$userData.lastName",
+          email: "$userData.email"
+        }
+      },
+      // Sort by highest average score first
+      { $sort: { avgScore: -1 } },
+      // Optional: limit to top 100
+      { $limit: 100 }
+    ]);
+
+    res.json(students);
+  } catch (err) {
+    console.error("Leaderboard fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch leaderboard" });
+  }
+});
+
 app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
   if (!["faculty", "admin"].includes(req.user.role)) {
     return res.status(403).json({ error: "Access denied" });
