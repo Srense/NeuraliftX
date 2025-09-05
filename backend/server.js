@@ -372,7 +372,10 @@ app.get("/api/verify-email", async (req, res) => {
     const { token } = req.query;
     if (!token) return res.status(400).json({ success: false, error: "Verification token missing" });
 
-    const user = await User.findOne({ verificationToken: token, verificationTokenExpires: { $gt: new Date() } });
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: new Date() }
+    });
     if (!user) return res.status(400).json({ success: false, error: "Invalid or expired token" });
 
     user.emailVerified = true;
@@ -380,13 +383,14 @@ app.get("/api/verify-email", async (req, res) => {
     user.verificationTokenExpires = undefined;
     await user.save();
 
-    res.json({ success: true, message: "Email verified successfully" });
-
+    // Respond with JSON, as requested
+    res.json({ success: true, message: "Email verified. You can now log in." });
   } catch (err) {
     console.error("Email verification error:", err);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 });
+
 
 // Login
 app.post("/api/login", async (req, res) => {
