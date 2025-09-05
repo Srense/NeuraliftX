@@ -258,10 +258,27 @@ const validateSignupInput = async (data) => {
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = "Invalid email format";
   else if (await isDisposableEmail(data.email)) errors.email = "Disposable or temporary emails are not allowed";
 
-  const existenceCheck = await validateEmailExistence(data.email);
-  if (!existenceCheck.valid) {
-    errors.email = "This email does not exist or cannot receive mail.";
-  }
+ // Place this right after you check for format/disposable emails, before password checks
+
+const bigFreeProviders = [
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "icloud.com",
+  "aol.com",
+  "live.com"
+];
+const emailDomain = data.email.split("@")[1].toLowerCase();
+let existenceCheck = { valid: true };
+
+// Only check SMTP for small/enterprise domains, NOT for common big free email providers
+if (!bigFreeProviders.includes(emailDomain)) {
+  existenceCheck = await validateEmailExistence(data.email);
+}
+if (!existenceCheck.valid) {
+  errors.email = "This email does not exist or cannot receive mail.";
+}
 
   if (!data.password) errors.password = "Password is required and must meet complexity requirements";
   else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(data.password))
