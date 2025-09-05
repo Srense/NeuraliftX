@@ -198,45 +198,57 @@ const QuizPage = () => {
           </p>
 
           <ul style={{ listStyle: "none", padding: 0 }}>
-            {quiz.map((q, i) => (
-              <li
-                key={i}
-                style={{
-                  marginBottom: "1.5rem",
-                  paddingBottom: "1rem",
-                  borderBottom: "1px solid #e0e0e0",
-                }}
-              >
-                <p style={{ fontWeight: "600", marginBottom: "0.5rem" }}>{q.question}</p>
-                <p>
-                  Your answer:{" "}
-                  <span
-                    style={{
-                      color: selectedAnswers[i] === results.correctAnswers[i] ? "green" : "red",
-                      fontWeight: "600",
+            {quiz.map((q, i) => {
+              // Ensure pdfUrl is absolute:
+              const pdfUrlRaw = results.suggestions[i]?.pdfUrl || "";
+              const pdfUrl = pdfUrlRaw.startsWith("http")
+                ? pdfUrlRaw
+                : `https://neuraliftx.onrender.com${pdfUrlRaw}`;
+              const page = results.suggestions[i]?.page || 1;
+              const highlightText = results.suggestions[i]?.highlightText || "";
+
+              return (
+                <li
+                  key={i}
+                  style={{
+                    marginBottom: "1.5rem",
+                    paddingBottom: "1rem",
+                    borderBottom: "1px solid #e0e0e0",
+                  }}
+                >
+                  <p style={{ fontWeight: "600", marginBottom: "0.5rem" }}>{q.question}</p>
+                  <p>
+                    Your answer:{" "}
+                    <span
+                      style={{
+                        color:
+                          selectedAnswers[i] === results.correctAnswers[i] ? "green" : "red",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {selectedAnswers[i] || "No answer"}
+                    </span>
+                  </p>
+                  <p>Correct answer: {results.correctAnswers[i]}</p>
+
+                  <button
+                    onClick={() => {
+                      const highlightParam = highlightText
+                        ? encodeURIComponent(highlightText)
+                        : "";
+                      const viewerUrl = `https://neuraliftx.onrender.com/pdf-viewer?file=${encodeURIComponent(
+                        pdfUrl
+                      )}&page=${page}&highlight=${highlightParam}`;
+                      window.open(viewerUrl, "_blank");
                     }}
+                    style={{ ...primaryButton, marginTop: "0.5rem" }}
+                    aria-label={`See relevant section in PDF for question ${i + 1}`}
                   >
-                    {selectedAnswers[i] || "No answer"}
-                  </span>
-                </p>
-                <p>Correct answer: {results.correctAnswers[i]}</p>
-
-               <button
-  onClick={() => {
-    const { pdfUrl, page, highlightText } = results.suggestions[i];
-    const highlightParam = highlightText ? encodeURIComponent(highlightText) : "";
-    const viewerUrl = `https://neuraliftx.onrender.com/pdf-viewer?file=${encodeURIComponent(
-      pdfUrl
-    )}&page=${page}&highlight=${highlightParam}`;
-    window.open(viewerUrl, "_blank");
-  }}
-  style={{ ...primaryButton, marginTop: "0.5rem" }}
->
-  See relevant section in PDF
-</button>
-
-              </li>
-            ))}
+                    See relevant section in PDF
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
