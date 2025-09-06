@@ -58,6 +58,8 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <p><b>Name:</b> {user.firstName} {user.lastName}</p>
         <p><b>UID:</b> {user.roleIdValue}</p>
         <p><b>Email:</b> {user.email}</p>
+        <p><b>Coins Earned:</b> {user.coins || 0}</p>
+
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
