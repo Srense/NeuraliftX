@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import logo from "../assets/Logo.png";
+import './Student.css';
 
 const Admin = () => {
   const token = localStorage.getItem("token_admin");
