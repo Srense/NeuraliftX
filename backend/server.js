@@ -838,6 +838,23 @@ app.post("/api/feedback", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to submit feedback" });
   }
 });
+// === Announcement Active Endpoint for Student/Faculty/Alumni Role Filter ===
+app.get("/api/announcements/active", authenticateJWT, async (req, res) => {
+  try {
+    const role = req.user.role;
+    const query = {};
+    if (role === "student") query["visibleTo.students"] = true;
+    else if (role === "faculty") query["visibleTo.faculty"] = true;
+    else if (role === "alumni") query["visibleTo.alumni"] = true;
+    else return res.json([]); // No announcements for other roles
+
+    const announcements = await Announcement.find(query).sort({ createdAt: -1 });
+    res.json(announcements);
+  } catch (err) {
+    console.error("Active announcements fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch announcements" });
+  }
+});
 
 // Get courses
 app.get("/api/courses", authenticateJWT, async (req, res) => {
