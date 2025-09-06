@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Student.css";
-import logo from "../assets/logo.png"; // Please adjust path as needed
+import logo from "../assets/Logo.png"; // Please adjust path as needed
 
 // Announcement Popup Component
 function AnnouncementPopup({ announcement, onClose, token }) {
