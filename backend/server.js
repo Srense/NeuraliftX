@@ -838,18 +838,33 @@ app.post("/api/feedback", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to submit feedback" });
   }
 });
-// === Announcement Active Endpoint for Student/Faculty/Alumni Role Filter ===
 app.get("/api/announcements/active", authenticateJWT, async (req, res) => {
   try {
-    const role = req.user.role;
-    const query = {};
-    if (role === "student") query["visibleTo.students"] = true;
-    else if (role === "faculty") query["visibleTo.faculty"] = true;
-    else if (role === "alumni") query["visibleTo.alumni"] = true;
-    else return res.json([]); // No announcements for other roles
+    const userRole = req.user.role;
 
-    const announcements = await Announcement.find(query).sort({ createdAt: -1 });
+    // Build filter to match announcements visible to user's role OR to all roles
+    const roleFilters = [];
+
+    if(userRole === 'student' || userRole === 'all') {
+      roleFilters.push({ 'visibleTo.students': true });
+    }
+    if(userRole === 'faculty' || userRole === 'all') {
+      roleFilters.push({ 'visibleTo.faculty': true });
+    }
+    if(userRole === 'alumni' || userRole === 'all') {
+      roleFilters.push({ 'visibleTo.alumni': true });
+    }
+
+    if(roleFilters.length === 0) {
+      return res.json([]);
+    }
+
+    const announcements = await Announcement.find({
+      $or: roleFilters
+    }).sort({ createdAt: -1 });
+
     res.json(announcements);
+
   } catch (err) {
     console.error("Active announcements fetch error:", err);
     res.status(500).json({ error: "Failed to fetch announcements" });
