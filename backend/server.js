@@ -840,33 +840,24 @@ app.post("/api/feedback", authenticateJWT, async (req, res) => {
 });
 app.get("/api/announcements/active", authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user.role;
+    const role = req.user.role;
 
-    // Build filter to match announcements visible to user's role OR to all roles
+    // Build filter for any matching role visibility
     const roleFilters = [];
 
-    if(userRole === 'student' || userRole === 'all') {
-      roleFilters.push({ 'visibleTo.students': true });
-    }
-    if(userRole === 'faculty' || userRole === 'all') {
-      roleFilters.push({ 'visibleTo.faculty': true });
-    }
-    if(userRole === 'alumni' || userRole === 'all') {
-      roleFilters.push({ 'visibleTo.alumni': true });
-    }
+    if (role === "student") roleFilters.push({ "visibleTo.students": true });
+    if (role === "faculty") roleFilters.push({ "visibleTo.faculty": true });
+    if (role === "alumni") roleFilters.push({ "visibleTo.alumni": true });
 
-    if(roleFilters.length === 0) {
-      return res.json([]);
-    }
+    if (!roleFilters.length) return res.json([]);
 
     const announcements = await Announcement.find({
       $or: roleFilters
     }).sort({ createdAt: -1 });
 
     res.json(announcements);
-
-  } catch (err) {
-    console.error("Active announcements fetch error:", err);
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Failed to fetch announcements" });
   }
 });
