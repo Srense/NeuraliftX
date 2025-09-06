@@ -17,34 +17,37 @@ function IndividualLeaderboard() {
 
   if (loading) return <div>Loading leaderboard...</div>;
 
-  // Adjust IndividualLeaderboard to show totalCoins
-
-return (
-  <Container>
-    <h2>🏆 Top Individual Rankers</h2>
-    <Table responsive hover>
-      <thead>
-        <tr>
-          <th>Rank</th>
-          <th>Name</th>
-          <th>Total Coins</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((student, idx) => (
-          <tr key={student.studentId} style={idx < 3 ? { background: rankColors[idx], color: "#1e293b" } : {}}>
-            <td>
-              {idx + 1} {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''}
-            </td>
-            <td>{student.firstName} {student.lastName}</td>
-            <td>{student.totalCoins}</td>
+  return (
+    <Container>
+      <h2 className="text-glow mb-4">🏆 Top Individual Rankers</h2>
+      <Table responsive hover className="bg-dark text-white rounded shadow">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Name</th>
+            <th>Average Score</th>
+            <th>Attempts</th>
           </tr>
-        ))}
-      </tbody>
-    </Table>
-  </Container>
-);
-
+        </thead>
+        <tbody>
+          {data.map((student, idx) => (
+            <tr key={student.studentId}
+                style={idx < 3 ? {background: rankColors[idx], color: "#1e293b"} : {}}>
+              <td>
+                {idx + 1}{" "}
+                {idx === 0 && "🥇"}
+                {idx === 1 && "🥈"}
+                {idx === 2 && "🥉"}
+              </td>
+              <td>{student.firstName} {student.lastName}</td>
+              <td>{student.avgScore.toFixed(2)}</td>
+              <td><Badge bg="info">{student.attempts}</Badge></td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </Container>
+  );
 }
 
 export default IndividualLeaderboard;

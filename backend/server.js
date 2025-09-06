@@ -865,78 +865,43 @@ app.get("/api/assignments", authenticateJWT, async (req, res) => {
 
 app.get("/api/leaderboard/individual", async (req, res) => {
   try {
-    // Aggregate coins from quiz attempts
-    const coinsAggregation = await QuizAttempt.aggregate([
-      { $group: {
-          _id: "$userId",
-          totalQuizCoins: { $sum: "$coinsEarned" }
-      }},
-    ]);
-
-    // Simulate fetching coins from certifications, internships, puzzles collection
-    // Assuming collections like CertificationCompletion, InternshipCompletion, PuzzleCompletion with coins
-    // For brevity, assume these collections exist and have userId and coins fields
-
-    const certCoinsAgg = await CertificationCompletion.aggregate([
-      { $group: { _id: "$userId", totalCertCoins: { $sum: "$coins" } } }
-    ]);
-
-    const internCoinsAgg = await InternshipCompletion.aggregate([
-      { $group: { _id: "$userId", totalInternCoins: { $sum: "$coins" } } }
-    ]);
-
-    const puzzleCoinsAgg = await PuzzleCompletion.aggregate([
-      { $group: { _id: "$userId", totalPuzzleCoins: { $sum: "$coins" } } }
-    ]);
-
-    // Merge all coin aggregates into a single map by userId
-    const allCoinsMap = new Map();
-
-    const mergeAggregates = (aggArray, key) => {
-      aggArray.forEach(({ _id, [key]: amount }) => {
-        if (!allCoinsMap.has(_id.toString())) {
-          allCoinsMap.set(_id.toString(), { userId: _id, totalCoins: 0 });
+    // Aggregate average score per student from QuizAttempt collection
+    const students = await QuizAttempt.aggregate([
+      {
+        $group: {
+          _id: "$userId",                 // Group by student ID
+          avgScore: { $avg: "$score" },   // Calculate average score
+          attempts: { $sum: 1 }           // Total quiz attempts
         }
-        allCoinsMap.get(_id.toString())[key] = amount;
-      });
-    };
+      },
+      // Lookup user details (first name, last name, email)
+      {
+        $lookup: {
+          from: "users",                  // Your users collection
+          localField: "_id",
+          foreignField: "_id",
+          as: "userData"
+        }
+      },
+      { $unwind: "$userData" },
+      // Choose which fields to return
+      {
+        $project: {
+          studentId: "$_id",
+          avgScore: 1,
+          attempts: 1,
+          firstName: "$userData.firstName",
+          lastName: "$userData.lastName",
+          email: "$userData.email"
+        }
+      },
+      // Sort by highest average score first
+      { $sort: { avgScore: -1 } },
+      // Optional: limit to top 100
+      { $limit: 100 }
+    ]);
 
-    mergeAggregates(coinsAggregation, 'totalQuizCoins');
-    mergeAggregates(certCoinsAgg, 'totalCertCoins');
-    mergeAggregates(internCoinsAgg, 'totalInternCoins');
-    mergeAggregates(puzzleCoinsAgg, 'totalPuzzleCoins');
-
-    // Calculate totalCoins for each user
-    const finalArr = [];
-    for (const { userId, totalQuizCoins = 0, totalCertCoins = 0, totalInternCoins = 0, totalPuzzleCoins = 0 } of allCoinsMap.values()) {
-      finalArr.push({
-        userId,
-        totalCoins: totalQuizCoins + totalCertCoins + totalInternCoins + totalPuzzleCoins,
-      });
-    }
-
-    // Sort descending by total coins
-    finalArr.sort((a, b) => b.totalCoins - a.totalCoins);
-
-    // Fetch user details for leaderboard display for top 100
-    const userIds = finalArr.slice(0, 100).map(u => mongoose.Types.ObjectId(u.userId));
-
-    const users = await User.find({ _id: { $in: userIds } }, 'firstName lastName email').lean();
-
-    // Map userId to user info for quick lookup
-    const userMap = new Map(users.map(u => [u._id.toString(), u]));
-
-    // Prepare leaderboard data
-    const leaderboard = finalArr.slice(0, 100).map((item, idx) => ({
-      rank: idx + 1,
-      studentId: item.userId,
-      firstName: userMap.get(item.userId)?.firstName || 'N/A',
-      lastName: userMap.get(item.userId)?.lastName || '',
-      totalCoins: item.totalCoins,
-    }));
-
-    res.json(leaderboard);
-
+    res.json(students);
   } catch (err) {
     console.error("Leaderboard fetch error:", err);
     res.status(500).json({ error: "Failed to fetch leaderboard" });
