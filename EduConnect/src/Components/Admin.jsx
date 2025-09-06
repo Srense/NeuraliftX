@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 export default function Admin({ token }) {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     date: "",
@@ -16,21 +17,39 @@ export default function Admin({ token }) {
 
   useEffect(() => {
     fetchAnnouncements();
+    // eslint-disable-next-line
   }, []);
 
   async function fetchAnnouncements() {
     setLoading(true);
+    setApiError(null);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/admin/announcements", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }
       });
+      // If response is not OK, handle it
+      if (!res.ok) {
+        if (res.status === 401) {
+          setApiError("Unauthorized: Admin login required.");
+        } else {
+          setApiError("Failed to load announcements.");
+        }
+        setAnnouncements([]); // Prevent .map crash!
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
-      setAnnouncements(data);
-    } catch {
-      alert("Failed to load announcements");
-    } finally {
-      setLoading(false);
+      if (!Array.isArray(data)) {
+        setApiError("Unexpected server response.");
+        setAnnouncements([]);
+      } else {
+        setAnnouncements(data);
+      }
+    } catch (e) {
+      setApiError("Network or server error.");
+      setAnnouncements([]);
     }
+    setLoading(false);
   }
 
   function handleInputChange(e) {
@@ -67,13 +86,18 @@ export default function Admin({ token }) {
   }
 
   async function handleSubmit() {
+    setApiError(null);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/admin/announcements", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData),
       });
-      if (!res.ok) throw new Error("Failed to create announcement");
+      if (!res.ok) {
+        if (res.status === 401) setApiError("Unauthorized: Admin login required.");
+        else setApiError("Failed to create announcement.");
+        return;
+      }
       alert("Announcement created");
       setFormData({
         title: "", date: "", time: "", refNumber: "", contentType: "text",
@@ -81,11 +105,30 @@ export default function Admin({ token }) {
       });
       fetchAnnouncements();
     } catch (err) {
-      alert(err.message);
+      setApiError("Network/server error while creating announcement.");
+    }
+  }
+
+  async function handleDelete(id) {
+    setApiError(null);
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/admin/announcements/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        if (res.status === 401) setApiError("Unauthorized: Admin login required.");
+        else setApiError("Delete failed.");
+        return;
+      }
+      fetchAnnouncements();
+    } catch (err) {
+      setApiError("Network/server error while deleting announcement.");
     }
   }
 
   if (loading) return <div>Loading...</div>;
+  if (apiError) return <div style={{ color: "red", padding: 20 }}>{apiError}</div>;
 
   return (
     <div style={{ padding: 20 }}>
@@ -144,23 +187,21 @@ export default function Admin({ token }) {
 
       <h3>Existing Announcements</h3>
       <ul>
-        {announcements.map(a => (
-          <li key={a._id}>
-            <b>{a.title}</b> ({a.contentType}) — Visible to:
-            {a.visibleTo.students && " Students"}
-            {a.visibleTo.faculty && " Faculty"}
-            {a.visibleTo.alumni && " Alumni"}
-            <button onClick={async () => {
-              if(window.confirm("Delete announcement?")) {
-                await fetch(`https://neuraliftx.onrender.com/api/admin/announcements/${a._id}`, {
-                  method: "DELETE",
-                  headers: { Authorization: `Bearer ${token}` }
-                });
-                fetchAnnouncements();
-              }
-            }}>Delete</button>
-          </li>
-        ))}
+        {Array.isArray(announcements) && announcements.length > 0 ? (
+          announcements.map(a => (
+            <li key={a._id}>
+              <b>{a.title}</b> ({a.contentType}) — Visible to:
+              {a.visibleTo?.students && " Students"}
+              {a.visibleTo?.faculty && " Faculty"}
+              {a.visibleTo?.alumni && " Alumni"}
+              <button onClick={() => {
+                if(window.confirm("Delete announcement?")) handleDelete(a._id);
+              }}>Delete</button>
+            </li>
+          ))
+        ) : (
+          <li>No announcements found.</li>
+        )}
       </ul>
     </div>
   );
