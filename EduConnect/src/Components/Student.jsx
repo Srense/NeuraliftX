@@ -8,13 +8,16 @@ import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 
+
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
+
 
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(getProfileImageUrl(user.profilePicUrl));
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -24,11 +27,13 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     }
   };
 
+
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("profilePic", selectedFile);
+
 
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
@@ -49,6 +54,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     }
   };
 
+
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
@@ -60,6 +66,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <p><b>Email:</b> {user.email}</p>
         <p><b>Coins Earned:</b> {user.coins || 0}</p>
 
+
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
@@ -70,17 +77,127 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   );
 }
 
+
+// ============ ADDITION: Announcement Popup Modal Component ===============
+function AnnouncementPopup({ announcement, onClose, token }) {
+  const [responses, setResponses] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleChange = (qIndex, value) => {
+    setResponses((prev) => ({ ...prev, [qIndex]: value }));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ announcementId: announcement._id, responses }),
+      });
+      if (!res.ok) throw new Error("Feedback submission failed");
+      setSubmitted(true);
+    } catch (e) {
+      alert(e.message || "Submission error");
+    }
+    setSubmitting(false);
+  };
+
+  if (!announcement) return null;
+
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px" }}>
+        <button onClick={onClose} className="close-btn">✕</button>
+        <h2>{announcement.title}</h2>
+        {announcement.contentType === "text" ? (
+          <p>{announcement.message}</p>
+        ) : submitted ? (
+          <p>Thank you for your feedback!</p>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+            {announcement.surveyQuestions.map((q, idx) => (
+              <div key={idx} style={{ marginBottom: "1rem" }}>
+                <label style={{ fontWeight: "600" }}>{q.question}</label>
+                {q.inputType === "text" && (
+                  <textarea
+                    rows={3}
+                    value={responses[idx] || ""}
+                    onChange={(e) => handleChange(idx, e.target.value)}
+                    required
+                  />
+                )}
+                {(q.inputType === "radio" || q.inputType === "checkbox") && (
+                  <div>
+                    {q.options.map((opt, i) => (
+                      <label key={i} style={{ display: "block", marginTop: 4 }}>
+                        <input
+                          type={q.inputType}
+                          name={`question-${idx}`}
+                          value={opt}
+                          checked={
+                            q.inputType === "radio"
+                              ? responses[idx] === opt
+                              : Array.isArray(responses[idx]) && responses[idx].includes(opt)
+                          }
+                          onChange={(e) => {
+                            if (q.inputType === "radio") {
+                              handleChange(idx, e.target.value);
+                            } else {
+                              const prev = responses[idx] || [];
+                              if (e.target.checked) {
+                                handleChange(idx, [...prev, e.target.value]);
+                              } else {
+                                handleChange(idx, prev.filter((v) => v !== e.target.value));
+                              }
+                            }
+                          }}
+                          required={q.inputType === "radio"}
+                        />
+                        {" "}{opt}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {q.inputType === "select" && (
+                  <select
+                    value={responses[idx] || ""}
+                    onChange={(e) => handleChange(idx, e.target.value)}
+                    required
+                  >
+                    <option value="">Select...</option>
+                    {q.options.map((opt, i) => (
+                      <option key={i} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ))}
+            <button type="submit" disabled={submitting} className="action-btn">
+              {submitting ? "Submitting..." : "Submit Feedback"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+// ============ END ADDITION ==================================================
+
+
 export default function Student() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token_student");
   const handleGenerateQuiz = (assignmentId) => {
-  navigate(`/quiz/${assignmentId}`);
-};
+    navigate(`/quiz/${assignmentId}`);
+  };
 
 
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState(null);
+
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
@@ -89,7 +206,17 @@ export default function Student() {
   const [filteredMenu, setFilteredMenu] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
+  // ============== ADDITIONAL STATES FOR ANNOUNCEMENTS ======================
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [announcementError, setAnnouncementError] = useState(null);
+  const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
+  const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
+  // ========================================================================
+
+
   const [assignments, setAssignments] = useState([]); // for storing fetched assignments
+
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -119,6 +246,7 @@ export default function Student() {
     },
   ];
 
+
   useEffect(() => {
     async function fetchUser() {
       if (!token) {
@@ -133,7 +261,7 @@ export default function Student() {
         const data = await res.json();
         setUser(data.user);
       } catch (err) {
-        setError("Could not load user data. Please log in again.",err);
+        setError("Could not load user data. Please log in again.", err);
         localStorage.removeItem("token_student");
         navigate("/login");
       } finally {
@@ -143,12 +271,43 @@ export default function Student() {
     fetchUser();
   }, [token, navigate]);
 
+  // ======= ADDITION: fetch announcements after user loads ===========
+  useEffect(() => {
+    if (!user) return;
+    async function fetchAnnouncements() {
+      setLoadingAnnouncements(true);
+      setAnnouncementError(null);
+      try {
+        const res = await fetch("https://neuraliftx.onrender.com/api/announcements/active", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch announcements");
+        const data = await res.json();
+        setAnnouncements(Array.isArray(data) ? data : []);
+        // Show first announcement immediately
+        if (data.length > 0) {
+          setCurrentAnnouncement(data[0]);
+          setShowAnnouncementPopup(true);
+        }
+      } catch (e) {
+        setAnnouncementError(e.message);
+        setAnnouncements([]);
+      } finally {
+        setLoadingAnnouncements(false);
+      }
+    }
+    fetchAnnouncements();
+  }, [user, token]);
+  // =================================================================
+
+
   // Fetch assignments when "Quiz/Assignments" menu is active
   useEffect(() => {
     if (activeMain === "Quiz/Assignments") {
       fetchAssignments();
     }
   }, [activeMain]);
+
 
   async function fetchAssignments() {
     try {
@@ -159,9 +318,10 @@ export default function Student() {
       const data = await res.json();
       setAssignments(data);
     } catch (e) {
-      alert("Failed to load assignments",e);
+      alert("Failed to load assignments", e);
     }
   }
+
 
   useEffect(() => {
     if (user) {
@@ -173,6 +333,7 @@ export default function Student() {
       }
     }
   }, [user, navigate]);
+
 
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -197,7 +358,9 @@ export default function Student() {
     setFilteredMenu(filtered);
   }, [searchTerm]);
 
+
   const toggleSidebar = () => setSidebarOpen((open) => !open);
+
 
   const handleMainClick = (label) => {
     setActiveMain(label);
@@ -209,23 +372,34 @@ export default function Student() {
     }
   };
 
+
   const handleSubClick = (key) => setActiveSub(key);
+
 
   const handleLogout = () => {
     localStorage.removeItem("token_student");
     navigate("/login");
   };
 
+
   const handleUpdateProfilePic = (profilePicUrl) => {
     setUser((prev) => ({ ...prev, profilePicUrl }));
     setShowProfileModal(false);
   };
 
-  // Generate Quiz button handler stub
-  // function handleGenerateQuiz(assignmentId) {
-  //   alert(`Generate quiz for assignment ID: ${assignmentId}`);
-  //   // TODO: Implement actual quiz generation or navigation here
-  // }
+
+  // New - Close announcement and show next if any
+  const closeAnnouncementPopup = () => {
+    const currentIndex = announcements.findIndex((a) => a._id === currentAnnouncement?._id);
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < announcements.length) {
+      setCurrentAnnouncement(announcements[nextIndex]);
+    } else {
+      setShowAnnouncementPopup(false);
+      setCurrentAnnouncement(null);
+    }
+  };
+
 
   let contentArea = null;
   if (activeMain === "Home") {
@@ -265,19 +439,17 @@ export default function Student() {
       </div>
     );
   } else if (activeMain === "Certifications") {
-  contentArea = <CourseraCertifications />;
-}
-else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") {
-  contentArea = <IndividualLeaderboard />;
-}
-
-
-  else {
+    contentArea = <CourseraCertifications />;
+  } else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") {
+    contentArea = <IndividualLeaderboard />;
+  } else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
 
+
   if (loadingUser) return <div className="loading">Loading user info...</div>;
   if (error) return <div className="error">{error}</div>;
+
 
   return (
     <div className="student-root">
@@ -314,6 +486,7 @@ else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") 
         </div>
       </header>
 
+
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
@@ -338,8 +511,10 @@ else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") 
           </ul>
         </nav>
 
+
         <main className="student-content">{contentArea}</main>
       </div>
+
 
       {showProfileModal && (
         <ProfileModal
@@ -348,6 +523,15 @@ else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") 
           onClose={() => setShowProfileModal(false)}
           onLogout={handleLogout}
           onUpdateProfilePic={handleUpdateProfilePic}
+        />
+      )}
+
+      {/* =========== ADDITIONAL: Announcement Popup ========== */}
+      {showAnnouncementPopup && currentAnnouncement && (
+        <AnnouncementPopup
+          announcement={currentAnnouncement}
+          onClose={closeAnnouncementPopup}
+          token={token}
         />
       )}
     </div>
