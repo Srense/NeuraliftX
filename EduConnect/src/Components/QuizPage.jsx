@@ -197,6 +197,10 @@ const QuizPage = () => {
             Score: <strong>{results.score}</strong> / {quiz.length}
           </p>
 
+          {/* Coins earned display */}
+          <p>Coins earned for this attempt: {results.coinsAwarded}</p>
+          <p>Total coins: {results.totalCoins}</p>
+
           <ul style={{ listStyle: "none", padding: 0 }}>
             {quiz.map((q, i) => (
               <li
@@ -221,20 +225,19 @@ const QuizPage = () => {
                 </p>
                 <p>Correct answer: {results.correctAnswers[i]}</p>
 
-               <button
-  onClick={() => {
-    const { pdfUrl, page, highlightText } = results.suggestions[i];
-    const highlightParam = highlightText ? encodeURIComponent(highlightText) : "";
-    const viewerUrl = `https://neuraliftx.onrender.com/pdf-viewer?file=${encodeURIComponent(
-      pdfUrl
-    )}&page=${page}&highlight=${highlightParam}`;
-    window.open(viewerUrl, "_blank");
-  }}
-  style={{ ...primaryButton, marginTop: "0.5rem" }}
->
-  See relevant section in PDF
-</button>
-
+                <button
+                  onClick={() => {
+                    const { pdfUrl, page, highlightText } = results.suggestions[i];
+                    const highlightParam = highlightText ? encodeURIComponent(highlightText) : "";
+                    const viewerUrl = `https://neuraliftx.onrender.com/pdf-viewer?file=${encodeURIComponent(
+                      pdfUrl
+                    )}&page=${page}&highlight=${highlightParam}`;
+                    window.open(viewerUrl, "_blank");
+                  }}
+                  style={{ ...primaryButton, marginTop: "0.5rem" }}
+                >
+                  See relevant section in PDF
+                </button>
               </li>
             ))}
           </ul>
