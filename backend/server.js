@@ -121,17 +121,38 @@ userSchema.methods.generateJWT = function () {
 
 const User = mongoose.model("User", userSchema);
 
-// Announcement schema
+// 1. Extend announcement schema to support text/survey and visibility
 const announcementSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   title: String,
   date: String,
   time: String,
   refNumber: String,
-  details: String,
-}, { timestamps: true });
-
+  contentType: { type: String, enum: ['text', 'survey'], default: 'text' },
+  message: String,
+  surveyQuestions: [{
+    question: String,
+    inputType: { type: String, enum: ['text', 'radio', 'checkbox', 'select'], default: 'text' },
+    options: [String],
+  }],
+  visibleTo: {
+    students: { type: Boolean, default: false },
+    faculty: { type: Boolean, default: false },
+    alumni: { type: Boolean, default: false }
+  },
+  createdAt: { type: Date, default: Date.now }
+});
 const Announcement = mongoose.model("Announcement", announcementSchema);
+
+
+// 2. Feedback schema
+const feedbackSchema = new mongoose.Schema({
+  announcementId: { type: mongoose.Schema.Types.ObjectId, ref: "Announcement" },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  responses: mongoose.Schema.Types.Mixed,
+  submittedAt: { type: Date, default: Date.now }
+});
+const Feedback = mongoose.model("Feedback", feedbackSchema);
 
 // Course schema
 const courseSchema = new mongoose.Schema({
@@ -757,6 +778,64 @@ app.post("/api/announcements", authenticateJWT, authorizeRole(["faculty", "alumn
   } catch (err) {
     console.error("Create announcement error:", err);
     res.status(500).json({ success: false, error: "Failed to create announcement" });
+  }
+});
+
+// 3. Admin routes
+app.post("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
+  try {
+    const { title, date, time, refNumber, contentType, message, surveyQuestions, visibleTo } = req.body;
+    const announcement = new Announcement({
+      createdBy: req.user._id,
+      title, date, time, refNumber, contentType, message, surveyQuestions, visibleTo
+    });
+    await announcement.save();
+    res.json({ success: true, announcement });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: "Failed to create announcement" });
+  }
+});
+
+app.get("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
+  try {
+    const announcements = await Announcement.find().sort({ createdAt: -1 });
+    res.json(announcements);
+  } catch (e) {
+    res.status(500).json({ success: false, error: "Failed to fetch announcements" });
+  }
+});
+
+app.delete("/api/admin/announcements/:id", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
+  try {
+    const ann = await Announcement.findById(req.params.id);
+    if (!ann) return res.status(404).json({ error: "Not found" });
+    await Announcement.deleteOne({ _id: req.params.id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to delete announcement" });
+  }
+});
+
+// 4. Feedback submission
+app.post("/api/feedback", authenticateJWT, async (req, res) => {
+  try {
+    const { announcementId, responses } = req.body;
+    if (!announcementId || !responses) return res.status(400).json({ error: "Missing data" });
+
+    const existing = await Feedback.findOne({ announcementId, userId: req.user._id });
+    if (existing) {
+      existing.responses = responses;
+      existing.submittedAt = new Date();
+      await existing.save();
+      return res.json({ success: true, message: "Feedback updated" });
+    }
+
+    const feedback = new Feedback({ announcementId, userId: req.user._id, responses });
+    await feedback.save();
+    res.json({ success: true, message: "Feedback submitted" });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to submit feedback" });
   }
 });
 
