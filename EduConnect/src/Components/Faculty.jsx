@@ -2,33 +2,142 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PdfViewer from "./PDFViewer"; // If you want to preview PDFs inline
 import "./Student.css";
-import logo from "../assets/Logo.png";
+import logo from "../assets/logo.png"; // Adjust path if needed
+
+
+// === Announcement Popup Component ===
+function AnnouncementPopup({ announcement, onClose, token }) {
+  const [responses, setResponses] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleChange = (qIndex, value) => {
+    setResponses((prev) => ({ ...prev, [qIndex]: value }));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ announcementId: announcement._id, responses }),
+      });
+      if (!res.ok) throw new Error("Failed to submit feedback");
+      setSubmitted(true);
+    } catch (e) {
+      alert(e.message || "Submission failed");
+    }
+    setSubmitting(false);
+  };
+
+  if (!announcement) return null;
+
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">×</button>
+        <h2>{announcement.title}</h2>
+        {announcement.contentType === 'text' ? (
+          <p>{announcement.message}</p>
+        ) : submitted ? (
+          <p>Thank you for your feedback!</p>
+        ) : (
+          <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+            {announcement.surveyQuestions?.map((q, i) => (
+              <div key={i} style={{ marginBottom: '1rem' }}>
+                <label style={{ fontWeight: '600' }}>{q.question}</label>
+                {q.inputType === 'text' && (
+                  <textarea
+                    rows={3}
+                    value={responses[i] || ''}
+                    onChange={e => handleChange(i, e.target.value)}
+                    required
+                    style={{ width: '100%' }}
+                  />
+                )}
+                {(q.inputType === 'radio' || q.inputType === 'checkbox') && (
+                  <div>
+                    {q.options.map((opt, idx) => (
+                      <label key={idx} style={{ display: 'block', marginTop: 4 }}>
+                        <input
+                          type={q.inputType}
+                          name={`question-${i}`}
+                          value={opt}
+                          checked={q.inputType === 'radio' ?
+                            responses[i] === opt :
+                            Array.isArray(responses[i]) && responses[i].includes(opt)}
+                          onChange={e => {
+                            if (q.inputType === 'radio') {
+                              handleChange(i, e.target.value);
+                            } else {
+                              const prev = responses[i] || [];
+                              if (e.target.checked) {
+                                handleChange(i, [...prev, e.target.value]);
+                              } else {
+                                handleChange(i, prev.filter(v => v !== e.target.value));
+                              }
+                            }
+                          }}
+                          required={q.inputType === 'radio'}
+                        />
+                        {' '}{opt}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {q.inputType === 'select' && (
+                  <select
+                    value={responses[i] || ''}
+                    onChange={e => handleChange(i, e.target.value)}
+                    required
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Select an option</option>
+                    {q.options.map((opt, idx) => (
+                      <option key={idx} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ))}
+            <button disabled={submitting} type="submit" className="action-btn">
+              {submitting ? 'Submitting...' : 'Submit'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+// === End Announcement Popup Component ===
+
 
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
+  const handleChange = e => setSelectedFile(e.target.files[0]);
 
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
-    formData.append("pdf", selectedFile);
+    formData.append('pdf', selectedFile);
 
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
-        method: "POST",
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       onUpload(data.assignment);
-      alert("Assignment uploaded successfully!");
+      alert('Uploaded Assignment');
       onClose();
     } catch {
-      alert("Failed to upload assignment");
+      alert('Upload failed');
     } finally {
       setUploading(false);
     }
@@ -36,51 +145,50 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="close-btn">×</button>
-        <h2>Create Assignment (PDF)</h2>
-        <input type="file" accept="application/pdf" onChange={handleFileChange} />
-        <button onClick={handleUpload} disabled={!selectedFile || uploading} className="action-btn">
-          {uploading ? "Uploading..." : "Upload PDF"}
+        <h2>Upload Assignment PDF</h2>
+        <input type="file" accept="application/pdf" onChange={handleChange}/>
+        <button disabled={!selectedFile || uploading} onClick={handleUpload} className="action-btn">
+          {uploading ? 'Uploading...' : 'Upload'}
         </button>
       </div>
     </div>
   );
 }
 
-function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
+function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : "");
+  const [previewUrl, setPreview] = useState(user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : '');
 
-  const handleFileChange = (e) => {
+  const handleChange = e => {
     const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+    setSelectedFile(file);
+    if(file) {
+      setPreview(URL.createObjectURL(file));
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if(!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
-    formData.append("profilePic", selectedFile);
-
+    formData.append('profilePic', selectedFile);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
-        method: "POST",
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if(!res.ok) throw new Error("Upload failed");
       const data = await res.json();
-      onUpdateProfilePic(data.profilePicUrl);
-      alert("Profile picture updated");
+      onUpdate(data.profilePicUrl);
+      alert("Profile pic updated");
+      setPreview(`https://neuraliftx.onrender.com${data.profilePicUrl}`);
       setSelectedFile(null);
-      setPreviewUrl(`https://neuraliftx.onrender.com${data.profilePicUrl}`);
     } catch {
-      alert("Failed to upload profile picture");
+      alert("Upload error");
     } finally {
       setUploading(false);
     }
@@ -88,22 +196,16 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-        <button aria-label="Close profile modal" onClick={onClose} className="close-btn">
-          &times;
-        </button>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
+        <button aria-label="Close profile modal" onClick={onClose} className="close-btn">×</button>
         <h2>My Profile</h2>
-        <img
-          src={previewUrl || "https://via.placeholder.com/120"}
-          alt="Profile"
-          className="profile-large-pic"
-        />
-        <p><strong>Name:</strong> {user.firstName} {user.lastName}</p>
-        <p><strong>UID:</strong> {user.roleIdValue}</p>
-        <p><strong>Email:</strong> {user.email}</p>
-        <input type="file" accept="image/*" onChange={handleFileChange} />
+        <img src={previewUrl || "https://via.placeholder.com/120"} alt="Profile" className="profile-large-pic" />
+        <p><b>Name:</b> {user.firstName} {user.lastName}</p>
+        <p><b>UID:</b> {user.roleIdValue}</p>
+        <p><b>Email:</b> {user.email}</p>
+        <input type="file" onChange={handleChange} accept="image/*"/>
         <button onClick={handleUpload} disabled={!selectedFile || uploading} className="action-btn">
-          {uploading ? "Uploading..." : "Upload Picture"}
+          {uploading ? 'Uploading...' : 'Upload Pic'}
         </button>
         <button onClick={onLogout} className="logout-button">Logout</button>
       </div>
@@ -111,20 +213,31 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   );
 }
 
+
 export default function Faculty() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token_faculty");
 
   const [user, setUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,setError] = useState(null);
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
-  const [showCreateAssignment, setShowCreateAssignment] = useState(false);
-  const [assignments, setAssignments] = useState([]);
+  const [activeSub, setActiveSub] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredMenu, setFilteredMenu] = useState([]);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const [assignments, setAssignments] = useState([]);
+  const [showCreateAssignment, setShowCreateAssignment] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+
+  // === Announcements states ===
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [announcementError, setAnnouncementError] = useState(null);
+  const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
+  const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
   const menu = [
     { label: "Home", icon: "🏠" },
@@ -139,156 +252,180 @@ export default function Faculty() {
 
   useEffect(() => {
     async function fetchUser() {
-      if (!token) return navigate("/login");
+      if(!token) {
+        navigate('/login');
+        return;
+      }
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch('https://neuraliftx.onrender.com/api/profile', {
+          headers: { Authorization: `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error("Failed to fetch user");
+        if(!res.ok) throw new Error('Failed to fetch user');
         const data = await res.json();
         setUser(data.user);
       } catch {
-        setError("Error fetching profile");
-        localStorage.removeItem("token_faculty");
-        navigate("/login");
+        setError('Error loading user');
+        localStorage.removeItem('token_faculty');
+        navigate('/login');
       } finally {
-        setLoadingUser(false);
+        setLoading(false);
       }
     }
     fetchUser();
-  }, [token, navigate]);
+  }, [token,navigate]);
 
   useEffect(() => {
-    if (user) {
-      if (window.location.pathname.startsWith("/faculty") && user.role !== "faculty") {
-        if (user.role === "student") navigate("/student");
-        else if (user.role === "admin") navigate("/admin");
-        else if (user.role === "alumni") navigate("/alumni");
-        else navigate("/");
+    if(user) {
+      // Redirect if role mismatch
+      if(window.location.pathname.startsWith('/faculty') && user.role !== 'faculty'){
+        if(user.role==='student') navigate('/student');
+        else if(user.role==='admin') navigate('/admin');
+        else if(user.role==='alumni') navigate('/alumni');
+        else navigate('/');
       }
     }
-  }, [user, navigate]);
+  },[user,navigate]);
+
+  // Fetch announcements for faculty after user loads
+  useEffect(() => {
+    if(!user) return;
+    async function fetchAnnouncements() {
+      setLoadingAnnouncements(true);
+      setAnnouncementError(null);
+      try {
+        const res = await fetch('https://neuraliftx.onrender.com/api/announcements/active',{
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if(!res.ok) throw new Error('Failed to fetch announcements');
+        const data = await res.json();
+        setAnnouncements(Array.isArray(data) ? data : []);
+        if(data.length > 0){
+          setCurrentAnnouncement(data[0]);
+          setShowAnnouncementPopup(true);
+        }
+      }catch(e){
+        setAnnouncementError(e.message);
+        setAnnouncements([]);
+      }finally {
+        setLoadingAnnouncements(false);
+      }
+    }
+    fetchAnnouncements();
+  },[user,token]);
 
   useEffect(() => {
     setFilteredMenu(menu);
-  }, []);
+  },[]);
 
   useEffect(() => {
-    if (activeMain === "Assignments Submission") {
+    if(activeMain === "Assignments Submission"){
       fetchAssignments();
     }
   }, [activeMain]);
 
-  async function fetchAssignments() {
+  async function fetchAssignments(){
     try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch('https://neuraliftx.onrender.com/api/assignments',{
+        headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error("Failed to fetch assignments");
+      if(!res.ok) throw new Error('Failed to fetch assignments');
       const data = await res.json();
       setAssignments(data);
     } catch {
-      alert("Failed to load assignments");
+      alert('Failed to load assignments');
     }
   }
 
-  const handleUploadSuccess = (newAssignment) => {
-    setAssignments((prev) => [newAssignment, ...prev]);
-  };
+  const handleUploadSuccess = newAssignment => {
+    setAssignments(prev => [newAssignment, ...prev]);
+  }
 
   const handleDeleteAssignment = async (id) => {
-    if (!window.confirm("Delete this assignment?")) return;
+    if(!window.confirm('Delete this assignment?')) return;
     try {
       const res = await fetch(`https://neuraliftx.onrender.com/api/assignments/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error("Delete failed");
-      setAssignments((prev) => prev.filter((a) => a._id !== id));
+      if(!res.ok) throw new Error('Delete failed');
+      setAssignments(prev => prev.filter(a => a._id !== id));
     } catch {
-      alert("Failed to delete assignment");
+      alert('Failed to delete assignment');
     }
-  };
+  }
 
-  const toggleSidebar = () => setSidebarOpen((v) => !v);
+  const toggleSidebar = () => {
+    setSidebarOpen(v => !v);
+  }
 
   const handleLogout = () => {
-    localStorage.removeItem("token_faculty");
-    navigate("/login");
-  };
+    localStorage.removeItem('token_faculty');
+    navigate('/login');
+  }
 
-  const handleUpdateProfilePic = (url) => {
-    setUser((prev) => ({ ...prev, profilePicUrl: url }));
-    setShowProfileModal(false);
-  };
+  const handleProfileUpdate = (url) => {
+    setUser(prev => ({ ...prev, profilePicUrl: url }));
+    setShowProfile(false);
+  }
 
-  if (loadingUser) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  // Close announcement popup and show next
+  const closeAnnouncementPopup = () => {
+    const index = announcements.findIndex(a => a._id === currentAnnouncement._id);
+    const nextIndex = index + 1;
+    if(nextIndex < announcements.length){
+      setCurrentAnnouncement(announcements[nextIndex]);
+    } else {
+      setShowAnnouncementPopup(false);
+      setCurrentAnnouncement(null);
+    }
+  }
+
+
+  if(loading) return <div>Loading...</div>;
+  if(error) return <div>{error}</div>;
 
   return (
     <div className="student-root">
       <header className="student-header">
         <button className="hamburger" aria-label="Toggle sidebar" onClick={toggleSidebar}>
-          <span />
-          <span />
-          <span />
+          <span/>
+          <span/>
+          <span/>
         </button>
         <div className="header-brand">
-          <img src={logo} alt="EduConnect Faculty" className="header-logo" />
-          <span className="header-title">EduConnect Faculty</span>
+          <img src={logo} alt="logo" className="logo" />
+          <span className="header-title">EduConnect - Faculty</span>
         </div>
         <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search menu"
-            aria-label="Search menu"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <span className="search-icon">&#128269;</span>
+          <input type="text" placeholder="Search menu" aria-label="Search menu" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
+          <span className="search-icon">🔍</span>
         </div>
         <div className="header-icons">
-          <span className="icon" title="Notifications">&#128276;</span>
-          <span className="icon" title="Library">&#128214;</span>
-          <span className="icon" title="Home">&#8962;</span>
-          <span className="icon" title="Settings">&#9881;</span>
+          <span className="icon" title="Notifications">🔔</span>
+          <span className="icon" title="Library">📚</span>
+          <span className="icon" title="Home">🏠</span>
+          <span className="icon" title="Settings">⚙️</span>
         </div>
-        <div
-          className="profile-info"
-          style={{ cursor: "pointer" }}
-          onClick={() => setShowProfileModal(true)}
-        >
-          <span className="profile-name">{user?.firstName} {user?.lastName}</span>
-          <span className="profile-uid">{user?.roleIdValue}</span>
-          <img
-            src={user?.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : "https://via.placeholder.com/40"}
-            alt="Profile"
-            className="profile-pic"
-          />
+        <div className="profile-info" onClick={() => setShowProfile(true)} style={{cursor:'pointer'}}>
+          <span className="profile-name">{user.firstName} {user.lastName}</span>
+          <span className="profile-uid">{user.roleIdValue}</span>
+          <img src={user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : 'https://via.placeholder.com/40'} alt="Profile" className="profile-pic" />
         </div>
       </header>
 
-      <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
-        <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
+      <div className={`student-layout ${sidebarOpen ? '' : 'closed'}`}>
+        <nav className={`student-sidebar${sidebarOpen ? '' : ' closed'}`}>
           <ul>
-            {filteredMenu.map((item) => (
+            {filteredMenu.map(item => (
               <li key={item.label}>
-                <button
-                  className={`main-link${activeMain === item.label ? " active" : ""}`}
-                  onClick={() => setActiveMain(item.label)}
-                >
+                <button className={activeMain === item.label ? 'active main-link' : 'main-link'} onClick={() => setActiveMain(item.label)}>
                   <span className="main-icon">{item.icon}</span> {item.label}
                 </button>
                 {activeMain === item.label && item.subLinks && (
                   <ul className="sub-links open">
-                    {item.subLinks.map((sub) => (
+                    {item.subLinks.map(sub => (
                       <li key={sub.key}>
-                        <button
-                          className="sub-link"
-                          onClick={() => {
-                            if (sub.key === "create-assignment") setShowCreateAssignment(true);
-                          }}
-                        >
+                        <button className="sub-link" onClick={() => {sub.key==='create-assignment' && setShowCreateAssignment(true)}}>
                           {sub.label}
                         </button>
                       </li>
@@ -302,58 +439,28 @@ export default function Faculty() {
 
         <main className="student-content">
           {activeMain === "Assignments Submission" ? (
-            <div>
+            <>
               <h2>Uploaded Assignments</h2>
               {assignments.length === 0 && <p>No assignments uploaded.</p>}
               <ul>
-                {assignments.map(({ _id, originalName, fileUrl }) => (
-                  <li key={_id} style={{ marginBottom: 12 }}>
-                    <a
-                      href={`https://neuraliftx.onrender.com${fileUrl}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ marginRight: "1rem", fontWeight: 500 }}
-                    >
+                {assignments.map(({_id, originalName, fileUrl}) => (
+                  <li key={_id} style={{marginBottom:12}}>
+                    <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{fontWeight:'500', marginRight: '10px'}}>
                       {originalName}
                     </a>
-                    <button
-                      onClick={() => handleDeleteAssignment(_id)}
-                      style={{
-                        color: "#ef4444",
-                        fontWeight: 600,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer"
-                      }}
-                    >
-                      Delete
-                    </button>
+                    <button style={{color:'#ef4444', cursor:'pointer', background:'none', border:'none', fontWeight:'600'}} onClick={() => handleDeleteAssignment(_id)}>Delete</button>
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : (
-            <h2>{activeMain} content here</h2>
-          )}
+            </>
+          ) : <h2>{activeMain} content here</h2>}
         </main>
       </div>
 
-      {showCreateAssignment && (
-        <CreateAssignmentModal
-          token={token}
-          onClose={() => setShowCreateAssignment(false)}
-          onUpload={handleUploadSuccess}
-        />
-      )}
-
-      {showProfileModal && (
-        <ProfileModal
-          user={user}
-          token={token}
-          onClose={() => setShowProfileModal(false)}
-          onLogout={handleLogout}
-          onUpdateProfilePic={handleUpdateProfilePic}
-        />
+      {showCreateAssignment && <CreateAssignmentModal token={token} onClose={() => setShowCreateAssignment(false)} onUpload={handleUploadSuccess}/>}
+      {showProfile && <ProfileModal user={user} token={token} onClose={() => setShowProfile(false)} onLogout={handleLogout} onUpdate={handleProfileUpdate}/>}
+      {showAnnouncementPopup && currentAnnouncement && (
+        <AnnouncementPopup announcement={currentAnnouncement} onClose={closeAnnouncementPopup} token={token} />
       )}
     </div>
   );
