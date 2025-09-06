@@ -383,10 +383,10 @@ export default function Faculty() {
           <span />
           <span />
         </button>
-        {/* <div className="header-brand">
+        <div className="header-brand">
           <img src={logo} alt="Logo" className="logo" />
           <span className="header-title">EduConnect - Faculty</span>
-        </div> */}
+        </div>
         <div className="search-bar">
           <input
             type="text"

@@ -469,3 +469,53 @@ body {
 .generate-quiz-btn:hover {
   background-color: #2563eb;
 }
+
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Space between logo and text */
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.header-brand .logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.header-brand .header-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #2c3e50;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .header-brand .header-title {
+    font-size: 1.3rem;
+  }
+  .header-brand .logo {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 570px) {
+  .header-brand {
+    gap: 8px;
+  }
+  .header-brand .header-title {
+    font-size: 1.1rem;
+  }
+  .header-brand .logo {
+    width: 32px;
+    height: 32px;
+  }
+}
