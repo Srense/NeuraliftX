@@ -845,7 +845,7 @@ app.get("/api/announcements/active", authenticateJWT, async (req, res) => {
     // Build filter for any matching role visibility
     const roleFilters = [];
 
-    // if (role === "student") roleFilters.push({ "visibleTo.students": true });
+    if (role === "student") roleFilters.push({ "visibleTo.students": true });
     if (role === "faculty") roleFilters.push({ "visibleTo.faculty": true });
     if (role === "alumni") roleFilters.push({ "visibleTo.alumni": true });
 
