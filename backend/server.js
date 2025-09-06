@@ -863,50 +863,33 @@ app.get("/api/assignments", authenticateJWT, async (req, res) => {
 
 // Individual Leaderboard API - Top Rankers by Average Quiz Score
 
+// In your Express app
 app.get("/api/leaderboard/individual", async (req, res) => {
   try {
-    // Aggregate average score per student from QuizAttempt collection
-    const students = await QuizAttempt.aggregate([
-      {
-        $group: {
-          _id: "$userId",                 // Group by student ID
-          avgScore: { $avg: "$score" },   // Calculate average score
-          attempts: { $sum: 1 }           // Total quiz attempts
-        }
-      },
-      // Lookup user details (first name, last name, email)
-      {
-        $lookup: {
-          from: "users",                  // Your users collection
-          localField: "_id",
-          foreignField: "_id",
-          as: "userData"
-        }
-      },
-      { $unwind: "$userData" },
-      // Choose which fields to return
-      {
-        $project: {
-          studentId: "$_id",
-          avgScore: 1,
-          attempts: 1,
-          firstName: "$userData.firstName",
-          lastName: "$userData.lastName",
-          email: "$userData.email"
-        }
-      },
-      // Sort by highest average score first
-      { $sort: { avgScore: -1 } },
-      // Optional: limit to top 100
-      { $limit: 100 }
-    ]);
+    // Fetch students and sort by coins descending
+    const users = await User.find({ role: "student" })
+      .sort({ coins: -1 })
+      .select("firstName lastName coins")
+      .lean();
 
-    res.json(students);
+    const leaderboard = Array.isArray(users)
+      ? users.map((u, idx) => ({
+          studentId: u._id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          totalCoins: u.coins || 0,
+          rank: idx + 1,
+        }))
+      : [];
+
+    res.json(leaderboard);
   } catch (err) {
     console.error("Leaderboard fetch error:", err);
-    res.status(500).json({ error: "Failed to fetch leaderboard" });
+    // Always return array, never a crash or object!
+    res.status(200).json([]);
   }
 });
+
 
 app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
   if (!["faculty", "admin"].includes(req.user.role)) {
