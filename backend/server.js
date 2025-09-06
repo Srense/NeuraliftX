@@ -482,6 +482,7 @@ app.get("/api/profile", authenticateJWT, (req, res) => {
       email: req.user.email,
       role: req.user.role,
       roleIdValue: req.user.roleIdValue,
+      coins: req.user.coins || 0,
       profilePicUrl: req.user.profilePicUrl || "",
     },
   });
