@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PdfViewer from "./PDFViewer"; // If you want to preview PDFs inline
 import "./Student.css";
-import logo from "../assets/logo.png"; // Adjust path if needed
+import logo from "../assets/Logo.png"; // Adjust path if needed
 
 
 // === Announcement Popup Component ===
