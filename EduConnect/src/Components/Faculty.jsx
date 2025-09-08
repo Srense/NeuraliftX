@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Student.css";
 import logo from "../assets/Logo.png"; // Please adjust path as needed
-const themes = ["default", "dark", "blue"]; // same theme keys as admin
 
 // Announcement Popup Component
 function AnnouncementPopup({ announcement, onClose, token }) {
@@ -29,7 +28,6 @@ function AnnouncementPopup({ announcement, onClose, token }) {
     }
     setSubmitting(false);
   };
-
 
   if (!announcement) return null;
 
@@ -249,22 +247,6 @@ export default function Faculty() {
       subLinks: [{ label: "Create Assignment", key: "create-assignment" }],
     },
   ];
-
-  useEffect(() => {
-    const theme = localStorage.getItem("admin_theme") || "default";
-    document.body.classList.remove(...themes);
-    document.body.classList.add(theme);
-
-    // Optional: listen for theme changes in other tabs/windows
-    function onStorage(event) {
-      if (event.key === "admin_theme" && event.newValue && themes.includes(event.newValue)) {
-        document.body.classList.remove(...themes);
-        document.body.classList.add(event.newValue);
-      }
-    }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
 
   useEffect(() => {
     async function fetchUser() {
