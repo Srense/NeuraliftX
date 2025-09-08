@@ -10,6 +10,8 @@ import QuizPage from "./Components/QuizPage";
 import VerifyEmail from "./Components/VerifyEmail";
 import PdfViewerPage from "./Components/PDFViewer";
 import Admin from "./Components/Admin";
+import { ThemeProvider } from "./ThemeContext";
+import ThemeSelector from "./ThemeSelector"; 
 
 
 // Role-based protected route for multi-session support
@@ -64,6 +66,7 @@ const RoleBasedRoute = ({ allowedRoles }) => {
 
 const App = () => {
   return (
+    <ThemeProvider>
     <Router>
       <Routes>
         <Route path="/" element={<Homepage />} />
@@ -75,6 +78,7 @@ const App = () => {
         <Route path="/quiz/:assignmentId" element={<QuizPage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/pdf-viewer" element={<PdfViewerPage />} />
+
 
         {/* Protected routes per role */}
         <Route element={<RoleBasedRoute allowedRoles={['student']} />}>
@@ -92,6 +96,7 @@ const App = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
+    </ThemeProvider>
   );
 };
 
