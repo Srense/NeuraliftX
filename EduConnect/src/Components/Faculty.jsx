@@ -257,6 +257,7 @@ export default function Faculty() {
     const themes = ["default", "dark", "blue"];
     document.body.classList.remove(...themes);
     document.body.classList.add(adminTheme);
+    
     // Listen for theme changes in other tabs/windows
     function onStorage(event) {
       if (event.key === "admin_theme" && event.newValue && themes.includes(event.newValue)) {
