@@ -452,3 +452,48 @@ button:hover {
     max-width: 64vw;
   }
 }
+/* Default theme */
+body.default {
+  --primary-bg-color: #ffffff;
+  --primary-text-color: #000000;
+  --header-bg-color: #007bff;
+  --sidebar-bg-color: #f8f9fa;
+  --link-color: #007bff;
+}
+
+/* Dark theme */
+body.dark {
+  --primary-bg-color: #121212;
+  --primary-text-color: #e0e0e0;
+  --header-bg-color: #1f1f1f;
+  --sidebar-bg-color: #1a1a1a;
+  --link-color: #bb86fc;
+}
+
+/* Blue theme */
+body.blue {
+  --primary-bg-color: #e6f0ff;
+  --primary-text-color: #003366;
+  --header-bg-color: #004080;
+  --sidebar-bg-color: #cce0ff;
+  --link-color: #003366;
+}
+
+/* Use CSS variables throughout your components */
+
+.admin-root, .admin-content, .admin-header, .admin-sidebar {
+  background-color: var(--primary-bg-color);
+  color: var(--primary-text-color);
+}
+
+.admin-header {
+  background-color: var(--header-bg-color);
+}
+
+.admin-sidebar {
+  background-color: var(--sidebar-bg-color);
+}
+
+a, button {
+  color: var(--link-color);
+}

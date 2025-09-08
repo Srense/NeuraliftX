@@ -2,23 +2,25 @@ import React, { useState, useEffect } from "react";
 import logo from "../assets/Logo.png";
 import './Admin.css';
 
+const themes = [
+  { key: "default", label: "Default" },
+  { key: "dark", label: "Dark Mode" },
+  { key: "blue", label: "Blue Theme" },
+];
+
 const Admin = () => {
   const token = localStorage.getItem("token_admin");
-
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState(null);
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Dashboard");
   const [activeSub, setActiveSub] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredMenu, setFilteredMenu] = useState([]);
-
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementError, setAnnouncementError] = useState(null);
-
   const [formData, setFormData] = useState({
     title: "",
     date: "",
@@ -30,18 +32,8 @@ const Admin = () => {
     visibleTo: { students: false, faculty: false, alumni: false },
   });
 
-  // Admin Menu (example; expand as needed)
-  const menu = [
-    { label: "Dashboard", icon: "🏠", subLinks: [] },
-    {
-      label: "Announcements",
-      icon: "📢",
-      subLinks: [
-        { label: "Manage Announcements", key: "manage-announcements" },
-      ],
-    },
-    // Add other admin panels as needed
-  ];
+  // Theme state - load from localStorage or default to "default"
+  const [theme, setTheme] = useState(() => localStorage.getItem("admin_theme") || "default");
 
   useEffect(() => {
     async function fetchUserProfile() {
@@ -58,7 +50,7 @@ const Admin = () => {
         const data = await res.json();
         setUser(data.user);
       } catch (e) {
-        setError("Failed to load user profile.",e);
+        setError("Failed to load user profile.");
       } finally {
         setLoadingUser(false);
       }
@@ -90,6 +82,23 @@ const Admin = () => {
     }
   }
 
+  // Apply theme as class on body element whenever theme changes
+  useEffect(() => {
+    document.body.classList.remove(...themes.map(t => t.key));
+    document.body.classList.add(theme);
+    localStorage.setItem("admin_theme", theme);
+  }, [theme]);
+
+  const menu = [
+    { label: "Dashboard", icon: "🏠", subLinks: [] },
+    {
+      label: "Announcements",
+      icon: "📢",
+      subLinks: [{ label: "Manage Announcements", key: "manage-announcements" }],
+    },
+    // Add other admin panels as needed
+  ];
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     if (name.startsWith("visibleTo.")) {
@@ -109,10 +118,7 @@ const Admin = () => {
   const addSurveyQuestion = () =>
     setFormData((fd) => ({
       ...fd,
-      surveyQuestions: [
-        ...fd.surveyQuestions,
-        { question: "", inputType: "text", options: [] },
-      ],
+      surveyQuestions: [...fd.surveyQuestions, { question: "", inputType: "text", options: [] }],
     }));
 
   const updateSurveyQuestion = (i, key, value) => {
@@ -186,10 +192,9 @@ const Admin = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("token_admin");
-    window.location.href = "/login"; // Or use navigate
+    window.location.href = "/login";
   };
 
-  // Filter menu when searching
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredMenu(menu);
@@ -208,9 +213,8 @@ const Admin = () => {
       })
       .filter(Boolean);
     setFilteredMenu(filtered);
-  }, [searchTerm]);
+  }, [searchTerm, menu]);
 
-  // Content area render
   let contentArea = null;
   if (activeMain === "Dashboard") {
     contentArea = <h2>Welcome, Admin {user?.firstName || ""}</h2>;
@@ -218,50 +222,21 @@ const Admin = () => {
     contentArea = (
       <div>
         <h3>Create Announcement</h3>
-        <input
-          name="title"
-          placeholder="Title"
-          value={formData.title}
-          onChange={handleInputChange}
-        />
-        <input
-          type="date"
-          name="date"
-          value={formData.date}
-          onChange={handleInputChange}
-        />
-        <input
-          type="time"
-          name="time"
-          value={formData.time}
-          onChange={handleInputChange}
-        />
-        <input
-          name="refNumber"
-          placeholder="Reference Number"
-          value={formData.refNumber}
-          onChange={handleInputChange}
-        />
+        <input name="title" placeholder="Title" value={formData.title} onChange={handleInputChange} />
+        <input type="date" name="date" value={formData.date} onChange={handleInputChange} />
+        <input type="time" name="time" value={formData.time} onChange={handleInputChange} />
+        <input name="refNumber" placeholder="Reference Number" value={formData.refNumber} onChange={handleInputChange} />
         <div>
           <label>
             Content Type:
-            <select
-              name="contentType"
-              value={formData.contentType}
-              onChange={handleInputChange}
-            >
+            <select name="contentType" value={formData.contentType} onChange={handleInputChange}>
               <option value="text">Text</option>
               <option value="survey">Survey</option>
             </select>
           </label>
         </div>
         {formData.contentType === "text" ? (
-          <textarea
-            name="message"
-            placeholder="Message"
-            value={formData.message}
-            onChange={handleInputChange}
-          />
+          <textarea name="message" placeholder="Message" value={formData.message} onChange={handleInputChange} />
         ) : (
           <div>
             <button onClick={addSurveyQuestion}>Add Survey Question</button>
@@ -270,33 +245,23 @@ const Admin = () => {
                 <input
                   placeholder="Question"
                   value={q.question}
-                  onChange={(e) =>
-                    updateSurveyQuestion(i, "question", e.target.value)
-                  }
+                  onChange={(e) => updateSurveyQuestion(i, "question", e.target.value)}
                 />
                 <select
                   value={q.inputType}
-                  onChange={(e) =>
-                    updateSurveyQuestion(i, "inputType", e.target.value)
-                  }
+                  onChange={(e) => updateSurveyQuestion(i, "inputType", e.target.value)}
                 >
                   <option value="text">Text</option>
                   <option value="radio">Single Choice</option>
                   <option value="checkbox">Multiple Choice</option>
                   <option value="select">Dropdown</option>
                 </select>
-                {(q.inputType === "radio" ||
-                  q.inputType === "checkbox" ||
-                  q.inputType === "select") && (
+                {(q.inputType === "radio" || q.inputType === "checkbox" || q.inputType === "select") && (
                   <input
                     placeholder="Options (comma separated)"
                     value={q.options.join(",")}
                     onChange={(e) =>
-                      updateSurveyQuestion(
-                        i,
-                        "options",
-                        e.target.value.split(",").map((o) => o.trim())
-                      )
+                      updateSurveyQuestion(i, "options", e.target.value.split(",").map((o) => o.trim()))
                     }
                   />
                 )}
@@ -335,7 +300,6 @@ const Admin = () => {
           </label>
         </div>
         <button onClick={handleSubmitAnnouncement}>Create</button>
-
         <h3 style={{ marginTop: "2rem" }}>Existing Announcements</h3>
         {loadingAnnouncements ? (
           <p>Loading announcements...</p>
@@ -351,9 +315,7 @@ const Admin = () => {
                 {a.visibleTo?.students && " Students"}
                 {a.visibleTo?.faculty && " Faculty"}
                 {a.visibleTo?.alumni && " Alumni"}
-                <button onClick={() => handleDeleteAnnouncement(a._id)}>
-                  Delete
-                </button>
+                <button onClick={() => handleDeleteAnnouncement(a._id)}>Delete</button>
               </li>
             ))}
           </ul>
@@ -363,9 +325,6 @@ const Admin = () => {
   } else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
-
-  if (loadingUser) return <div>Loading user info...</div>;
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
 
   return (
     <div className={`admin-root ${sidebarOpen ? "" : "closed"}`}>
@@ -387,11 +346,25 @@ const Admin = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <span className="search-icon">&#128269;</span>
+          <span className="search-icon">🔍</span>
         </div>
-        <div className="header-icons">
-          {/* Add any icons if needed */}
+
+        {/* Theme Selector */}
+        <div style={{ marginLeft: "1rem" }}>
+          <label htmlFor="themeSelect" style={{ color: "white", marginRight: "0.5rem" }}>Select Theme:</label>
+          <select
+            id="themeSelect"
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            style={{ padding: "0.2rem 0.5rem" }}
+          >
+            {themes.map((t) => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </select>
         </div>
+
+        <div className="header-icons"></div>
         <div
           className="profile-info"
           style={{ cursor: "pointer" }}
@@ -401,11 +374,33 @@ const Admin = () => {
           <span className="profile-name">{user?.firstName} {user?.lastName}</span>
         </div>
       </header>
-
       <div className={`admin-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`admin-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
-            {filteredMenu.map((main) => (
+            {filteredMenu.length === 0 ? menu.map((main) => (
+              <li key={main.label}>
+                <button
+                  className={`main-link${activeMain === main.label ? " active" : ""}`}
+                  onClick={() => handleMainClick(main.label)}
+                >
+                  <span className="main-icon">{main.icon}</span> {main.label}
+                </button>
+                {activeMain === main.label && main.subLinks.length > 0 && (
+                  <ul className="sub-links open">
+                    {main.subLinks.map((sub) => (
+                      <li key={sub.key}>
+                        <button
+                          className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                          onClick={() => handleSubClick(sub.key)}
+                        >
+                          {sub.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )) : filteredMenu.map((main) => (
               <li key={main.label}>
                 <button
                   className={`main-link${activeMain === main.label ? " active" : ""}`}
@@ -431,7 +426,6 @@ const Admin = () => {
             ))}
           </ul>
         </nav>
-
         <main className="admin-content">{contentArea}</main>
       </div>
     </div>
