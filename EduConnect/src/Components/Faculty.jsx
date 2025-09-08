@@ -29,6 +29,22 @@ function AnnouncementPopup({ announcement, onClose, token }) {
     setSubmitting(false);
   };
 
+  useEffect(() => {
+    const theme = localStorage.getItem("admin_theme") || "default";
+    document.body.classList.remove("default", "dark", "blue"); // remove all known themes
+    document.body.classList.add(theme);
+
+    // Optional: listen for changes in other tabs/windows
+    function onStorage(event) {
+      if (event.key === "admin_theme" && event.newValue) {
+        document.body.classList.remove("default", "dark", "blue");
+        document.body.classList.add(event.newValue);
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   if (!announcement) return null;
 
   return (
