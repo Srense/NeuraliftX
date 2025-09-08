@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Student.css";
-import logo from "../assets/Logo.png"; // Please adjust path as needed
+import logo from "../assets/Logo.png"; // Adjust path if needed
 
 // Announcement Popup Component
 function AnnouncementPopup({ announcement, onClose, token }) {
@@ -34,7 +34,9 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="close-btn">×</button>
+        <button onClick={onClose} className="close-btn">
+          ×
+        </button>
         {(announcement.title || announcement.message) && (
           <>
             <h2>{announcement.title || "Announcement"}</h2>
@@ -63,9 +65,11 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                           type={q.inputType}
                           name={`question-${i}`}
                           value={opt}
-                          checked={q.inputType === 'radio'
-                            ? responses[i] === opt
-                            : Array.isArray(responses[i]) && responses[i].includes(opt)}
+                          checked={
+                            q.inputType === 'radio'
+                              ? responses[i] === opt
+                              : Array.isArray(responses[i]) && responses[i].includes(opt)
+                          }
                           onChange={(e) => {
                             if (q.inputType === 'radio') {
                               handleChange(i, e.target.value);
@@ -160,7 +164,7 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreview] = useState(user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : '');
+  const [previewUrl, setPreview] = useState(user?.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : '');
 
   const handleChange = e => {
     const file = e.target.files[0];
@@ -223,7 +227,6 @@ export default function Faculty() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
-  const [activeSub, setActiveSub] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredMenu, setFilteredMenu] = useState([]);
 
@@ -247,6 +250,23 @@ export default function Faculty() {
       subLinks: [{ label: "Create Assignment", key: "create-assignment" }],
     },
   ];
+
+  // Load and apply theme (reflecting admin's theme choice)
+  useEffect(() => {
+    const adminTheme = localStorage.getItem("admin_theme") || "default";
+    const themes = ["default", "dark", "blue"];
+    document.body.classList.remove(...themes);
+    document.body.classList.add(adminTheme);
+    // Listen for theme changes in other tabs/windows
+    function onStorage(event) {
+      if (event.key === "admin_theme" && event.newValue && themes.includes(event.newValue)) {
+        document.body.classList.remove(...themes);
+        document.body.classList.add(event.newValue);
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     async function fetchUser() {
@@ -284,8 +304,12 @@ export default function Faculty() {
   }, [user, navigate]);
 
   useEffect(() => {
-    setFilteredMenu(menu);
-  }, []);
+    setFilteredMenu(
+      menu.filter((item) =>
+        item.label.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [searchTerm, menu]);
 
   useEffect(() => {
     if (user) {
@@ -373,7 +397,7 @@ export default function Faculty() {
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  if (error) return <div style={{ color: "red" }}>{error}</div>;
 
   return (
     <div className="student-root">
@@ -454,7 +478,12 @@ export default function Faculty() {
               <ul>
                 {assignments.map(({ _id, originalName, fileUrl }) => (
                   <li key={_id} style={{ marginBottom: 12 }}>
-                    <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{ fontWeight: 500, marginRight: 10 }}>
+                    <a
+                      href={`https://neuraliftx.onrender.com${fileUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontWeight: 500, marginRight: 10 }}
+                    >
                       {originalName}
                     </a>
                     <button
