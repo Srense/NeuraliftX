@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Admin.css";
+import "./Admin.css"; // Use the universal theme CSS file for all dashboards!
 import logo from "../assets/Logo.png";
-import "./Student.css";
+import"./Student.css";
 
-const BACKEND_URL = "https://neuraliftx.onrender.com";
-
-// ========== THEME SYNC HOOK ==========
+// ================= THEME SYNC HOOK ================
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
-      const res = await fetch(`${BACKEND_URL}/api/theme`);
+      const res = await fetch("/api/theme");
       if (res.ok) {
         const { theme } = await res.json();
         document.body.classList.remove("default", "dark", "blue");
@@ -20,6 +18,7 @@ function useGlobalTheme() {
     syncTheme();
   }, []);
 }
+// ===================================================
 
 // ========== Announcement Popup (unchanged) =========
 function AnnouncementPopup({ announcement, onClose, token }) {
@@ -32,7 +31,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/feedback`, {
+      const res = await fetch("https://neuraliftx.onrender.com/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ announcementId: announcement._id, responses }),
@@ -46,6 +45,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   };
 
   if (!announcement) return null;
+
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
@@ -126,7 +126,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// CreateAssignmentModal (unchanged)...
+// ========== Assignment upload modal ==============
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -138,8 +138,9 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
     setUploading(true);
     const formData = new FormData();
     formData.append('pdf', selectedFile);
+
     try {
-      const res = await fetch(`${BACKEND_URL}/api/assignments`, {
+      const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -170,73 +171,18 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
   );
 }
 
-// ---------- Student Answer Submissions Modal ----------
-function SubmissionsModal({ assignment, show, onClose, token }) {
-  const [loading, setLoading] = useState(false);
-  const [submissions, setSubmissions] = useState([]);
-
-  useEffect(() => {
-    if (!show || !assignment) return;
-    setLoading(true);
-    fetch(`${BACKEND_URL}/api/assignment/${assignment._id}/answers`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(data => setSubmissions(data))
-      .catch(() => setSubmissions([]))
-      .finally(() => setLoading(false));
-  }, [show, assignment, token]);
-
-  if (!show || !assignment) return null;
-
-  return (
-    <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" style={{ maxWidth: 700, minHeight: 250 }} onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="close-btn">×</button>
-        <h3>
-          Submissions for: <span style={{color:"#2267c7"}}>{assignment.originalName}</span>
-        </h3>
-        {loading ? (
-          <p>Loading submissions...</p>
-        ) : submissions.length === 0 ? (
-          <p>No student submissions yet for this assignment.</p>
-        ) : (
-          <ul>
-            {submissions.map(sub => (
-              <li key={sub._id} style={{ marginBottom: 15, padding: 2 }}>
-                <b>{sub.studentId?.firstName} {sub.studentId?.lastName}</b>
-                {" ("}{sub.studentId?.email}{") – "}
-                <a
-                  href={sub.fileUrl.startsWith("http") ? sub.fileUrl : `${BACKEND_URL}${sub.fileUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: "#0a84ff", fontWeight: 500 }}
-                >
-                  View Submission
-                </a>
-                {" | "}
-                <span style={{ fontSize: 12, color: "#888" }}>
-                  Uploaded at: {new Date(sub.uploadTime).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ========== Profile Modal ===========
+// ========== Profile Modal =============
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreview] = useState(user.profilePicUrl ? `${BACKEND_URL}${user.profilePicUrl}` : '');
+  const [previewUrl, setPreview] = useState(user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : '');
 
   const handleChange = e => {
     const file = e.target.files[0];
     setSelectedFile(file);
-    if (file) setPreview(URL.createObjectURL(file));
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    }
   };
 
   const handleUpload = async () => {
@@ -245,7 +191,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
     const formData = new FormData();
     formData.append('profilePic', selectedFile);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/profile/picture`, {
+      const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -254,7 +200,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
       const data = await res.json();
       onUpdate(data.profilePicUrl);
       alert("Profile pic updated");
-      setPreview(`${BACKEND_URL}${data.profilePicUrl}`);
+      setPreview(`https://neuraliftx.onrender.com${data.profilePicUrl}`);
       setSelectedFile(null);
     } catch {
       alert("Upload error");
@@ -282,9 +228,9 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   );
 }
 
-// ========== FACULTY DASHBOARD COMPONENT ============
+// ========== FACULTY ROOT COMPONENT===============
 export default function Faculty() {
-  useGlobalTheme();
+  useGlobalTheme(); // THEME SYNC
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token_faculty");
@@ -309,8 +255,6 @@ export default function Faculty() {
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
-  const [viewSubmissionsAssignment, setViewSubmissionsAssignment] = useState(null);
-
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -329,7 +273,7 @@ export default function Faculty() {
         return;
       }
       try {
-        const res = await fetch(`${BACKEND_URL}/api/profile`, {
+        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch user");
@@ -364,7 +308,7 @@ export default function Faculty() {
   useEffect(() => {
     if (user) {
       setLoadingAnnouncements(true);
-      fetch(`${BACKEND_URL}/api/announcements/active`, {
+      fetch("https://neuraliftx.onrender.com/api/announcements/active", {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => {
@@ -394,7 +338,7 @@ export default function Faculty() {
 
   async function fetchAssignments() {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/assignments`, {
+      const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch assignments");
@@ -412,7 +356,7 @@ export default function Faculty() {
   const handleDeleteAssignment = async (id) => {
     if (!window.confirm("Delete this assignment?")) return;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/assignments/${id}`, {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/assignments/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -481,12 +425,13 @@ export default function Faculty() {
           <span className="profile-name">{user?.firstName} {user?.lastName}</span>
           <span className="profile-uid">{user?.roleIdValue}</span>
           <img
-            src={user?.profilePicUrl ? `${BACKEND_URL}${user.profilePicUrl}` : "https://via.placeholder.com/40"}
+            src={user?.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : "https://via.placeholder.com/40"}
             alt="Profile"
             className="profile-pic"
           />
         </div>
       </header>
+
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
@@ -518,6 +463,7 @@ export default function Faculty() {
             ))}
           </ul>
         </nav>
+
         <main className="student-content">
           {activeMain === "Assignments Submission" ? (
             <>
@@ -526,7 +472,7 @@ export default function Faculty() {
               <ul>
                 {assignments.map(({ _id, originalName, fileUrl }) => (
                   <li key={_id} style={{ marginBottom: 12 }}>
-                    <a href={`${BACKEND_URL}${fileUrl}`} target="_blank" rel="noreferrer" style={{ fontWeight: 500, marginRight: 10 }}>
+                    <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{ fontWeight: 500, marginRight: 10 }}>
                       {originalName}
                     </a>
                     <button
@@ -535,29 +481,16 @@ export default function Faculty() {
                     >
                       Delete
                     </button>
-                    {/* Submissions modal trigger */}
-                    <button
-                      style={{ marginLeft: 14, color: "#093b91", fontWeight: 600, border: "none", background: "none", cursor: "pointer" }}
-                      onClick={() => setViewSubmissionsAssignment({ _id, originalName })}
-                    >
-                      View Submissions
-                    </button>
                   </li>
                 ))}
               </ul>
-              {/* Submissions modal */}
-              <SubmissionsModal
-                assignment={viewSubmissionsAssignment}
-                show={!!viewSubmissionsAssignment}
-                onClose={() => setViewSubmissionsAssignment(null)}
-                token={token}
-              />
             </>
           ) : (
             <h2>{activeMain} content here</h2>
           )}
         </main>
       </div>
+
       {showCreateAssignment && (
         <CreateAssignmentModal token={token} onUpload={handleUploadSuccess} onClose={() => setShowCreateAssignment(false)} />
       )}
