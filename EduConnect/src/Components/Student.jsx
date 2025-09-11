@@ -188,8 +188,11 @@ function useGlobalTheme() {
       }
     }
     syncTheme();
+    const interval = setInterval(syncTheme, 3000); // 3 seconds
+    return () => clearInterval(interval);
   }, []);
 }
+
 // ===========================================================================================
 
 export default function Student() {
