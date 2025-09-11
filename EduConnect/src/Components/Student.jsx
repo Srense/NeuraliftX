@@ -180,7 +180,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
-      const res = await fetch("/api/theme");
+      const res = await fetch("https://neuraliftx.onrender.com/api/theme");
       if (res.ok) {
         const { theme } = await res.json();
         document.body.classList.remove("default", "dark", "blue");
