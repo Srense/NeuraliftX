@@ -60,7 +60,7 @@ const Admin = () => {
   const handleThemeChange = async (newTheme) => {
     setTheme(newTheme);
     if (!token) return;
-    await fetch('/api/admin/theme', {
+    await fetch('https://neuraliftx.onrender.com/api/admin/theme', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ theme: newTheme }),
@@ -319,7 +319,7 @@ const Admin = () => {
             <input
               type="checkbox"
               name="visibleTo.alumni"
-              checked={formData.visibleTo.alumni}
+              checked={formData.visibleTo.aluamni}
               onChange={handleInputChange}
             />
             Alumni
