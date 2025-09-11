@@ -208,8 +208,14 @@ const quizAttemptSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+
 const QuizAttempt = mongoose.model("QuizAttempt", quizAttemptSchema);
 
+// THEME SETTINGS SCHEMA & MODEL (add directly in your server file)
+const themeSettingsSchema = new mongoose.Schema({
+  globalTheme: { type: String, default: "default" } // "default", "dark", "blue"
+});
+const ThemeSettings = mongoose.model("ThemeSettings", themeSettingsSchema);
 
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -796,6 +802,33 @@ app.post("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), 
     res.status(500).json({ success: false, error: "Failed to create announcement" });
   }
 });
+
+// Get current global theme (accessible to all users, no auth required)
+app.get("/api/theme", async (req, res) => {
+  try {
+    let settings = await ThemeSettings.findOne({});
+    res.json({ theme: settings?.globalTheme || "default" });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to fetch theme" });
+  }
+});
+
+// Set global theme (admin only)
+app.post("/api/admin/theme", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
+  try {
+    const { theme } = req.body;
+    if (!["default", "dark", "blue"].includes(theme))
+      return res.status(400).json({ error: "Invalid theme" });
+    let settings = await ThemeSettings.findOne({});
+    if (!settings) settings = new ThemeSettings();
+    settings.globalTheme = theme;
+    await settings.save();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to update theme" });
+  }
+});
+
 
 app.get("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
   try {

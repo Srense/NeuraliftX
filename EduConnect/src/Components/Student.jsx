@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Student.css";
+import "./Admin.css"; // Notice: Use the shared theme CSS for all dashboards!
 import logo from "../assets/Logo.png";
 import HomeDashboard from "./HomeDashboard";
 import AttendanceDashboard from "./AttendanceDashboard";
@@ -8,16 +8,13 @@ import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 
-
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
-
 
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(getProfileImageUrl(user.profilePicUrl));
-
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -27,13 +24,11 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     }
   };
 
-
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("profilePic", selectedFile);
-
 
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
@@ -54,7 +49,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     }
   };
 
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
@@ -66,7 +60,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <p><b>Email:</b> {user.email}</p>
         <p><b>Coins Earned:</b> {user.coins || 0}</p>
 
-
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
@@ -77,8 +70,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   );
 }
 
-
-// ============ ADDITION: Announcement Popup Modal Component ===============
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -183,21 +174,34 @@ function AnnouncementPopup({ announcement, onClose, token }) {
     </div>
   );
 }
-// ============ END ADDITION ==================================================
 
+// ======================= THEME SYNC LOGIC: fetch global theme and apply ====================
+function useGlobalTheme() {
+  useEffect(() => {
+    async function syncTheme() {
+      const res = await fetch("/api/theme");
+      if (res.ok) {
+        const { theme } = await res.json();
+        document.body.classList.remove("default", "dark", "blue");
+        document.body.classList.add(theme);
+      }
+    }
+    syncTheme();
+  }, []);
+}
+// ===========================================================================================
 
 export default function Student() {
+  useGlobalTheme();
   const navigate = useNavigate();
   const token = localStorage.getItem("token_student");
   const handleGenerateQuiz = (assignmentId) => {
     navigate(`/quiz/${assignmentId}`);
   };
 
-
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState(null);
-
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
@@ -206,17 +210,14 @@ export default function Student() {
   const [filteredMenu, setFilteredMenu] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // ============== ADDITIONAL STATES FOR ANNOUNCEMENTS ======================
+  // Announcement popup states
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementError, setAnnouncementError] = useState(null);
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
-  // ========================================================================
-
 
   const [assignments, setAssignments] = useState([]); // for storing fetched assignments
-
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -246,7 +247,6 @@ export default function Student() {
     },
   ];
 
-
   useEffect(() => {
     async function fetchUser() {
       if (!token) {
@@ -261,7 +261,7 @@ export default function Student() {
         const data = await res.json();
         setUser(data.user);
       } catch (err) {
-        setError("Could not load user data. Please log in again.", err);
+        setError("Could not load user data. Please log in again.");
         localStorage.removeItem("token_student");
         navigate("/login");
       } finally {
@@ -271,7 +271,7 @@ export default function Student() {
     fetchUser();
   }, [token, navigate]);
 
-  // ======= ADDITION: fetch announcements after user loads ===========
+  // Fetch announcements after user loads
   useEffect(() => {
     if (!user) return;
     async function fetchAnnouncements() {
@@ -298,8 +298,6 @@ export default function Student() {
     }
     fetchAnnouncements();
   }, [user, token]);
-  // =================================================================
-
 
   // Fetch assignments when "Quiz/Assignments" menu is active
   useEffect(() => {
@@ -307,7 +305,6 @@ export default function Student() {
       fetchAssignments();
     }
   }, [activeMain]);
-
 
   async function fetchAssignments() {
     try {
@@ -318,10 +315,9 @@ export default function Student() {
       const data = await res.json();
       setAssignments(data);
     } catch (e) {
-      alert("Failed to load assignments", e);
+      alert("Failed to load assignments");
     }
   }
-
 
   useEffect(() => {
     if (user) {
@@ -333,7 +329,6 @@ export default function Student() {
       }
     }
   }, [user, navigate]);
-
 
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -358,9 +353,7 @@ export default function Student() {
     setFilteredMenu(filtered);
   }, [searchTerm]);
 
-
   const toggleSidebar = () => setSidebarOpen((open) => !open);
-
 
   const handleMainClick = (label) => {
     setActiveMain(label);
@@ -372,23 +365,19 @@ export default function Student() {
     }
   };
 
-
   const handleSubClick = (key) => setActiveSub(key);
-
 
   const handleLogout = () => {
     localStorage.removeItem("token_student");
     navigate("/login");
   };
 
-
   const handleUpdateProfilePic = (profilePicUrl) => {
     setUser((prev) => ({ ...prev, profilePicUrl }));
     setShowProfileModal(false);
   };
 
-
-  // New - Close announcement and show next if any
+  // Close announcement and show next if any
   const closeAnnouncementPopup = () => {
     const currentIndex = announcements.findIndex((a) => a._id === currentAnnouncement?._id);
     const nextIndex = currentIndex + 1;
@@ -399,7 +388,6 @@ export default function Student() {
       setCurrentAnnouncement(null);
     }
   };
-
 
   let contentArea = null;
   if (activeMain === "Home") {
@@ -446,10 +434,8 @@ export default function Student() {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
 
-
   if (loadingUser) return <div className="loading">Loading user info...</div>;
   if (error) return <div className="error">{error}</div>;
-
 
   return (
     <div className="student-root">
@@ -486,7 +472,6 @@ export default function Student() {
         </div>
       </header>
 
-
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
@@ -511,10 +496,8 @@ export default function Student() {
           </ul>
         </nav>
 
-
         <main className="student-content">{contentArea}</main>
       </div>
-
 
       {showProfileModal && (
         <ProfileModal
@@ -526,7 +509,6 @@ export default function Student() {
         />
       )}
 
-      {/* =========== ADDITIONAL: Announcement Popup ========== */}
       {showAnnouncementPopup && currentAnnouncement && (
         <AnnouncementPopup
           announcement={currentAnnouncement}

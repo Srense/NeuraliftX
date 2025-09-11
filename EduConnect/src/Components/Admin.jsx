@@ -32,8 +32,41 @@ const Admin = () => {
     visibleTo: { students: false, faculty: false, alumni: false },
   });
 
-  // Theme state - load from localStorage or default to "default"
-  const [theme, setTheme] = useState(() => localStorage.getItem("admin_theme") || "default");
+  // Global theme state syncs with backend
+  const [theme, setTheme] = useState("default");
+
+  // Fetch latest theme from backend on mount
+  useEffect(() => {
+    async function loadTheme() {
+      const res = await fetch("/api/theme");
+      if (res.ok) {
+        const { theme } = await res.json();
+        setTheme(theme);
+        document.body.classList.remove(...themes.map(t => t.key));
+        document.body.classList.add(theme);
+      }
+    }
+    loadTheme();
+  }, []);
+
+  // Update <body> class and store for admin UX every time theme changes
+  useEffect(() => {
+    document.body.classList.remove(...themes.map(t => t.key));
+    document.body.classList.add(theme);
+    localStorage.setItem("admin_theme", theme); // Keeps admin's select in sync, optional
+  }, [theme]);
+
+  // When admin chooses a theme, push to backend
+  const handleThemeChange = async (newTheme) => {
+    setTheme(newTheme);
+    if (!token) return;
+    await fetch('/api/admin/theme', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ theme: newTheme }),
+    });
+    // Theme instantly updates everywhere on next reload or via polling/live-sync.
+  };
 
   useEffect(() => {
     async function fetchUserProfile() {
@@ -43,7 +76,7 @@ const Admin = () => {
         return;
       }
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
+        const res = await fetch("/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to load admin profile");
@@ -67,7 +100,7 @@ const Admin = () => {
     setLoadingAnnouncements(true);
     setAnnouncementError(null);
     try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/admin/announcements", {
+      const res = await fetch("/api/admin/announcements", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to load announcements");
@@ -81,13 +114,6 @@ const Admin = () => {
       setLoadingAnnouncements(false);
     }
   }
-
-  // Apply theme as class on body element whenever theme changes
-  useEffect(() => {
-    document.body.classList.remove(...themes.map(t => t.key));
-    document.body.classList.add(theme);
-    localStorage.setItem("admin_theme", theme);
-  }, [theme]);
 
   const menu = [
     { label: "Dashboard", icon: "🏠", subLinks: [] },
@@ -139,7 +165,7 @@ const Admin = () => {
 
   const handleSubmitAnnouncement = async () => {
     try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/admin/announcements", {
+      const res = await fetch("/api/admin/announcements", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData),
@@ -165,7 +191,7 @@ const Admin = () => {
   const handleDeleteAnnouncement = async (id) => {
     if (!window.confirm("Delete this announcement?")) return;
     try {
-      const res = await fetch(`https://neuraliftx.onrender.com/api/admin/announcements/${id}`, {
+      const res = await fetch(`/api/admin/announcements/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -355,7 +381,7 @@ const Admin = () => {
           <select
             id="themeSelect"
             value={theme}
-            onChange={(e) => setTheme(e.target.value)}
+            onChange={e => handleThemeChange(e.target.value)}
             style={{ padding: "0.2rem 0.5rem" }}
           >
             {themes.map((t) => (

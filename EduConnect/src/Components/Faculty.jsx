@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Student.css";
-import logo from "../assets/Logo.png"; // Please adjust path as needed
+import "./Admin.css"; // Use the universal theme CSS file for all dashboards!
+import logo from "../assets/Logo.png";
 
-// Announcement Popup Component
+// ================= THEME SYNC HOOK ================
+function useGlobalTheme() {
+  useEffect(() => {
+    async function syncTheme() {
+      const res = await fetch("/api/theme");
+      if (res.ok) {
+        const { theme } = await res.json();
+        document.body.classList.remove("default", "dark", "blue");
+        document.body.classList.add(theme);
+      }
+    }
+    syncTheme();
+  }, []);
+}
+// ===================================================
+
+// ========== Announcement Popup (unchanged) =========
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleChange = (qIndex, value) => {
-    setResponses((prev) => ({ ...prev, [qIndex]: value }));
-  };
+  const handleChange = (qIndex, value) => setResponses((prev) => ({ ...prev, [qIndex]: value }));
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -111,7 +125,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// CreateAssignmentModal Component
+// ========== Assignment upload modal ==============
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -156,7 +170,7 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
   );
 }
 
-// ProfileModal Component
+// ========== Profile Modal =============
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -213,7 +227,10 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   );
 }
 
+// ========== FACULTY ROOT COMPONENT===============
 export default function Faculty() {
+  useGlobalTheme(); // THEME SYNC
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token_faculty");
 
