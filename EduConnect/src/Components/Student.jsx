@@ -1,32 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Document, Page, pdfjs } from "react-pdf";
-import "./Admin.css"; 
-import "./Student.css"; 
+import "./Admin.css";
 import logo from "../assets/Logo.png";
+import "./Student.css";
 import HomeDashboard from "./HomeDashboard";
 import AttendanceDashboard from "./AttendanceDashboard";
 import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 
-const BACKEND_URL = "https://neuraliftx.onrender.com";
+// PDF.js worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+const BACKEND_URL = "https://neuraliftx.onrender.com";
 
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `${BACKEND_URL}${profilePicUrl}` : "https://via.placeholder.com/40";
 
+// ========== Profile Modal ==========
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(getProfileImageUrl(user.profilePicUrl));
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setSelectedFile(file);
-    if (file) {
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+    if (file) setPreviewUrl(URL.createObjectURL(file));
   };
+
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
@@ -50,6 +52,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
       setUploading(false);
     }
   };
+
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
@@ -70,13 +73,14 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   );
 }
 
+// ========== Announcement Popup ==========
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const handleChange = (qIndex, value) => {
-    setResponses((prev) => ({ ...prev, [qIndex]: value }));
-  };
+
+  const handleChange = (qIndex, value) => setResponses((prev) => ({ ...prev, [qIndex]: value }));
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -92,7 +96,9 @@ function AnnouncementPopup({ announcement, onClose, token }) {
     }
     setSubmitting(false);
   };
+
   if (!announcement) return null;
+
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px" }}>
@@ -171,6 +177,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
+// ========== Theme sync ==========
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
@@ -187,6 +194,7 @@ function useGlobalTheme() {
   }, []);
 }
 
+// ========== Task Upload: Answer upload modal ==========
 function AnswerUploadModal({ assignmentId, show, onClose, onSuccess, token }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -223,11 +231,7 @@ function AnswerUploadModal({ assignmentId, show, onClose, onSuccess, token }) {
       <div className="profile-modal" onClick={e => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>×</button>
         <h3>Upload Your Answer</h3>
-        <input
-          type="file"
-          accept=".pdf,image/*"
-          onChange={handleFileChange}
-        />
+        <input type="file" accept=".pdf,image/*" onChange={handleFileChange} />
         <button disabled={!selectedFile || uploading} onClick={handleUpload}>
           {uploading ? 'Uploading...' : 'Upload'}
         </button>
@@ -236,13 +240,12 @@ function AnswerUploadModal({ assignmentId, show, onClose, onSuccess, token }) {
   );
 }
 
+// ========== Main Student Component ==========
 export default function Student() {
   useGlobalTheme();
   const navigate = useNavigate();
   const token = localStorage.getItem("token_student");
-  const handleGenerateQuiz = (assignmentId) => {
-    navigate(`/quiz/${assignmentId}`);
-  };
+
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState(null);
@@ -253,14 +256,12 @@ export default function Student() {
   const [filteredMenu, setFilteredMenu] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Announcements
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementError, setAnnouncementError] = useState(null);
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
-  // Assignments/general
   const [assignments, setAssignments] = useState([]);
   const [viewedAssignment, setViewedAssignment] = useState(null);
   const [showTaskUploadModal, setShowTaskUploadModal] = useState(false);
@@ -268,34 +269,20 @@ export default function Student() {
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
     {
-      label: "Academics",
-      icon: "📚",
-      subLinks: [
-        { label: "Attendance", key: "academics-attendance" },
-        { label: "Grades", key: "academics-grades" },
-        { label: "Courses", key: "academics-courses" },
-      ],
-    },
-    { label: "Syllabus", icon: "📄", subLinks: [] },
-    {
       label: "Quiz/Assignments", icon: "📝",
-      subLinks: [
-        { label: "Task Upload", key: "task-upload" }
-      ],
+      subLinks: [{ label: "Task Upload", key: "task-upload" }]
     },
+    { label: "Academics", icon: "📚", subLinks: [{ label: "Attendance", key: "academics-attendance" }] },
+    { label: "Syllabus", icon: "📄", subLinks: [] },
     { label: "Personalisation Tracker", icon: "📈", subLinks: [] },
     { label: "Internships", icon: "💼", subLinks: [] },
     { label: "Live Projects", icon: "💻", subLinks: [] },
     { label: "Certifications", icon: "🎓", subLinks: [] },
     { label: "Alumni Arena", icon: "🤝", subLinks: [] },
-    {
-      label: "Top Rankers",
-      icon: "🏆",
-      subLinks: [
-        { label: "Individual", key: "toprankers-individual" },
-        { label: "School Ranking", key: "toprankers-school" },
-      ],
-    },
+    { label: "Top Rankers", icon: "🏆", subLinks: [
+      { label: "Individual", key: "toprankers-individual" },
+      { label: "School Ranking", key: "toprankers-school" }
+    ]},
   ];
 
   useEffect(() => {
@@ -323,12 +310,8 @@ export default function Student() {
   }, [token, navigate]);
 
   useEffect(() => {
-    if (
-      (activeMain === "Quiz/Assignments" && activeSub === "task-upload") ||
-      activeMain === "Quiz/Assignments"
-    ) {
-      fetchAssignments();
-    }
+    if (activeMain === "Quiz/Assignments") fetchAssignments();
+    if (activeMain === "Quiz/Assignments" && activeSub === "task-upload") fetchAssignments();
   }, [activeMain, activeSub]);
 
   async function fetchAssignments() {
@@ -344,7 +327,6 @@ export default function Student() {
     }
   }
 
-  // Announcements (unchanged from your code)...
   useEffect(() => {
     if (!user) return;
     async function fetchAnnouncements() {
@@ -406,6 +388,7 @@ export default function Student() {
   }, [searchTerm, menu]);
 
   const toggleSidebar = () => setSidebarOpen((open) => !open);
+
   const handleMainClick = (label) => {
     setActiveMain(label);
     const mainItem = menu.find((m) => m.label === label);
@@ -416,14 +399,17 @@ export default function Student() {
     }
   };
   const handleSubClick = (key) => setActiveSub(key);
+
   const handleLogout = () => {
     localStorage.removeItem("token_student");
     navigate("/login");
   };
+
   const handleUpdateProfilePic = (profilePicUrl) => {
     setUser((prev) => ({ ...prev, profilePicUrl }));
     setShowProfileModal(false);
   };
+
   const closeAnnouncementPopup = () => {
     const currentIndex = announcements.findIndex((a) => a._id === currentAnnouncement?._id);
     const nextIndex = currentIndex + 1;
@@ -435,7 +421,7 @@ export default function Student() {
     }
   };
 
-  // ============= TASK UPLOAD MAIN CONTENT ==============
+  // ========= Task Upload Content =========
   const taskUploadContent = (
     <div style={{ padding: '1rem' }}>
       <h2>Assignments for Task Upload</h2>
@@ -452,7 +438,6 @@ export default function Student() {
           </li>
         ))}
       </ul>
-      {/* PDF Viewer Modal */}
       {viewedAssignment && (
         <div className="profile-modal-backdrop" onClick={() => setViewedAssignment(null)}>
           <div className="profile-modal" style={{ maxWidth: '80vw', width: 600, padding: 0, minHeight: 600 }} onClick={e => e.stopPropagation()}>
@@ -461,7 +446,6 @@ export default function Student() {
             <div style={{ maxHeight: 500, overflow: "auto", marginBottom: 12 }}>
               <Document file={`${BACKEND_URL}${viewedAssignment.fileUrl}`}>
                 <Page pageNumber={1} width={550} />
-                {/* Optional: allow paging */}
               </Document>
             </div>
             <button
@@ -471,7 +455,6 @@ export default function Student() {
             >
               Upload Answers
             </button>
-            {/* Answer upload modal */}
             <AnswerUploadModal
               assignmentId={viewedAssignment._id}
               show={showTaskUploadModal}
@@ -484,16 +467,18 @@ export default function Student() {
       )}
     </div>
   );
-  // ======================================================
+  // ========= Main Content Routing ========
+  const handleGenerateQuiz = (assignmentId) => {
+    navigate(`/quiz/${assignmentId}`);
+  };
 
-  // Main area routing
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
-  } else if (activeMain === "Academics" && activeSub === "academics-attendance") {
-    contentArea = <AttendanceDashboard token={token} />;
   } else if (activeMain === "Quiz/Assignments" && activeSub === "task-upload") {
     contentArea = taskUploadContent;
+  } else if (activeMain === "Academics" && activeSub === "academics-attendance") {
+    contentArea = <AttendanceDashboard token={token} />;
   } else if (activeMain === "Quiz/Assignments") {
     contentArea = (
       <div className="assignments-container">
@@ -557,18 +542,18 @@ export default function Student() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <span className="search-icon">🔍</span>
+          <span className="search-icon">&#128269;</span>
         </div>
         <div className="header-icons">
-          <span className="icon" title="Notifications">🔔</span>
-          <span className="icon" title="Library">📖</span>
-          <span className="icon" title="Home">⌂</span>
-          <span className="icon" title="Settings">⚙</span>
+          <span className="icon" title="Notifications">&#128276;</span>
+          <span className="icon" title="Library">&#128214;</span>
+          <span className="icon" title="Home">&#8962;</span>
+          <span className="icon" title="Settings">&#9881;</span>
         </div>
         <div className="profile-info" style={{ cursor: "pointer" }} onClick={() => setShowProfileModal(true)}>
-          <span className="profile-name">{user.firstName} {user.lastName}</span>
-          <span className="profile-uid">{user.roleIdValue}</span>
-          <img src={getProfileImageUrl(user.profilePicUrl)} alt="Profile" className="profile-pic" />
+          <span className="profile-name">{user?.firstName} {user?.lastName}</span>
+          <span className="profile-uid">{user?.roleIdValue}</span>
+          <img src={getProfileImageUrl(user?.profilePicUrl)} alt="Profile" className="profile-pic" />
         </div>
       </header>
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
