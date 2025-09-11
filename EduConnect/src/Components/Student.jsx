@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Admin.css"; // Notice: Use the shared theme CSS for all dashboards!
+import "./student.css"; // Student specific styles
 import logo from "../assets/Logo.png";
 import HomeDashboard from "./HomeDashboard";
 import AttendanceDashboard from "./AttendanceDashboard";

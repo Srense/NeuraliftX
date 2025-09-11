@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Admin.css"; // Use the universal theme CSS file for all dashboards!
 import logo from "../assets/Logo.png";
+import"./student.css";
 
 // ================= THEME SYNC HOOK ================
 function useGlobalTheme() {
