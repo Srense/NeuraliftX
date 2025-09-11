@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Admin.css"; // Notice: Use the shared theme CSS for all dashboards!
-import "./Student.css"; // Student specific styles
+import { Document, Page, pdfjs } from "react-pdf";
+import "./Admin.css"; 
+import "./Student.css"; 
 import logo from "../assets/Logo.png";
 import HomeDashboard from "./HomeDashboard";
 import AttendanceDashboard from "./AttendanceDashboard";
@@ -9,14 +10,16 @@ import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 
+const BACKEND_URL = "https://neuraliftx.onrender.com";
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
 const getProfileImageUrl = (profilePicUrl) =>
-  profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
+  profilePicUrl ? `${BACKEND_URL}${profilePicUrl}` : "https://via.placeholder.com/40";
 
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(getProfileImageUrl(user.profilePicUrl));
-
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setSelectedFile(file);
@@ -24,15 +27,13 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
-
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("profilePic", selectedFile);
-
     try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
+      const res = await fetch(`${BACKEND_URL}/api/profile/picture`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -49,7 +50,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
       setUploading(false);
     }
   };
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
@@ -60,7 +60,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <p><b>UID:</b> {user.roleIdValue}</p>
         <p><b>Email:</b> {user.email}</p>
         <p><b>Coins Earned:</b> {user.coins || 0}</p>
-
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
@@ -75,15 +74,13 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
   const handleChange = (qIndex, value) => {
     setResponses((prev) => ({ ...prev, [qIndex]: value }));
   };
-
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/feedback", {
+      const res = await fetch(`${BACKEND_URL}/api/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ announcementId: announcement._id, responses }),
@@ -95,9 +92,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
     }
     setSubmitting(false);
   };
-
   if (!announcement) return null;
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px" }}>
@@ -176,11 +171,10 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// ======================= THEME SYNC LOGIC: fetch global theme and apply ====================
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
-      const res = await fetch("https://neuraliftx.onrender.com/api/theme");
+      const res = await fetch(`${BACKEND_URL}/api/theme`);
       if (res.ok) {
         const { theme } = await res.json();
         document.body.classList.remove("default", "dark", "blue");
@@ -188,12 +182,59 @@ function useGlobalTheme() {
       }
     }
     syncTheme();
-    const interval = setInterval(syncTheme, 3000); // 3 seconds
+    const interval = setInterval(syncTheme, 3000);
     return () => clearInterval(interval);
   }, []);
 }
 
-// ===========================================================================================
+function AnswerUploadModal({ assignmentId, show, onClose, onSuccess, token }) {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = e => setSelectedFile(e.target.files[0]);
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('answerFile', selectedFile);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/student/assignment/${assignmentId}/upload-answer`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      await res.json();
+      alert('Answer uploaded successfully!');
+      setSelectedFile(null);
+      onSuccess();
+      onClose();
+    } catch {
+      alert('File upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (!show) return null;
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
+        <button className="close-btn" onClick={onClose}>×</button>
+        <h3>Upload Your Answer</h3>
+        <input
+          type="file"
+          accept=".pdf,image/*"
+          onChange={handleFileChange}
+        />
+        <button disabled={!selectedFile || uploading} onClick={handleUpload}>
+          {uploading ? 'Uploading...' : 'Upload'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Student() {
   useGlobalTheme();
@@ -202,11 +243,9 @@ export default function Student() {
   const handleGenerateQuiz = (assignmentId) => {
     navigate(`/quiz/${assignmentId}`);
   };
-
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState(null);
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
   const [activeSub, setActiveSub] = useState(null);
@@ -214,14 +253,17 @@ export default function Student() {
   const [filteredMenu, setFilteredMenu] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Announcement popup states
+  // Announcements
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementError, setAnnouncementError] = useState(null);
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
-  const [assignments, setAssignments] = useState([]); // for storing fetched assignments
+  // Assignments/general
+  const [assignments, setAssignments] = useState([]);
+  const [viewedAssignment, setViewedAssignment] = useState(null);
+  const [showTaskUploadModal, setShowTaskUploadModal] = useState(false);
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -235,7 +277,12 @@ export default function Student() {
       ],
     },
     { label: "Syllabus", icon: "📄", subLinks: [] },
-    { label: "Quiz/Assignments", icon: "📝", subLinks: [] },
+    {
+      label: "Quiz/Assignments", icon: "📝",
+      subLinks: [
+        { label: "Task Upload", key: "task-upload" }
+      ],
+    },
     { label: "Personalisation Tracker", icon: "📈", subLinks: [] },
     { label: "Internships", icon: "💼", subLinks: [] },
     { label: "Live Projects", icon: "💻", subLinks: [] },
@@ -258,7 +305,7 @@ export default function Student() {
         return;
       }
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
+        const res = await fetch(`${BACKEND_URL}/api/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch user profile");
@@ -275,20 +322,41 @@ export default function Student() {
     fetchUser();
   }, [token, navigate]);
 
-  // Fetch announcements after user loads
+  useEffect(() => {
+    if (
+      (activeMain === "Quiz/Assignments" && activeSub === "task-upload") ||
+      activeMain === "Quiz/Assignments"
+    ) {
+      fetchAssignments();
+    }
+  }, [activeMain, activeSub]);
+
+  async function fetchAssignments() {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/assignments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch assignments");
+      const data = await res.json();
+      setAssignments(data);
+    } catch (e) {
+      alert("Failed to load assignments");
+    }
+  }
+
+  // Announcements (unchanged from your code)...
   useEffect(() => {
     if (!user) return;
     async function fetchAnnouncements() {
       setLoadingAnnouncements(true);
       setAnnouncementError(null);
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/announcements/active", {
+        const res = await fetch(`${BACKEND_URL}/api/announcements/active`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch announcements");
         const data = await res.json();
         setAnnouncements(Array.isArray(data) ? data : []);
-        // Show first announcement immediately
         if (data.length > 0) {
           setCurrentAnnouncement(data[0]);
           setShowAnnouncementPopup(true);
@@ -302,26 +370,6 @@ export default function Student() {
     }
     fetchAnnouncements();
   }, [user, token]);
-
-  // Fetch assignments when "Quiz/Assignments" menu is active
-  useEffect(() => {
-    if (activeMain === "Quiz/Assignments") {
-      fetchAssignments();
-    }
-  }, [activeMain]);
-
-  async function fetchAssignments() {
-    try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch assignments");
-      const data = await res.json();
-      setAssignments(data);
-    } catch (e) {
-      alert("Failed to load assignments");
-    }
-  }
 
   useEffect(() => {
     if (user) {
@@ -355,10 +403,9 @@ export default function Student() {
       })
       .filter(Boolean);
     setFilteredMenu(filtered);
-  }, [searchTerm]);
+  }, [searchTerm, menu]);
 
   const toggleSidebar = () => setSidebarOpen((open) => !open);
-
   const handleMainClick = (label) => {
     setActiveMain(label);
     const mainItem = menu.find((m) => m.label === label);
@@ -368,20 +415,15 @@ export default function Student() {
       setActiveSub(null);
     }
   };
-
   const handleSubClick = (key) => setActiveSub(key);
-
   const handleLogout = () => {
     localStorage.removeItem("token_student");
     navigate("/login");
   };
-
   const handleUpdateProfilePic = (profilePicUrl) => {
     setUser((prev) => ({ ...prev, profilePicUrl }));
     setShowProfileModal(false);
   };
-
-  // Close announcement and show next if any
   const closeAnnouncementPopup = () => {
     const currentIndex = announcements.findIndex((a) => a._id === currentAnnouncement?._id);
     const nextIndex = currentIndex + 1;
@@ -393,11 +435,65 @@ export default function Student() {
     }
   };
 
+  // ============= TASK UPLOAD MAIN CONTENT ==============
+  const taskUploadContent = (
+    <div style={{ padding: '1rem' }}>
+      <h2>Assignments for Task Upload</h2>
+      {assignments.length === 0 && <p>No assignments available.</p>}
+      <ul style={{ listStyle: 'none', padding: 0 }}>
+        {assignments.map((assn) => (
+          <li key={assn._id} style={{ marginBottom: '1.5rem', border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
+            <div>
+              <b>{assn.originalName}</b>
+              <button style={{ marginLeft: 12 }} onClick={() => setViewedAssignment(assn)}>
+                View PDF
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {/* PDF Viewer Modal */}
+      {viewedAssignment && (
+        <div className="profile-modal-backdrop" onClick={() => setViewedAssignment(null)}>
+          <div className="profile-modal" style={{ maxWidth: '80vw', width: 600, padding: 0, minHeight: 600 }} onClick={e => e.stopPropagation()}>
+            <button className="close-btn" style={{ right: 8, top: 8 }} onClick={() => setViewedAssignment(null)}>×</button>
+            <h3>{viewedAssignment.originalName}</h3>
+            <div style={{ maxHeight: 500, overflow: "auto", marginBottom: 12 }}>
+              <Document file={`${BACKEND_URL}${viewedAssignment.fileUrl}`}>
+                <Page pageNumber={1} width={550} />
+                {/* Optional: allow paging */}
+              </Document>
+            </div>
+            <button
+              className="action-btn"
+              onClick={() => setShowTaskUploadModal(true)}
+              style={{ marginBottom: 10, marginTop: 16 }}
+            >
+              Upload Answers
+            </button>
+            {/* Answer upload modal */}
+            <AnswerUploadModal
+              assignmentId={viewedAssignment._id}
+              show={showTaskUploadModal}
+              onClose={() => setShowTaskUploadModal(false)}
+              onSuccess={fetchAssignments}
+              token={token}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  // ======================================================
+
+  // Main area routing
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
   } else if (activeMain === "Academics" && activeSub === "academics-attendance") {
     contentArea = <AttendanceDashboard token={token} />;
+  } else if (activeMain === "Quiz/Assignments" && activeSub === "task-upload") {
+    contentArea = taskUploadContent;
   } else if (activeMain === "Quiz/Assignments") {
     contentArea = (
       <div className="assignments-container">
@@ -406,7 +502,7 @@ export default function Student() {
           {assignments.map(({ _id, originalName, fileUrl }) => (
             <div key={_id} className="assignment-card">
               <a
-                href={`https://neuraliftx.onrender.com${fileUrl}`}
+                href={`${BACKEND_URL}${fileUrl}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="assignment-link"
@@ -461,13 +557,13 @@ export default function Student() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <span className="search-icon">&#128269;</span>
+          <span className="search-icon">🔍</span>
         </div>
         <div className="header-icons">
-          <span className="icon" title="Notifications">&#128276;</span>
-          <span className="icon" title="Library">&#128214;</span>
-          <span className="icon" title="Home">&#8962;</span>
-          <span className="icon" title="Settings">&#9881;</span>
+          <span className="icon" title="Notifications">🔔</span>
+          <span className="icon" title="Library">📖</span>
+          <span className="icon" title="Home">⌂</span>
+          <span className="icon" title="Settings">⚙</span>
         </div>
         <div className="profile-info" style={{ cursor: "pointer" }} onClick={() => setShowProfileModal(true)}>
           <span className="profile-name">{user.firstName} {user.lastName}</span>
@@ -475,7 +571,6 @@ export default function Student() {
           <img src={getProfileImageUrl(user.profilePicUrl)} alt="Profile" className="profile-pic" />
         </div>
       </header>
-
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
@@ -499,10 +594,8 @@ export default function Student() {
             ))}
           </ul>
         </nav>
-
         <main className="student-content">{contentArea}</main>
       </div>
-
       {showProfileModal && (
         <ProfileModal
           user={user}
@@ -512,7 +605,6 @@ export default function Student() {
           onUpdateProfilePic={handleUpdateProfilePic}
         />
       )}
-
       {showAnnouncementPopup && currentAnnouncement && (
         <AnnouncementPopup
           announcement={currentAnnouncement}

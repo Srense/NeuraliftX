@@ -217,6 +217,16 @@ const themeSettingsSchema = new mongoose.Schema({
 });
 const ThemeSettings = mongoose.model("ThemeSettings", themeSettingsSchema);
 
+//assignmnet upload by strudent schema
+const assignmentAnswerSchema = new mongoose.Schema({
+  assignmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Assignment", required: true },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  fileUrl: { type: String, required: true }, // path to uploaded answer file
+  originalName: { type: String },
+  uploadTime: { type: Date, default: Date.now }
+});
+const AssignmentAnswer = mongoose.model("AssignmentAnswer", assignmentAnswerSchema);
+
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: EMAIL_HOST,
@@ -894,8 +904,35 @@ app.get("/api/announcements/active", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch announcements" });
   }
 });
+//assignment upload by student
+app.post("/api/student/assignment/:assignmentId/upload-answer", authenticateJWT, upload.single('answerFile'), async (req, res) => {
+  if (req.user.role !== "student") return res.status(403).json({ error: "Only students can upload answers" });
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+  try {
+    const answer = new AssignmentAnswer({
+      assignmentId: req.params.assignmentId,
+      studentId: req.user._id,
+      fileUrl: `/uploads/${req.file.filename}`,
+      originalName: req.file.originalname
+    });
+    await answer.save();
+    res.json({ success: true, answer });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to upload answer" });
+  }
+});
+//assigfnmet upload y studnet get by faculty
 
-// Get courses
+app.get("/api/assignment/:assignmentId/answers", authenticateJWT, authorizeRole(["faculty", "admin"]), async (req, res) => {
+  try {
+    const answers = await AssignmentAnswer.find({ assignmentId: req.params.assignmentId }).populate("studentId", "firstName lastName email");
+    res.json(answers);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to fetch submitted answers" });
+  }
+});
+
+// / Get courses
 app.get("/api/courses", authenticateJWT, async (req, res) => {
   try {
     const courses = await Course.find().sort({ createdAt: -1 });
