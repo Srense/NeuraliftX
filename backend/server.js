@@ -340,6 +340,99 @@ if (!existenceCheck.valid) {
 
   return errors;
 };
+const studentAnswerSchema = new mongoose.Schema({
+  taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  fileName: String,
+  fileUrl: String,
+  uploadedAt: { type: Date, default: Date.now }
+});
+
+const StudentAnswer = mongoose.model('StudentAnswer', studentAnswerSchema);
+
+
+const answerDir = path.join(uploadDir, "student_answers");
+if (!fs.existsSync(answerDir)) fs.mkdirSync(answerDir, { recursive: true });
+
+const answerStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, answerDir),
+  filename: (req, file, cb) => {
+    cb(null, `${req.user._id}-${req.params.taskId}-${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
+  if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
+
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    // Remove any existing answer for this student and task
+    await StudentAnswer.deleteMany({ studentId: req.user._id, taskId: req.params.taskId });
+
+    const answer = await StudentAnswer.create({
+      taskId: req.params.taskId,
+      studentId: req.user._id,
+      fileName: file.originalname,
+      fileUrl: `/uploads/student_answers/${file.filename}`,
+      uploadedAt: new Date()
+    });
+
+    res.json(answer);
+
+  } catch (err) {
+    console.error("Student answer upload error:", err);
+    res.status(500).json({ error: "Answer upload failed" });
+  }
+});
+
+app.get('/api/student-answers/:taskId', authenticateJWT, async (req, res) => {
+  if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
+
+  try {
+    const answer = await StudentAnswer.findOne({ studentId: req.user._id, taskId: req.params.taskId });
+    if (!answer) return res.status(404).json({ error: "No answer submitted yet" });
+    res.json(answer);
+
+  } catch (err) {
+    console.error("Fetching student answer error:", err);
+    res.status(500).json({ error: "Failed to fetch answer" });
+  }
+});
+
+app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
+  if (req.user.role !== "faculty") return res.status(403).json({ error: "Faculty only" });
+
+  try {
+    const task = await Task.findById(req.params.taskId);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+
+    if (task.uploadedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: "You can only view answers for your own tasks" });
+    }
+
+    const answers = await StudentAnswer.find({ taskId: req.params.taskId }).populate('studentId', 'firstName lastName roleIdValue email');
+    const formatted = answers.map(ans => ({
+      id: ans._id,
+      fileName: ans.fileName,
+      fileUrl: ans.fileUrl,
+      uploadedAt: ans.uploadedAt,
+      studentName: ans.studentId ? `${ans.studentId.firstName} ${ans.studentId.lastName}` : "",
+      studentUID: ans.studentId ? ans.studentId.roleIdValue : "",
+      studentEmail: ans.studentId ? ans.studentId.email : ""
+    }));
+    res.json(formatted);
+
+  } catch (err) {
+    console.error("Fetching faculty answers error:", err);
+    res.status(500).json({ error: "Failed to fetch student answers" });
+  }
+});
+
+const uploadAnswer = multer({ storage: answerStorage });
 
 // Middleware: Authenticate JWT token and attach user to req.user
 const authenticateJWT = async (req, res, next) => {
