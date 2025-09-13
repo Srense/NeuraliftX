@@ -245,6 +245,17 @@ const studentAnswerSchema = new mongoose.Schema({
 
 const StudentAnswer = mongoose.model('StudentAnswer', studentAnswerSchema);
 
+const answerVerificationSchema = new mongoose.Schema({
+  taskId: { type: mongoose.Schema.Types.ObjectId, ref: "Task", required: true },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  score: Number,
+  report: String, // JSON or text explanation from Perplexity
+  createdAt: { type: Date, default: Date.now },
+});
+
+const AnswerVerification = mongoose.model("AnswerVerification", answerVerificationSchema);
+
+
 
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
@@ -449,21 +460,37 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
   try {
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ error: "Task not found" });
+    if (task.uploadedBy.toString() !== req.user._id.toString())
+      return res.status(403).json({ error: "Not authorized to view this task's answers" });
 
-    if (task.uploadedBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "You can only view answers for your own tasks" });
-    }
+    const answers = await StudentAnswer.find({ taskId: req.params.taskId })
+      .populate('studentId', 'firstName lastName roleIdValue email');
 
-    const answers = await StudentAnswer.find({ taskId: req.params.taskId }).populate('studentId', 'firstName lastName roleIdValue email');
-    const formatted = answers.map(ans => ({
-      id: ans._id,
-      fileName: ans.fileName,
-      fileUrl: ans.fileUrl,
-      uploadedAt: ans.uploadedAt,
-      studentName: ans.studentId ? `${ans.studentId.firstName} ${ans.studentId.lastName}` : "",
-      studentUID: ans.studentId ? ans.studentId.roleIdValue : "",
-      studentEmail: ans.studentId ? ans.studentId.email : ""
-    }));
+    // Get verification results
+    const verificationReports = await AnswerVerification.find({ taskId: req.params.taskId });
+
+    // Map by studentId for quick lookup
+    const verificationMap = {};
+    verificationReports.forEach(v => {
+      verificationMap[v.studentId.toString()] = v;
+    });
+
+    const formatted = answers.map(ans => {
+      const verification = verificationMap[ans.studentId?._id?.toString()];
+      return {
+        id: ans._id,
+        fileName: ans.fileName,
+        fileUrl: ans.fileUrl,
+        uploadedAt: ans.uploadedAt,
+        studentName: ans.studentId ? `${ans.studentId.firstName} ${ans.studentId.lastName}` : "",
+        studentUID: ans.studentId ? ans.studentId.roleIdValue : "",
+        studentEmail: ans.studentId ? ans.studentId.email : "",
+        verificationScore: verification?.score || null,
+        verificationReport: verification?.report || null,
+        verificationDate: verification?.createdAt || null,
+      };
+    });
+
     res.json(formatted);
 
   } catch (err) {
@@ -1223,6 +1250,91 @@ app.get("/api/leaderboard/individual", async (req, res) => {
     console.error("Leaderboard fetch error:", err);
     // Always return array, never a crash or object!
     res.status(200).json([]);
+  }
+});
+
+app.post("/api/check-answer", authenticateJWT, async (req, res) => {
+  if (req.user.role !== "student") return res.status(403).json({ error: "Only students can verify answers" });
+
+  const { taskId } = req.body;
+  if (!taskId) return res.status(400).json({ error: "taskId required" });
+  const studentId = req.user._id;
+
+  try {
+    // Fetch documents
+    const task = await Task.findById(taskId);
+    const answer = await StudentAnswer.findOne({ taskId, studentId });
+
+    if (!task || !answer) return res.status(404).json({ error: "Task or answer not found" });
+
+    // Get file system paths
+    const taskPdfPath = path.join(__dirname, task.fileUrl);
+    const answerPdfPath = path.join(__dirname, answer.fileUrl);
+
+    if (!fs.existsSync(taskPdfPath) || !fs.existsSync(answerPdfPath)) {
+      return res.status(404).json({ error: "PDF files not found for comparison" });
+    }
+
+    // Extract text via pdf-parse
+    const taskText = (await pdfParse(fs.readFileSync(taskPdfPath))).text;
+    const answerText = (await pdfParse(fs.readFileSync(answerPdfPath))).text;
+
+    // Compose prompt for Perplexity
+    const prompt = `
+You are an expert academic grader. Given the following assignment description:
+
+${taskText}
+
+And the student's answer:
+
+${answerText}
+
+Assess the student's answer correctness on a scale of 0 to 100 and provide a brief explanation. Return response in JSON: { "score":number, "feedback":string }.
+`;
+
+    // Call Perplexity API
+    const response = await axios.post(
+      "https://api.perplexity.ai/api/chat/completions",
+      {
+        model: "sonar",
+        messages: [
+          { role: "system", content: "You are a helpful assistant for academic grading." },
+          { role: "user", content: prompt }
+        ],
+        max_tokens: 1000,
+        temperature: 0.5,
+      },
+      { headers: { Authorization: `Bearer ${process.env.API_KEY}` } }
+    );
+
+    let content = response.data?.choices?.[0]?.message?.content || "";
+    // Clean markdown or code fences if present
+    content = content.replace(/``````/g, "").trim();
+
+    let result;
+    try {
+      result = JSON.parse(content);
+    } catch {
+      result = { score: null, feedback: content };
+    }
+
+    // Save or update verification report
+    await AnswerVerification.findOneAndUpdate(
+      { taskId, studentId },
+      { score: result.score, report: result.feedback, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    // Award coins to student if score sufficiently high
+    if (result.score && result.score >= 80) {
+      await User.findByIdAndUpdate(studentId, { $inc: { coins: 5 } });
+    }
+
+    res.json({ message: "Verification completed", score: result.score, feedback: result.feedback });
+
+  } catch (err) {
+    console.error("Verification error:", err);
+    res.status(500).json({ error: "Verification failed" });
   }
 });
 

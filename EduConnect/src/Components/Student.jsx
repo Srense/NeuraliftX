@@ -201,6 +201,9 @@ function StudentTasks({ token }) {
   const [studentAnswer, setStudentAnswer] = useState(null);
   const [answerFile, setAnswerFile] = useState(null);
   const [uploadingAnswer, setUploadingAnswer] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState(null);
+
 
   // Fetch tasks uploaded by faculty
   useEffect(() => {
@@ -251,32 +254,59 @@ function StudentTasks({ token }) {
     setAnswerFile(e.target.files[0]);
   };
 
-  const handleSubmitAnswer = async () => {
-    if (!answerFile || !selectedTask) {
-      alert("Select a file and task first.");
-      return;
-    }
-    setUploadingAnswer(true);
-    const formData = new FormData();
-    formData.append('answerFile', answerFile);
+const handleSubmitAnswer = async () => {
+  if (!answerFile || !selectedTask) {
+    alert("Select a file and task first.");
+    return;
+  }
+  setUploadingAnswer(true);
+  const formData = new FormData();
+  formData.append('answerFile', answerFile);
 
-    try {
-      const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Answer upload failed");
-      const data = await res.json();
-      alert("Answer uploaded successfully");
-      setStudentAnswer(data);
-      setAnswerFile(null);
-    } catch (e) {
-      alert(e.message || "Failed to upload answer");
-    } finally {
-      setUploadingAnswer(false);
-    }
-  };
+  try {
+    const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (!res.ok) throw new Error("Answer upload failed");
+    const data = await res.json();
+    alert("Answer uploaded successfully");
+    setStudentAnswer(data);
+    setAnswerFile(null);
+  } catch (e) {
+    alert(e.message || "Failed to upload answer");
+  } finally {
+    setUploadingAnswer(false);
+  }
+};
+
+const handleCheck = async () => {
+  if (!selectedTask) {
+    alert("Select a task first");
+    return;
+  }
+  setVerifying(true);
+  setVerificationResult(null);
+  try {
+    const res = await fetch(`https://neuraliftx.onrender.com/api/check-answer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ taskId: selectedTask._id }),
+    });
+    if (!res.ok) throw new Error("Verification failed");
+    const data = await res.json();
+    setVerificationResult(data);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    setVerifying(false);
+  }
+};
 
   return (
     <div>
@@ -309,6 +339,26 @@ function StudentTasks({ token }) {
             ) : (
               <p>No answer uploaded yet.</p>
             )}
+
+            {studentAnswer && (
+         <>
+    <button
+      onClick={handleCheck}
+      disabled={verifying}
+      style={{ marginTop: 10 }}
+    >
+      {verifying ? "Checking..." : "Check"}
+    </button>
+
+    {verificationResult && (
+      <div style={{ marginTop: 10, padding: 10, border: "1px solid #ccc" }}>
+        <strong>Score: </strong>{verificationResult.score ?? "N/A"} <br />
+        <strong>Feedback: </strong>{verificationResult.feedback ?? "No feedback"}
+      </div>
+    )}
+  </>
+)}
+
             <input type="file" accept="application/pdf" onChange={handleAnswerChange} disabled={uploadingAnswer} />
             <button onClick={handleSubmitAnswer} disabled={!answerFile || uploadingAnswer}>
               {uploadingAnswer ? "Uploading..." : "Upload Answer"}
