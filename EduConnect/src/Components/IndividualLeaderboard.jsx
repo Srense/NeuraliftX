@@ -26,7 +26,7 @@ function IndividualLeaderboard() {
     <Container>
       <h2
   style={{
-    color: "#FFD700",            // gold color
+    color: "#0c0c0bff",            // gold color
     textShadow: "0 0 8px #FFD700, 0 0 12px #FFA500",
     fontWeight: "700",
     fontSize: "2.25rem",
