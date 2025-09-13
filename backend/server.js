@@ -12,6 +12,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const pdfParse = require("pdf-parse");
+const PDFDocument = require('pdfkit');
 
 
 
@@ -250,6 +251,7 @@ const answerVerificationSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   score: Number,
   report: String, // JSON or text explanation from Perplexity
+  documentUrl: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -866,6 +868,8 @@ app.post("/api/submit-quiz", authenticateJWT, async (req, res) => {
 });
 
 app.use('/pdf-viewer', express.static(path.join(__dirname, 'pdf-viewer')));
+app.use('/uploads/verification_reports', express.static(path.join(__dirname, 'uploads', 'verification_reports')));
+
 
 // Example endpoint to fetch Coursera categories or courses
 app.get("/api/coursera-courses", async (req, res) => {
@@ -984,27 +988,42 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
   try {
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ error: "Task not found" });
+    if (task.uploadedBy.toString() !== req.user._id.toString())
+      return res.status(403).json({ error: "Not authorized" });
 
-    if (task.uploadedBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "You can only view answers for your own tasks" });
-    }
+    const answers = await StudentAnswer.find({ taskId: req.params.taskId })
+      .populate('studentId', 'firstName lastName roleIdValue email');
 
-    const answers = await StudentAnswer.find({ taskId: req.params.taskId }).populate('studentId', 'firstName lastName roleIdValue email');
-    const formatted = answers.map(ans => ({
-      id: ans._id,
-      fileName: ans.fileName,
-      fileUrl: ans.fileUrl,
-      uploadedAt: ans.uploadedAt,
-      studentName: ans.studentId ? `${ans.studentId.firstName} ${ans.studentId.lastName}` : "",
-      studentUID: ans.studentId ? ans.studentId.roleIdValue : "",
-      studentEmail: ans.studentId ? ans.studentId.email : ""
-    }));
+    const verificationReports = await AnswerVerification.find({ taskId: req.params.taskId });
+    const verificationMap = {};
+    verificationReports.forEach(v => {
+      verificationMap[v.studentId.toString()] = v;
+    });
+
+    const formatted = answers.map(ans => {
+      const v = verificationMap[ans.studentId?._id?.toString()] || {};
+      return {
+        id: ans._id,
+        fileName: ans.fileName,
+        fileUrl: ans.fileUrl,
+        uploadedAt: ans.uploadedAt,
+        studentName: ans.studentId ? `${ans.studentId.firstName} ${ans.studentId.lastName}` : "",
+        studentUID: ans.studentId ? ans.studentId.roleIdValue : "",
+        studentEmail: ans.studentId ? ans.studentId.email : "",
+        verificationScore: v.score || null,
+        verificationReport: v.report || null,
+        verificationDate: v.createdAt || null,
+        verificationReportUrl: v.documentUrl || null, // Send URL of PDF report
+      };
+    });
+
     res.json(formatted);
   } catch (err) {
-    console.error("Fetching faculty answers error:", err);
-    res.status(500).json({ error: "Failed to fetch student answers" });
+    console.error('Fetching faculty answers error:', err);
+    res.status(500).json({ error: 'Failed to fetch' });
   }
 });
+
 
 
 
@@ -1254,72 +1273,60 @@ app.get("/api/leaderboard/individual", async (req, res) => {
 });
 
 app.post("/api/check-answer", authenticateJWT, async (req, res) => {
-  if (req.user.role !== "student") return res.status(403).json({ error: "Only students can verify answers" });
+  if (req.user.role !== "student") return res.status(403).json({ error: "Only students can verify" });
 
   const { taskId } = req.body;
-  if (!taskId) return res.status(400).json({ error: "taskId required" });
   const studentId = req.user._id;
 
   try {
-    // Fetch documents
+    // Fetch task and answer
     const task = await Task.findById(taskId);
     const answer = await StudentAnswer.findOne({ taskId, studentId });
-
     if (!task || !answer) return res.status(404).json({ error: "Task or answer not found" });
 
-    function resolveUploadPath(fileUrl) {
-  // Guarantee path is project-root relative, not absolute from host root!
-  return path.join(__dirname, fileUrl.startsWith("/") ? fileUrl.slice(1) : fileUrl);
-}
-
-const taskPdfPath = resolveUploadPath(task.fileUrl);
-const answerPdfPath = resolveUploadPath(answer.fileUrl);
-
-// --- Insert these lines right after defining the paths ---
-    console.log('[DEBUG] Task path:', taskPdfPath, fs.existsSync(taskPdfPath));
-    console.log('[DEBUG] Answer path:', answerPdfPath, fs.existsSync(answerPdfPath));
-    // ---------------------------------------------------------
-
+    function resolvePath(url) {
+      return path.join(__dirname, url.startsWith("/") ? url.slice(1) : url);
+    }
+    const taskPdfPath = resolvePath(task.fileUrl);
+    const answerPdfPath = resolvePath(answer.fileUrl);
 
     if (!fs.existsSync(taskPdfPath) || !fs.existsSync(answerPdfPath)) {
-      return res.status(404).json({ error: "PDF files not found for comparison" });
+      return res.status(404).json({ error: "PDF files not found" });
     }
 
-    // Extract text via pdf-parse
+    // Extract text for prompt
     const taskText = (await pdfParse(fs.readFileSync(taskPdfPath))).text;
     const answerText = (await pdfParse(fs.readFileSync(answerPdfPath))).text;
 
-    // Compose prompt for Perplexity
     const prompt = `
-You are an expert academic grader. Given the following assignment description:
+      You are an expert academic grader.
 
-${taskText}
+      Task Description:
+      ${taskText}
 
-And the student's answer:
+      Student Answer:
+      ${answerText}
 
-${answerText}
-
-Assess the student's answer correctness on a scale of 0 to 100 and provide a brief explanation. Return response in JSON: { "score":number, "feedback":string }.
-`;
+      Provide score (0-100) and feedback in JSON: { "score":number, "feedback":string }
+    `;
 
     // Call Perplexity API
     const response = await axios.post(
-      "https://api.perplexity.ai/chat/completions",
+      "https://api.perplexity.ai/chat/completions",   // Corrected endpoint
       {
         model: "sonar",
         messages: [
-          { role: "system", content: "You are a helpful assistant for academic grading." },
-          { role: "user", content: prompt }
+          { role: "system", content: "You are an academic grading assistant." },
+          { role: "user", content: prompt },
         ],
-        max_tokens: 1500,
-        temperature: 0.7,
+        max_tokens: 1000,
+        temperature: 0.5,
       },
       { headers: { Authorization: `Bearer ${process.env.API_KEY}` } }
     );
 
-    let content = response.data?.choices?.[0]?.message?.content || "";
-    // Clean markdown or code fences if present
-    content = content.replace(/``````/g, "").trim();
+    let content = response.data?.choices?.[0].message.content || "";
+    content = content.replace(/``````/g, '').trim();
 
     let result;
     try {
@@ -1328,26 +1335,54 @@ Assess the student's answer correctness on a scale of 0 to 100 and provide a bri
       result = { score: null, feedback: content };
     }
 
-    // Save or update verification report
+    // Generate PDF report
+    const doc = new PDFDocument();
+    const reportsDir = path.join(__dirname, 'uploads', 'verification_reports');
+    if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
+
+    const filename = `verification_${studentId}_${taskId}_${Date.now()}.pdf`;
+    const filePath = path.join(reportsDir, filename);
+    const writeStream = fs.createWriteStream(filePath);
+    doc.pipe(writeStream);
+
+    doc.fontSize(18).text('Answer Verification Report', { underline: true });
+    doc.moveDown();
+    doc.fontSize(12).text(`Student ID: ${studentId}`);
+    doc.text(`Task ID: ${taskId}`);
+    doc.moveDown();
+    doc.fontSize(14).text(`Score: ${result.score !== null ? result.score : "N/A"}`);
+    doc.moveDown();
+    doc.fontSize(12).text('Feedback:', { underline: true });
+    doc.moveDown();
+    doc.fontSize(10).text(result.feedback || 'No feedback provided.');
+    doc.end();
+
+    await new Promise((resolve) => writeStream.on('finish', resolve));
+
+    // Save verification result and documentUrl in DB
+    const docUrl = `/uploads/verification_reports/${filename}`;
     await AnswerVerification.findOneAndUpdate(
       { taskId, studentId },
-      { score: result.score, report: result.feedback, createdAt: new Date() },
+      {
+        score: result.score,
+        report: result.feedback,
+        documentUrl: docUrl,
+        createdAt: new Date(),
+      },
       { upsert: true, new: true }
     );
 
-    // Award coins to student if score sufficiently high
-    if (result.score && result.score >= 80) {
+    // Award coins for high scores
+    if (result.score !== null && result.score >= 80) {
       await User.findByIdAndUpdate(studentId, { $inc: { coins: 5 } });
     }
 
-    res.json({ message: "Verification completed", score: result.score, feedback: result.feedback });
-
+    res.json({ message: 'Verification completed', score: result.score, feedback: result.feedback, reportUrl: docUrl });
   } catch (err) {
-    console.error("Verification error:", err);
-    res.status(500).json({ error: "Verification failed" });
+    console.error('Verification error:', err);
+    res.status(500).json({ error: 'Verification failed' });
   }
 });
-
 
 app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
   if (!["faculty", "admin"].includes(req.user.role)) {
