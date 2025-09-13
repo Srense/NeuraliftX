@@ -31,7 +31,7 @@ function UploadTaskModal({ token, onClose, onUpload }) {
     formData.append('pdf', selectedFile);
 
     try {
-      const res = await fetch('/api/tasks', {
+      const res = await fetch('https://neuraliftx.onrender.com/api/tasks', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
