@@ -52,13 +52,20 @@ const CourseraCertifications = () => {
   );
   if (error) return <p>Error: {error}</p>;
   if (courses.length === 0) return <p>No courses found.</p>;
-  
 
   return (
     <div>
       <h3>Coursera Courses</h3>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {courses.map((course) => {
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: "1.5rem",
+        }}
+      >
+        {courses.slice(0, 9).map((course) => {  // Show max 3x3 = 9 courses
           const imageUrl = isValidUrl(course.photoUrl)
             ? course.photoUrl
             : "https://via.placeholder.com/120x80?text=No+Image";
@@ -67,22 +74,27 @@ const CourseraCertifications = () => {
             <li
               key={course.id}
               style={{
-                marginBottom: "1rem",
-                borderBottom: "1px solid #ddd",
-                paddingBottom: "1rem",
+                border: "1px solid #ddd",
+                borderRadius: 8,
+                padding: "1rem",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
+                backgroundColor: "#ffffff",
+                minHeight: 220,
+                textAlign: "center"
               }}
             >
               <img
                 src={imageUrl}
                 alt={course.name}
                 style={{
-                  height: 80,
-                  width: 120,
+                  height: 100,
+                  width: "100%",
                   objectFit: "cover",
-                  marginRight: "1rem",
                   borderRadius: 6,
+                  marginBottom: "1rem",
                   border: "1px solid #ccc",
                 }}
                 onError={(e) => {
@@ -90,21 +102,25 @@ const CourseraCertifications = () => {
                   e.target.src = "https://via.placeholder.com/120x80?text=No+Image";
                 }}
               />
-              <div>
-                <a
-                  href={course.courseUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontWeight: "bold", fontSize: "1.1rem", color: "#007bff" }}
-                >
-                  {course.name}
-                </a>
-                <p style={{ margin: "0.5rem 0", maxWidth: 600 }}>
-                  {course.description.length > 200
-                    ? course.description.slice(0, 200) + "..."
-                    : course.description}
-                </p>
-              </div>
+              <a
+                href={course.courseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  color: "#007bff",
+                  marginBottom: "0.5rem",
+                  textDecoration: "none",
+                }}
+              >
+                {course.name}
+              </a>
+              <p style={{ margin: 0, fontSize: 14, color: "#444", maxHeight: 60, overflow: "hidden" }}>
+                {course.description.length > 100
+                  ? course.description.slice(0, 100) + "..."
+                  : course.description}
+              </p>
             </li>
           );
         })}
