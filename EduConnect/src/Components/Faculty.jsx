@@ -289,34 +289,21 @@ function FacultyAnswersModal({ token, task, onClose }) {
     fetchAnswers();
   }, [task, token]);
 
- return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}>×</button>
-        <h2>Answers for: {task?.originalName}</h2>
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">×</button>
+        <h2>Answers for: {task.originalName}</h2>
         {loading && <p>Loading...</p>}
-        {!loading && studentAnswers.length === 0 && <p>No student answers submitted yet.</p>}
+        {!loading && studentAnswers.length === 0 && (
+          <p>No student has submitted an answer for this task yet.</p>
+        )}
         {!loading && studentAnswers.length > 0 && (
           <ul>
             {studentAnswers.map(a => (
               <li key={a.id} style={{ marginBottom: 12 }}>
-                <div>
-                  <strong>{a.studentName}</strong> ({a.studentUID}) –&nbsp;
-                  <a href={`https://neuraliftx.onrender.com${a.fileUrl}`} target="_blank" rel="noreferrer">View Answer</a>
-                  {a.verificationReportUrl && (
-                    <>
-                      &nbsp;|&nbsp;
-                      <a href={`https://neuraliftx.onrender.com${a.verificationReportUrl}`} target="_blank" rel="noreferrer" style={{color: 'blue'}}>
-                        View Report
-                      </a>
-                      &nbsp;|&nbsp;
-                      <a href={`https://neuraliftx.onrender.com${a.verificationReportUrl}`} download style={{color: 'green'}}>
-                        Download Report
-                      </a>
-                    </>
-                  )}
-                </div>
-                <div style={{ fontSize: '0.9em', color: '#888' }}>{a.studentEmail}</div>
+                <div><strong>{a.studentName}</strong> ({a.studentUID}) - <a href={`https://neuraliftx.onrender.com${a.fileUrl}`} target="_blank" rel="noreferrer">View Answer</a></div>
+                <div style={{ fontSize: "0.9em", color: "#888" }}>{a.studentEmail}</div>
               </li>
             ))}
           </ul>
