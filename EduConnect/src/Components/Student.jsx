@@ -363,6 +363,7 @@ export default function Student() {
     },
     { label: "Syllabus", icon: "📄", subLinks: [] },
     { label: "Quiz/Assignments", icon: "📝", subLinks: [] },
+    { label: "Tasks", icon: "📝", subLinks: [] }, 
     { label: "Personalisation Tracker", icon: "📈", subLinks: [] },
     { label: "Internships", icon: "💼", subLinks: [] },
     { label: "Live Projects", icon: "💻", subLinks: [] },
