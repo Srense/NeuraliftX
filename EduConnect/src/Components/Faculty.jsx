@@ -4,7 +4,6 @@ import "./Admin.css"; // Universal theme CSS for all dashboards
 import logo from "../assets/Logo.png";
 import "./Student.css";
 
-// ================= THEME SYNC HOOK ================
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
@@ -19,7 +18,6 @@ function useGlobalTheme() {
   }, []);
 }
 
-// ========== Upload Task Modal ===========
 function UploadTaskModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -39,7 +37,7 @@ function UploadTaskModal({ token, onClose, onUpload }) {
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       alert(data.message || "Task uploaded successfully");
-      onUpload(data.task); // update task list
+      onUpload(data.task);
       onClose();
     } catch {
       alert("Task upload failed");
@@ -62,66 +60,6 @@ function UploadTaskModal({ token, onClose, onUpload }) {
   );
 }
 
-// ========== Faculty Tasks List with View/Delete ===========
-function FacultyTasksList({ token }) {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchTasks = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('https://neuraliftx.onrender.com/api/tasks', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch tasks');
-      const data = await res.json();
-      setTasks(data);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure to delete this task?')) return;
-    try {
-      const res = await fetch(`https://neuraliftx.onrender.com/api/tasks/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Delete failed');
-      setTasks(tasks.filter(t => t._id !== id));
-      alert('Task deleted');
-    } catch (e) {
-      alert(e.message);
-    }
-  };
-
-  if (loading) return <p>Loading tasks...</p>;
-  if (tasks.length === 0) return <p>No tasks uploaded yet.</p>;
-
-  return (
-    <ul>
-      {tasks.map(({ _id, originalName, fileUrl }) => (
-        <li key={_id} style={{ marginBottom: 12 }}>
-          <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{ marginRight: 10 }}>
-            {originalName}
-          </a>
-          <button onClick={() => handleDelete(_id)} style={{ color: 'red', cursor: 'pointer' }}>
-            Delete
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// ========== Announcement Popup (unchanged) ==========
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -227,7 +165,6 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// ========== Assignment Upload Modal (unchanged) ===========
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -272,7 +209,6 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
   );
 }
 
-// ========== Profile Modal (unchanged) ===========
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -329,10 +265,57 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   );
 }
 
+// ====== NEW FACULTY ANSWERS MODAL ======
+function FacultyAnswersModal({ token, task, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [studentAnswers, setStudentAnswers] = useState([]);
+
+  useEffect(() => {
+    async function fetchAnswers() {
+      setLoading(true);
+      try {
+        const res = await fetch(`https://neuraliftx.onrender.com/api/faculty-answers/${task._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch student answers");
+        const data = await res.json();
+        setStudentAnswers(data);
+      } catch (e) {
+        alert("Failed to load student answers: " + (e.message || e));
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAnswers();
+  }, [task, token]);
+
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">×</button>
+        <h2>Answers for: {task.originalName}</h2>
+        {loading && <p>Loading...</p>}
+        {!loading && studentAnswers.length === 0 && (
+          <p>No student has submitted an answer for this task yet.</p>
+        )}
+        {!loading && studentAnswers.length > 0 && (
+          <ul>
+            {studentAnswers.map(a => (
+              <li key={a.id} style={{ marginBottom: 12 }}>
+                <div><strong>{a.studentName}</strong> ({a.studentUID}) - <a href={`https://neuraliftx.onrender.com${a.fileUrl}`} target="_blank" rel="noreferrer">View Answer</a></div>
+                <div style={{ fontSize: "0.9em", color: "#888" }}>{a.studentEmail}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ========== FACULTY ROOT COMPONENT ===========
 export default function Faculty() {
   useGlobalTheme();
-
   const navigate = useNavigate();
   const token = localStorage.getItem("token_faculty");
 
@@ -356,10 +339,14 @@ export default function Faculty() {
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
-  const [showUploadTask, setShowUploadTask] = useState(false); // NEW
+  const [showUploadTask, setShowUploadTask] = useState(false);
 
-  const [tasks, setTasks] = useState([]); // NEW for faculty task list
+  const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
+
+  // MODAL STATE FOR STUDENT ANSWERS
+  const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
+  const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
 
   const menu = [
     { label: "Home", icon: "🏠" },
@@ -375,7 +362,7 @@ export default function Faculty() {
       icon: "📝",
       subLinks: [
         { label: "Upload Task", key: "upload-task" },
-        { label: "My Tasks", key: "my-tasks" },   // NEW menu option to show task list
+        { label: "My Tasks", key: "my-tasks" },
       ],
     },
   ];
@@ -522,6 +509,16 @@ export default function Faculty() {
     }
   };
 
+  // Show student answers for a faculty-uploaded task
+  const handleViewAnswers = (task) => {
+    setSelectedTaskForAnswers(task);
+    setShowFacultyAnswersModal(true);
+  };
+  const closeFacultyAnswersModal = () => {
+    setShowFacultyAnswersModal(false);
+    setSelectedTaskForAnswers(null);
+  };
+
   const toggleSidebar = () => setSidebarOpen(v => !v);
 
   const handleLogout = () => {
@@ -650,16 +647,22 @@ export default function Faculty() {
               {!loadingTasks && tasks.length === 0 && <p>No tasks uploaded yet.</p>}
               {!loadingTasks && tasks.length > 0 && (
                 <ul>
-                  {tasks.map(({ _id, originalName, fileUrl }) => (
-                    <li key={_id} style={{ marginBottom: 12 }}>
-                      <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{ marginRight: 10 }}>
-                        {originalName}
+                  {tasks.map((task) => (
+                    <li key={task._id} style={{ marginBottom: 18 }}>
+                      <a href={`https://neuraliftx.onrender.com${task.fileUrl}`} target="_blank" rel="noreferrer" style={{ marginRight: 10 }}>
+                        {task.originalName}
                       </a>
                       <button
-                        onClick={() => handleDeleteTask(_id)}
-                        style={{ color: "red", cursor: "pointer" }}
+                        onClick={() => handleDeleteTask(task._id)}
+                        style={{ color: "red", cursor: "pointer", marginRight: 8 }}
                       >
                         Delete
+                      </button>
+                      <button
+                        onClick={() => handleViewAnswers(task)}
+                        style={{ color: "#0066cc", cursor: "pointer" }}
+                      >
+                        View Answers
                       </button>
                     </li>
                   ))}
@@ -684,6 +687,13 @@ export default function Faculty() {
       )}
       {showUploadTask && (
         <UploadTaskModal token={token} onClose={() => setShowUploadTask(false)} onUpload={fetchTasks} />
+      )}
+      {showFacultyAnswersModal && selectedTaskForAnswers && (
+        <FacultyAnswersModal
+          token={token}
+          task={selectedTaskForAnswers}
+          onClose={closeFacultyAnswersModal}
+        />
       )}
     </div>
   );

@@ -951,6 +951,34 @@ app.get("/api/tasks", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to get tasks" });
   }
 });
+app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
+  if (req.user.role !== "faculty") return res.status(403).json({ error: "Faculty only" });
+
+  try {
+    const task = await Task.findById(req.params.taskId);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+
+    if (task.uploadedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: "You can only view answers for your own tasks" });
+    }
+
+    const answers = await StudentAnswer.find({ taskId: req.params.taskId }).populate('studentId', 'firstName lastName roleIdValue email');
+    const formatted = answers.map(ans => ({
+      id: ans._id,
+      fileName: ans.fileName,
+      fileUrl: ans.fileUrl,
+      uploadedAt: ans.uploadedAt,
+      studentName: ans.studentId ? `${ans.studentId.firstName} ${ans.studentId.lastName}` : "",
+      studentUID: ans.studentId ? ans.studentId.roleIdValue : "",
+      studentEmail: ans.studentId ? ans.studentId.email : ""
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error("Fetching faculty answers error:", err);
+    res.status(500).json({ error: "Failed to fetch student answers" });
+  }
+});
+
 
 
 app.delete("/api/tasks/:id", authenticateJWT, async (req, res) => {
