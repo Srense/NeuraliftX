@@ -1306,8 +1306,8 @@ Assess the student's answer correctness on a scale of 0 to 100 and provide a bri
           { role: "system", content: "You are a helpful assistant for academic grading." },
           { role: "user", content: prompt }
         ],
-        max_tokens: 1000,
-        temperature: 0.5,
+        max_tokens: 1500,
+        temperature: 0.7,
       },
       { headers: { Authorization: `Bearer ${process.env.API_KEY}` } }
     );
