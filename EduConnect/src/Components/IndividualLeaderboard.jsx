@@ -24,7 +24,23 @@ function IndividualLeaderboard() {
 
   return (
     <Container>
-      <h2 className="text-glow mb-4">🏆 Top Individual Rankers</h2>
+      <h2
+  style={{
+    color: "#FFD700",            // gold color
+    textShadow: "0 0 8px #FFD700, 0 0 12px #FFA500",
+    fontWeight: "700",
+    fontSize: "2.25rem",
+    marginBottom: "1.5rem",
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  }}
+>
+  <span role="img" aria-label="trophy" style={{ fontSize: "2.5rem" }}>🏆</span>
+  Top Individual Rankers
+</h2>
+
       <Table responsive hover className="bg-dark text-white rounded shadow">
         <thead>
           <tr>
