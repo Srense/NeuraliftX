@@ -834,6 +834,7 @@ app.post(
       });
 
       res.json({ success: true, task });
+      console.write("Task uploaded:", task);
     } catch (err) {
       console.error("Task upload failed:", err);
       res.status(500).json({ error: "Task upload failed" });
