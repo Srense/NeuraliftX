@@ -47,7 +47,39 @@ function IndividualLeaderboard() {
                   {idx === 2 && "🥉"}
                 </td>
                 <td>{student.firstName} {student.lastName}</td>
-                <td><Badge bg="info">{student.totalCoins}</Badge></td>
+                <td>
+  <span
+    style={{
+      position: "relative",
+      display: "inline-block",
+      width: 36,
+      height: 36,
+      background: "radial-gradient(circle at center, #ffd700, #b8860b)",
+      borderRadius: "50%",
+      boxShadow: "0 0 5px #b8860b inset",
+      verticalAlign: "middle",
+      textAlign: "center",
+      fontWeight: "bold",
+      fontSize: 14,
+      lineHeight: "36px",
+      color: "black",
+      userSelect: "none",
+      fontFamily: "monospace",
+    }}
+  >
+    <span
+      style={{
+        position: "relative",
+        zIndex: 2,
+        color: "black",
+        fontWeight: "bold",
+      }}
+    >
+      {student.totalCoins}
+    </span>
+  </span>
+</td>
+
               </tr>
             ))
           ) : (
