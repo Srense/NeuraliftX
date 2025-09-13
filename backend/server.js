@@ -833,14 +833,44 @@ app.post(
         uploadedAt: new Date(),
       });
 
-      res.json({ success: true, task });
-      console.write("Task uploaded:", task);
+      res.json({ success: true, message: "Task uploaded successfully", task });
     } catch (err) {
       console.error("Task upload failed:", err);
       res.status(500).json({ error: "Task upload failed" });
     }
   }
 );
+app.get("/api/tasks", authenticateJWT, async (req, res) => {
+  try {
+    // Return only tasks uploaded by this user
+    const tasks = await Task.find({ uploadedBy: req.user._id }).sort({ uploadedAt: -1 });
+    res.json(tasks);
+  } catch (err) {
+    console.error("Get tasks error:", err);
+    res.status(500).json({ error: "Failed to get tasks" });
+  }
+});
+
+app.delete("/api/tasks/:id", authenticateJWT, async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (task.uploadedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: "Not authorized to delete this task" });
+    }
+
+    // Delete the file from server
+    const filePath = path.join(__dirname, "uploads", path.basename(task.fileUrl));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await Task.deleteOne({ _id: task._id });
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Delete task error:", e);
+    res.status(500).json({ error: "Failed to delete task" });
+  }
+});
+
 
 
 // Get current global theme (accessible to all users, no auth required)

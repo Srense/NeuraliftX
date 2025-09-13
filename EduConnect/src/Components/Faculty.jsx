@@ -38,7 +38,8 @@ function UploadTaskModal({ token, onClose, onUpload }) {
       });
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
-      onUpload(data.task); // You may want to update Tasks state here later
+      alert(data.message || "Task uploaded successfully");
+      onUpload(data.task); // update task list
       onClose();
     } catch {
       alert("Task upload failed");
@@ -61,7 +62,66 @@ function UploadTaskModal({ token, onClose, onUpload }) {
   );
 }
 
-// ========== Announcement Popup ==========
+// ========== Faculty Tasks List with View/Delete ===========
+function FacultyTasksList({ token }) {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('https://neuraliftx.onrender.com/api/tasks', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch tasks');
+      const data = await res.json();
+      setTasks(data);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure to delete this task?')) return;
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/tasks/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      setTasks(tasks.filter(t => t._id !== id));
+      alert('Task deleted');
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  if (loading) return <p>Loading tasks...</p>;
+  if (tasks.length === 0) return <p>No tasks uploaded yet.</p>;
+
+  return (
+    <ul>
+      {tasks.map(({ _id, originalName, fileUrl }) => (
+        <li key={_id} style={{ marginBottom: 12 }}>
+          <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{ marginRight: 10 }}>
+            {originalName}
+          </a>
+          <button onClick={() => handleDelete(_id)} style={{ color: 'red', cursor: 'pointer' }}>
+            Delete
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ========== Announcement Popup (unchanged) ==========
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -167,7 +227,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// ========== Assignment Upload Modal ===========
+// ========== Assignment Upload Modal (unchanged) ===========
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -212,7 +272,7 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
   );
 }
 
-// ========== Profile Modal ===========
+// ========== Profile Modal (unchanged) ===========
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -298,6 +358,9 @@ export default function Faculty() {
 
   const [showUploadTask, setShowUploadTask] = useState(false); // NEW
 
+  const [tasks, setTasks] = useState([]); // NEW for faculty task list
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -310,8 +373,11 @@ export default function Faculty() {
     {
       label: "Tasks",
       icon: "📝",
-      subLinks: [{ label: "Upload Task", key: "upload-task" }]
-    }
+      subLinks: [
+        { label: "Upload Task", key: "upload-task" },
+        { label: "My Tasks", key: "my-tasks" },   // NEW menu option to show task list
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -359,11 +425,11 @@ export default function Faculty() {
       fetch("https://neuraliftx.onrender.com/api/announcements/active", {
         headers: { Authorization: `Bearer ${token}` },
       })
-        .then((res) => {
+        .then(res => {
           if (!res.ok) throw new Error("Failed to fetch announcements");
           return res.json();
         })
-        .then((data) => {
+        .then(data => {
           setAnnouncements(data);
           if (data.length) {
             setCurrentAnnouncement(data[0]);
@@ -371,7 +437,7 @@ export default function Faculty() {
           }
           setLoadingAnnouncements(false);
         })
-        .catch((e) => {
+        .catch(e => {
           setAnnouncementError(e.message);
           setLoadingAnnouncements(false);
         });
@@ -381,6 +447,16 @@ export default function Faculty() {
   useEffect(() => {
     if (activeMain === "Assignments Submission") {
       fetchAssignments();
+    } else {
+      setAssignments([]);
+    }
+  }, [activeMain]);
+
+  useEffect(() => {
+    if (activeMain === "My Tasks") {
+      fetchTasks();
+    } else {
+      setTasks([]);
     }
   }, [activeMain]);
 
@@ -397,8 +473,24 @@ export default function Faculty() {
     }
   }
 
+  async function fetchTasks() {
+    setLoadingTasks(true);
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/tasks", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch tasks");
+      const data = await res.json();
+      setTasks(data);
+    } catch (e) {
+      alert(e.message || "Failed to load tasks");
+    } finally {
+      setLoadingTasks(false);
+    }
+  }
+
   const handleUploadSuccess = (newAssignment) => {
-    setAssignments((prev) => [newAssignment, ...prev]);
+    setAssignments(prev => [newAssignment, ...prev]);
   };
 
   const handleDeleteAssignment = async (id) => {
@@ -409,13 +501,28 @@ export default function Faculty() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Delete failed");
-      setAssignments((prev) => prev.filter((a) => a._id !== id));
+      setAssignments(prev => prev.filter(a => a._id !== id));
     } catch {
       alert("Failed to delete assignment");
     }
   };
 
-  const toggleSidebar = () => setSidebarOpen((v) => !v);
+  const handleDeleteTask = async (id) => {
+    if (!window.confirm("Delete this task?")) return;
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/tasks/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      setTasks(prev => prev.filter(t => t._id !== id));
+      alert("Task deleted");
+    } catch (e) {
+      alert(e.message || "Failed to delete task");
+    }
+  };
+
+  const toggleSidebar = () => setSidebarOpen(v => !v);
 
   const handleLogout = () => {
     localStorage.removeItem("token_faculty");
@@ -423,12 +530,12 @@ export default function Faculty() {
   };
 
   const handleProfileUpdate = (url) => {
-    setUser((prev) => ({ ...prev, profilePicUrl: url }));
+    setUser(prev => ({ ...prev, profilePicUrl: url }));
     setShowProfile(false);
   };
 
   const closeAnnouncementPopup = () => {
-    const idx = announcements.findIndex((a) => a._id === currentAnnouncement._id);
+    const idx = announcements.findIndex(a => a._id === currentAnnouncement._id);
     const nextIdx = idx + 1;
     if (nextIdx < announcements.length) {
       setCurrentAnnouncement(announcements[nextIdx]);
@@ -483,7 +590,7 @@ export default function Faculty() {
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
-            {filteredMenu.map((item) => (
+            {filteredMenu.map(item => (
               <li key={item.label}>
                 <button
                   className={activeMain === item.label ? "active main-link" : "main-link"}
@@ -493,13 +600,14 @@ export default function Faculty() {
                 </button>
                 {activeMain === item.label && item.subLinks && (
                   <ul className="sub-links open">
-                    {item.subLinks.map((sub) => (
+                    {item.subLinks.map(sub => (
                       <li key={sub.key}>
                         <button
                           className="sub-link"
                           onClick={() => {
                             if (sub.key === "create-assignment") setShowCreateAssignment(true);
                             if (sub.key === "upload-task") setShowUploadTask(true);
+                            if (sub.key === "my-tasks") setActiveMain("My Tasks");
                           }}
                         >
                           {sub.label}
@@ -514,7 +622,7 @@ export default function Faculty() {
         </nav>
 
         <main className="student-content">
-          {activeMain === "Assignments Submission" ? (
+          {activeMain === "Assignments Submission" && (
             <>
               <h2>Uploaded Assignments</h2>
               {assignments.length === 0 && <p>No assignments uploaded.</p>}
@@ -534,7 +642,32 @@ export default function Faculty() {
                 ))}
               </ul>
             </>
-          ) : (
+          )}
+          {activeMain === "My Tasks" && (
+            <>
+              <h2>My Uploaded Tasks</h2>
+              {loadingTasks && <p>Loading tasks...</p>}
+              {!loadingTasks && tasks.length === 0 && <p>No tasks uploaded yet.</p>}
+              {!loadingTasks && tasks.length > 0 && (
+                <ul>
+                  {tasks.map(({ _id, originalName, fileUrl }) => (
+                    <li key={_id} style={{ marginBottom: 12 }}>
+                      <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{ marginRight: 10 }}>
+                        {originalName}
+                      </a>
+                      <button
+                        onClick={() => handleDeleteTask(_id)}
+                        style={{ color: "red", cursor: "pointer" }}
+                      >
+                        Delete
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          {activeMain !== "Assignments Submission" && activeMain !== "My Tasks" && (
             <h2>{activeMain} content here</h2>
           )}
         </main>
@@ -550,7 +683,7 @@ export default function Faculty() {
         <AnnouncementPopup announcement={currentAnnouncement} onClose={closeAnnouncementPopup} token={token} />
       )}
       {showUploadTask && (
-        <UploadTaskModal token={token} onClose={() => setShowUploadTask(false)} onUpload={()=>{}} />
+        <UploadTaskModal token={token} onClose={() => setShowUploadTask(false)} onUpload={fetchTasks} />
       )}
     </div>
   );
