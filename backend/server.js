@@ -812,21 +812,35 @@ app.post("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), 
   }
 });
 
-app.post('/api/tasks', authenticateJWT, upload.single('pdf'), async (req, res) => {
-  const file = req.file;
-  if (!file) return res.status(400).json({ error: "No PDF uploaded" });
-  try {
-    const task = await Task.create({
-      originalName: file.originalname,
-      fileUrl: `/uploads/${file.filename}`,
-      uploadedBy: req.user._id  // safe now because authenticateJWT ran
-    });
-    res.json({ task });
-  } catch (err) {
-    console.error("Task upload failed:", err);
-    res.status(500).json({ error: "Task upload failed" });
+// Ensure this is after your multer and authenticateJWT middleware setup
+
+app.post(
+  "/api/tasks",
+  authenticateJWT,            // verify the user's token, set req.user
+  upload.single("pdf"),       // multer middleware to handle single file upload 'pdf'
+  async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No PDF uploaded" });
+      }
+
+      // Create Task document in MongoDB
+      const task = await Task.create({
+        originalName: file.originalname,
+        fileUrl: `/uploads/${file.filename}`,
+        uploadedBy: req.user._id,   // req.user is set by authenticateJWT
+        uploadedAt: new Date(),
+      });
+
+      res.json({ success: true, task });
+    } catch (err) {
+      console.error("Task upload failed:", err);
+      res.status(500).json({ error: "Task upload failed" });
+    }
   }
-});
+);
+
 
 // Get current global theme (accessible to all users, no auth required)
 app.get("/api/theme", async (req, res) => {
