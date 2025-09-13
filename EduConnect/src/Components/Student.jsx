@@ -59,7 +59,13 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <p><b>Name:</b> {user.firstName} {user.lastName}</p>
         <p><b>UID:</b> {user.roleIdValue}</p>
         <p><b>Email:</b> {user.email}</p>
-        <p><b>Coins Earned:</b> {user.coins || 0}</p>
+       <p>
+  <b>Coins Earned:</b>{" "}
+  <span className="coin-with-number">
+    <span className="coin-number">{user.coins || 0}</span>
+  </span>
+</p>
+
 
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>

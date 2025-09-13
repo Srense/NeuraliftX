@@ -519,3 +519,26 @@ body {
     height: 32px;
   }
 }
+.coin-with-number {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background: radial-gradient(circle at center, #ffd700, #b8860b);
+  border-radius: 50%;
+  box-shadow: 0 0 5px #b8860b inset;
+  vertical-align: middle;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 40px;
+  color: white;
+  user-select: none;
+}
+
+.coin-number {
+  position: relative;
+  z-index: 2;
+  color: black;
+  font-weight: bold;
+}
