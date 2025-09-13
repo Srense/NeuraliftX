@@ -812,6 +812,16 @@ app.post("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), 
   }
 });
 
+app.post('/api/tasks', upload.single('pdf'), async (req, res) => {
+  const file = req.file;
+  const task = await Task.create({
+    originalName: file.originalname,
+    fileUrl: `/uploads/${file.filename}`,
+    uploadedBy: req.user.id
+  });
+  res.json({ task });
+});
+
 // Get current global theme (accessible to all users, no auth required)
 app.get("/api/theme", async (req, res) => {
   try {
