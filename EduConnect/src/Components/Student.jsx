@@ -377,7 +377,7 @@ export default function Student() {
         { label: "School Ranking", key: "toprankers-school" },
       ],
     },
-    { label: "Tasks", icon: "📝", subLinks: [] }, // Add Tasks menu (linked to the new Task component)
+    
   ];
 
   useEffect(() => {
