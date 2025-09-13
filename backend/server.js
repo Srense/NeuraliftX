@@ -225,15 +225,15 @@ const transporter = nodemailer.createTransport({
   auth: { user: EMAIL_USER, pass: EMAIL_PASS },
 });
 
-
+// Task Model
 const TaskSchema = new mongoose.Schema({
   originalName: String,
-  fileUrl: String, // Store file path if saving to disk
-  fileData: Buffer, // Optionally if storing in DB (prefer GridFS if large)
+  fileUrl: String, // path to file if saved in 'uploads' folder,
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   uploadedAt: { type: Date, default: Date.now }
 });
 
+const Task = mongoose.model("Task", TaskSchema);
 
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
@@ -812,14 +812,20 @@ app.post("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), 
   }
 });
 
-app.post('/api/tasks', upload.single('pdf'), async (req, res) => {
+app.post('/api/tasks', authenticateJWT, upload.single('pdf'), async (req, res) => {
   const file = req.file;
-  const task = await Task.create({
-    originalName: file.originalname,
-    fileUrl: `/uploads/${file.filename}`,
-    uploadedBy: req.user.id
-  });
-  res.json({ task });
+  if (!file) return res.status(400).json({ error: "No PDF uploaded" });
+  try {
+    const task = await Task.create({
+      originalName: file.originalname,
+      fileUrl: `/uploads/${file.filename}`,
+      uploadedBy: req.user._id  // safe now because authenticateJWT ran
+    });
+    res.json({ task });
+  } catch (err) {
+    console.error("Task upload failed:", err);
+    res.status(500).json({ error: "Task upload failed" });
+  }
 });
 
 // Get current global theme (accessible to all users, no auth required)
