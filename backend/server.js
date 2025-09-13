@@ -1275,6 +1275,11 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
 const taskPdfPath = resolveUploadPath(task.fileUrl);
 const answerPdfPath = resolveUploadPath(answer.fileUrl);
 
+// --- Insert these lines right after defining the paths ---
+    console.log('[DEBUG] Task path:', taskPdfPath, fs.existsSync(taskPdfPath));
+    console.log('[DEBUG] Answer path:', answerPdfPath, fs.existsSync(answerPdfPath));
+    // ---------------------------------------------------------
+
 
     if (!fs.existsSync(taskPdfPath) || !fs.existsSync(answerPdfPath)) {
       return res.status(404).json({ error: "PDF files not found for comparison" });
