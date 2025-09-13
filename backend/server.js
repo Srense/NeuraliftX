@@ -1267,9 +1267,14 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
 
     if (!task || !answer) return res.status(404).json({ error: "Task or answer not found" });
 
-    // Get file system paths
-    const taskPdfPath = path.join(__dirname, task.fileUrl);
-    const answerPdfPath = path.join(__dirname, answer.fileUrl);
+    function resolveUploadPath(fileUrl) {
+  // Guarantee path is project-root relative, not absolute from host root!
+  return path.join(__dirname, fileUrl.startsWith("/") ? fileUrl.slice(1) : fileUrl);
+}
+
+const taskPdfPath = resolveUploadPath(task.fileUrl);
+const answerPdfPath = resolveUploadPath(answer.fileUrl);
+
 
     if (!fs.existsSync(taskPdfPath) || !fs.existsSync(answerPdfPath)) {
       return res.status(404).json({ error: "PDF files not found for comparison" });
