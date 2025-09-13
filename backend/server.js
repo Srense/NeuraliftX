@@ -944,7 +944,8 @@ app.post(
 app.get("/api/tasks", authenticateJWT, async (req, res) => {
   try {
     // Return only tasks uploaded by this user
-    const tasks = await Task.find({ uploadedBy: req.user._id }).sort({ uploadedAt: -1 });
+   const tasks = await Task.find({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
+
     res.json(tasks);
   } catch (err) {
     console.error("Get tasks error:", err);
