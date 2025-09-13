@@ -490,6 +490,8 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
         verificationScore: verification?.score || null,
         verificationReport: verification?.report || null,
         verificationDate: verification?.createdAt || null,
+        verificationReportUrl: verification?.documentUrl || null,
+
       };
     });
 
