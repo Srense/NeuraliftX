@@ -943,15 +943,15 @@ app.post(
 );
 app.get("/api/tasks", authenticateJWT, async (req, res) => {
   try {
-    // Return only tasks uploaded by this user
-   const tasks = await Task.find({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
-
+    // Return ALL tasks (visible to students)
+    const tasks = await Task.find().sort({ uploadedAt: -1 });
     res.json(tasks);
   } catch (err) {
     console.error("Get tasks error:", err);
     res.status(500).json({ error: "Failed to get tasks" });
   }
 });
+
 
 app.delete("/api/tasks/:id", authenticateJWT, async (req, res) => {
   try {
