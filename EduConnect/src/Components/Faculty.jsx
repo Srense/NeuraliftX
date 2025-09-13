@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Admin.css"; // Use the universal theme CSS file for all dashboards!
+import "./Admin.css"; // Universal theme CSS for all dashboards
 import logo from "../assets/Logo.png";
-import"./Student.css";
+import "./Student.css";
 
 // ================= THEME SYNC HOOK ================
 function useGlobalTheme() {
@@ -19,6 +19,7 @@ function useGlobalTheme() {
   }, []);
 }
 
+// ========== Upload Task Modal ===========
 function UploadTaskModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -37,7 +38,7 @@ function UploadTaskModal({ token, onClose, onUpload }) {
       });
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
-      onUpload(data.task);
+      onUpload(data.task); // You may want to update Tasks state here later
       onClose();
     } catch {
       alert("Task upload failed");
@@ -60,9 +61,7 @@ function UploadTaskModal({ token, onClose, onUpload }) {
   );
 }
 
-// ===================================================
-
-// ========== Announcement Popup (unchanged) =========
+// ========== Announcement Popup ==========
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -90,7 +89,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
+      <div className="profile-modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="close-btn">×</button>
         {(announcement.title || announcement.message) && (
           <>
@@ -99,7 +98,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
           </>
         )}
         {announcement.contentType === "survey" && !submitted && (
-          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+          <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
             {announcement.surveyQuestions?.map((q, i) => (
               <div key={i} style={{ marginBottom: "1rem" }}>
                 <label style={{ fontWeight: "600" }}>{q.question}</label>
@@ -107,7 +106,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                   <textarea
                     rows={3}
                     value={responses[i] || ""}
-                    onChange={(e) => handleChange(i, e.target.value)}
+                    onChange={e => handleChange(i, e.target.value)}
                     required
                     style={{ width: "100%" }}
                   />
@@ -123,7 +122,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                           checked={q.inputType === 'radio'
                             ? responses[i] === opt
                             : Array.isArray(responses[i]) && responses[i].includes(opt)}
-                          onChange={(e) => {
+                          onChange={e => {
                             if (q.inputType === 'radio') {
                               handleChange(i, e.target.value);
                             } else {
@@ -131,7 +130,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                               if (e.target.checked) {
                                 handleChange(i, [...prev, e.target.value]);
                               } else {
-                                handleChange(i, prev.filter((v) => v !== e.target.value));
+                                handleChange(i, prev.filter(v => v !== e.target.value));
                               }
                             }
                           }}
@@ -145,7 +144,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                 {q.inputType === "select" && (
                   <select
                     value={responses[i] || ''}
-                    onChange={(e) => handleChange(i, e.target.value)}
+                    onChange={e => handleChange(i, e.target.value)}
                     required
                     style={{ width: '100%' }}
                   >
@@ -168,7 +167,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// ========== Assignment upload modal ==============
+// ========== Assignment Upload Modal ===========
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -213,7 +212,7 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
   );
 }
 
-// ========== Profile Modal =============
+// ========== Profile Modal ===========
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -270,9 +269,9 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   );
 }
 
-// ========== FACULTY ROOT COMPONENT===============
+// ========== FACULTY ROOT COMPONENT ===========
 export default function Faculty() {
-  useGlobalTheme(); // THEME SYNC
+  useGlobalTheme();
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token_faculty");
@@ -297,6 +296,8 @@ export default function Faculty() {
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
+  const [showUploadTask, setShowUploadTask] = useState(false); // NEW
+
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -306,10 +307,11 @@ export default function Faculty() {
       icon: "📤",
       subLinks: [{ label: "Create Assignment", key: "create-assignment" }],
     },
-    { label: "Tasks", 
-    icon: "📝", 
-    subLinks: [{ label: "Upload Task", key: "upload-task" }] }
-
+    {
+      label: "Tasks",
+      icon: "📝",
+      subLinks: [{ label: "Upload Task", key: "upload-task" }]
+    }
   ];
 
   useEffect(() => {
@@ -457,7 +459,7 @@ export default function Faculty() {
             placeholder="Search menu"
             aria-label="Search menu"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
           />
           <span className="search-icon">🔍</span>
         </div>
@@ -497,6 +499,7 @@ export default function Faculty() {
                           className="sub-link"
                           onClick={() => {
                             if (sub.key === "create-assignment") setShowCreateAssignment(true);
+                            if (sub.key === "upload-task") setShowUploadTask(true);
                           }}
                         >
                           {sub.label}
@@ -545,6 +548,9 @@ export default function Faculty() {
       )}
       {showAnnouncementPopup && currentAnnouncement && (
         <AnnouncementPopup announcement={currentAnnouncement} onClose={closeAnnouncementPopup} token={token} />
+      )}
+      {showUploadTask && (
+        <UploadTaskModal token={token} onClose={() => setShowUploadTask(false)} onUpload={()=>{}} />
       )}
     </div>
   );
