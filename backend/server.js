@@ -226,6 +226,15 @@ const transporter = nodemailer.createTransport({
 });
 
 
+const TaskSchema = new mongoose.Schema({
+  originalName: String,
+  fileUrl: String, // Store file path if saving to disk
+  fileData: Buffer, // Optionally if storing in DB (prefer GridFS if large)
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  uploadedAt: { type: Date, default: Date.now }
+});
+
+
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {

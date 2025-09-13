@@ -18,6 +18,48 @@ function useGlobalTheme() {
     syncTheme();
   }, []);
 }
+
+function UploadTaskModal({ token, onClose, onUpload }) {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('pdf', selectedFile);
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      onUpload(data.task);
+      onClose();
+    } catch {
+      alert("Task upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
+        <button className="close-btn" onClick={onClose}>×</button>
+        <h2>Upload Faculty Task PDF</h2>
+        <input type="file" accept="application/pdf" onChange={e => setSelectedFile(e.target.files[0])}/>
+        <button disabled={!selectedFile || uploading} onClick={handleUpload} className="action-btn">
+          {uploading ? 'Uploading...' : 'Upload Task'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ===================================================
 
 // ========== Announcement Popup (unchanged) =========
@@ -264,6 +306,10 @@ export default function Faculty() {
       icon: "📤",
       subLinks: [{ label: "Create Assignment", key: "create-assignment" }],
     },
+    { label: "Tasks", 
+    icon: "📝", 
+    subLinks: [{ label: "Upload Task", key: "upload-task" }] }
+
   ];
 
   useEffect(() => {
