@@ -1304,7 +1304,7 @@ Assess the student's answer correctness on a scale of 0 to 100 and provide a bri
 
     // Call Perplexity API
     const response = await axios.post(
-      "https://api.perplexity.ai/api/chat/completions",
+      "https://api.perplexity.ai/chat/completions",
       {
         model: "sonar",
         messages: [
