@@ -193,7 +193,134 @@ function useGlobalTheme() {
   }, []);
 }
 
+// ========== Student Task Section Component ==========
+function StudentTasks({ token }) {
+  const [tasks, setTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [studentAnswer, setStudentAnswer] = useState(null);
+  const [answerFile, setAnswerFile] = useState(null);
+  const [uploadingAnswer, setUploadingAnswer] = useState(false);
+
+  // Fetch tasks uploaded by faculty
+  useEffect(() => {
+    async function fetchTasks() {
+      setLoadingTasks(true);
+      try {
+        const res = await fetch('https://neuraliftx.onrender.com/api/tasks', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch tasks');
+        const data = await res.json();
+        setTasks(data);
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        setLoadingTasks(false);
+      }
+    }
+    fetchTasks();
+  }, [token]);
+
+  // Fetch student's existing answer for the selected task
+  useEffect(() => {
+    if (!selectedTask) {
+      setStudentAnswer(null);
+      return;
+    }
+
+    async function fetchAnswer() {
+      try {
+        const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          setStudentAnswer(null);
+          return;
+        }
+        const data = await res.json();
+        setStudentAnswer(data);
+      } catch {
+        setStudentAnswer(null);
+      }
+    }
+    fetchAnswer();
+  }, [selectedTask, token]);
+
+  const handleAnswerChange = (e) => {
+    setAnswerFile(e.target.files[0]);
+  };
+
+  const handleSubmitAnswer = async () => {
+    if (!answerFile || !selectedTask) {
+      alert("Select a file and task first.");
+      return;
+    }
+    setUploadingAnswer(true);
+    const formData = new FormData();
+    formData.append('answerFile', answerFile);
+
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Answer upload failed");
+      const data = await res.json();
+      alert("Answer uploaded successfully");
+      setStudentAnswer(data);
+      setAnswerFile(null);
+    } catch (e) {
+      alert(e.message || "Failed to upload answer");
+    } finally {
+      setUploadingAnswer(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2>Tasks Assigned</h2>
+      {loadingTasks && <p>Loading tasks...</p>}
+      {!loadingTasks && tasks.length === 0 && <p>No tasks available.</p>}
+      {!loadingTasks && tasks.length > 0 && (
+        <ul>
+          {tasks.map(task => (
+            <li key={task._id} style={{ marginBottom: 12, cursor: "pointer" }}>
+              <button onClick={() => setSelectedTask(task)} style={{ background: selectedTask?._id === task._id ? '#ccc' : 'transparent' }}>
+                {task.originalName}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {selectedTask && (
+        <>
+          <h3>Task Details</h3>
+          <p><a href={`https://neuraliftx.onrender.com${selectedTask.fileUrl}`} target="_blank" rel="noreferrer">View Task PDF</a></p>
+          <hr />
+          <div>
+            <h4>Your Answer</h4>
+            {studentAnswer ? (
+              <p>
+                <a href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`} target="_blank" rel="noreferrer">View uploaded answer</a>
+              </p>
+            ) : (
+              <p>No answer uploaded yet.</p>
+            )}
+            <input type="file" accept="application/pdf" onChange={handleAnswerChange} disabled={uploadingAnswer} />
+            <button onClick={handleSubmitAnswer} disabled={!answerFile || uploadingAnswer}>
+              {uploadingAnswer ? "Uploading..." : "Upload Answer"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 // ===========================================================================================
+
 
 export default function Student() {
   useGlobalTheme();
@@ -249,6 +376,7 @@ export default function Student() {
         { label: "School Ranking", key: "toprankers-school" },
       ],
     },
+    { label: "Tasks", icon: "📝", subLinks: [] }, // Add Tasks menu (linked to the new Task component)
   ];
 
   useEffect(() => {
@@ -325,7 +453,10 @@ export default function Student() {
 
   useEffect(() => {
     if (user) {
-      if (window.location.pathname.startsWith("/student") && user.role !== "student") {
+      if (
+        window.location.pathname.startsWith("/student") &&
+        user.role !== "student"
+      ) {
         if (user.role === "faculty") navigate("/faculty");
         else if (user.role === "admin") navigate("/admin");
         else if (user.role === "alumni") navigate("/alumni");
@@ -383,7 +514,9 @@ export default function Student() {
 
   // Close announcement and show next if any
   const closeAnnouncementPopup = () => {
-    const currentIndex = announcements.findIndex((a) => a._id === currentAnnouncement?._id);
+    const currentIndex = announcements.findIndex(
+      (a) => a._id === currentAnnouncement?._id
+    );
     const nextIndex = currentIndex + 1;
     if (nextIndex < announcements.length) {
       setCurrentAnnouncement(announcements[nextIndex]);
@@ -396,7 +529,10 @@ export default function Student() {
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
-  } else if (activeMain === "Academics" && activeSub === "academics-attendance") {
+  } else if (
+    activeMain === "Academics" &&
+    activeSub === "academics-attendance"
+  ) {
     contentArea = <AttendanceDashboard token={token} />;
   } else if (activeMain === "Quiz/Assignments") {
     contentArea = (
@@ -434,6 +570,8 @@ export default function Student() {
     contentArea = <CourseraCertifications />;
   } else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") {
     contentArea = <IndividualLeaderboard />;
+  } else if (activeMain === "Tasks") {
+    contentArea = <StudentTasks token={token} />;
   } else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
@@ -444,7 +582,11 @@ export default function Student() {
   return (
     <div className="student-root">
       <header className="student-header">
-        <button className="hamburger" aria-label="Toggle menu" onClick={toggleSidebar}>
+        <button
+          className="hamburger"
+          aria-label="Toggle menu"
+          onClick={toggleSidebar}
+        >
           <span />
           <span />
           <span />
@@ -469,10 +611,20 @@ export default function Student() {
           <span className="icon" title="Home">&#8962;</span>
           <span className="icon" title="Settings">&#9881;</span>
         </div>
-        <div className="profile-info" style={{ cursor: "pointer" }} onClick={() => setShowProfileModal(true)}>
-          <span className="profile-name">{user.firstName} {user.lastName}</span>
+        <div
+          className="profile-info"
+          style={{ cursor: "pointer" }}
+          onClick={() => setShowProfileModal(true)}
+        >
+          <span className="profile-name">
+            {user.firstName} {user.lastName}
+          </span>
           <span className="profile-uid">{user.roleIdValue}</span>
-          <img src={getProfileImageUrl(user.profilePicUrl)} alt="Profile" className="profile-pic" />
+          <img
+            src={getProfileImageUrl(user.profilePicUrl)}
+            alt="Profile"
+            className="profile-pic"
+          />
         </div>
       </header>
 
@@ -481,14 +633,20 @@ export default function Student() {
           <ul>
             {filteredMenu.map((main) => (
               <li key={main.label}>
-                <button className={`main-link${activeMain === main.label ? " active" : ""}`} onClick={() => handleMainClick(main.label)}>
+                <button
+                  className={`main-link${activeMain === main.label ? " active" : ""}`}
+                  onClick={() => handleMainClick(main.label)}
+                >
                   <span className="main-icon">{main.icon}</span> {main.label}
                 </button>
                 {activeMain === main.label && main.subLinks.length > 0 && (
                   <ul className="sub-links open">
                     {main.subLinks.map((sub) => (
                       <li key={sub.key}>
-                        <button className={`sub-link${activeSub === sub.key ? " active" : ""}`} onClick={() => handleSubClick(sub.key)}>
+                        <button
+                          className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                          onClick={() => handleSubClick(sub.key)}
+                        >
                           {sub.label}
                         </button>
                       </li>
@@ -497,6 +655,15 @@ export default function Student() {
                 )}
               </li>
             ))}
+            {/* Add Tasks menu separately */}
+            <li>
+              <button
+                className={`main-link${activeMain === "Tasks" ? " active" : ""}`}
+                onClick={() => setActiveMain("Tasks")}
+              >
+                <span className="main-icon">📝</span> Tasks
+              </button>
+            </li>
           </ul>
         </nav>
 
