@@ -522,39 +522,23 @@ body {
 .coin-with-number {
   position: relative;
   display: inline-block;
-  width: 80px;
-  height: 80px;
-  background: radial-gradient(circle at 30% 33%, #ffeb70 55%, #ffd700 85%, #ff9800 100%);
+  width: 40px;
+  height: 40px;
+  background: radial-gradient(circle at center, #ffd700, #b8860b);
   border-radius: 50%;
-  box-shadow:
-    0 4px 20px #e0a90044, /* outer soft shadow */
-    0 0 0 6px #ffe066 inset, /* highlight ring */
-    0 12px 14px 0 #b8860b33 inset; /* inner deep shadow */
+  box-shadow: 0 0 5px #b8860b inset;
+  vertical-align: middle;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 40px;
+  color: white;
+  user-select: none;
 }
 
-.coin-with-number::before {
-  content: "";
-  position: absolute;
-  left: 16%;
-  top: 15%;
-  width: 60%;
-  height: 25%;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fff8 0%, #fff2 100%);
-  filter: blur(1px);
+.coin-number {
+  position: relative;
   z-index: 2;
-  opacity: 0.55;
-}
-
-.coin-with-number::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 60% 80%, #ffd70022 0%, #b8860b55 95%);
-  z-index: 1;
-  pointer-events: none;
+  color: black;
+  font-weight: bold;
 }
