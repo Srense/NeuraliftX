@@ -712,15 +712,7 @@ export default function Student() {
                 )}
               </li>
             ))}
-            {/* Add Tasks menu separately */}
-            <li>
-              <button
-                className={`main-link${activeMain === "Tasks" ? " active" : ""}`}
-                onClick={() => setActiveMain("Tasks")}
-              >
-                <span className="main-icon">📝</span> Tasks
-              </button>
-            </li>
+            
           </ul>
         </nav>
 
