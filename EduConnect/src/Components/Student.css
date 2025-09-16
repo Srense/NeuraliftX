@@ -547,3 +547,57 @@ body {
   margin-top: 4px;
 }
 
+
+/* Ensure the sidebar has scroll if content overflows */
+.student-sidebar {
+  overflow-y: auto;
+  max-height: 100vh; /* full viewport height */
+  padding-right: 8px; /* avoid scrollbar overlapping */
+}
+
+/* Style for expanded sub-links (subjects) */
+.sub-links.open {
+  display: block;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+/* Nested unit list under subject */
+.sub-links.nested-unit-list {
+  padding-left: 16px; /* indent nested units */
+  margin-top: 4px;
+  margin-bottom: 8px;
+  max-height: 300px;  /* limit max height for scrolling if too long */
+  overflow-y: auto;
+  border-left: 2px solid #ccc; /* a subtle vertical line */
+  background-color: #f9f9f9; /* subtle background for nesting */
+  border-radius: 4px;
+}
+
+/* Each unit button styling */
+.sub-links.nested-unit-list .sub-link {
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  color: #333;
+  background: none;
+  border: none;
+  display: block;
+  width: 100%;
+}
+
+/* Highlight selected active unit */
+.sub-links.nested-unit-list .sub-link.active {
+  background-color: #d1e7ff;
+  font-weight: 600;
+  color: #0056b3;
+}
+
+/* Add hover effect for unit buttons */
+.sub-links.nested-unit-list .sub-link:hover {
+  background-color: #e8f0ff;
+}
+
