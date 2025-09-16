@@ -416,9 +416,19 @@ export default function Faculty() {
   const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
   const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
 
-  // SYLLABUS STATE
-  const syllabusMenu = {
-    label: "Syllabus",
+  
+
+  const menu = [
+    { label: "Home", icon: "🏠" },
+    { label: "Monitoring", icon: "🖥️" },
+    { label: "Credits Check", icon: "🧾" },
+    {
+      label: "Assignments Submission",
+      icon: "📤",
+      subLinks: [{ label: "Create Assignment", key: "create-assignment" }],
+    },
+    { 
+        label: "Syllabus",
     icon: "📄",
     subLinks: [
       {
@@ -449,17 +459,8 @@ export default function Faculty() {
         ],
       },
     ],
-  };
-
-  const menu = [
-    { label: "Home", icon: "🏠" },
-    { label: "Monitoring", icon: "🖥️" },
-    { label: "Credits Check", icon: "🧾" },
-    {
-      label: "Assignments Submission",
-      icon: "📤",
-      subLinks: [{ label: "Create Assignment", key: "create-assignment" }],
     },
+
     {
       label: "Tasks",
       icon: "📝",
@@ -468,7 +469,7 @@ export default function Faculty() {
         { label: "My Tasks", key: "my-tasks" },
       ],
     },
-    syllabusMenu,
+  
   ];
 
   // SYLLABUS FILE UPLOAD AND VIEW STATES
