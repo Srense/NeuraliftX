@@ -257,16 +257,17 @@ const answerVerificationSchema = new mongoose.Schema({
 
 const AnswerVerification = mongoose.model("AnswerVerification", answerVerificationSchema);
 
+
+
+
 const syllabusFileSchema = new mongoose.Schema({
-  fileName: String,
-  fileUrl: String,
-  unitKey: String,
-  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  createdAt: { type: Date, default: Date.now },
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  unitKey: { type: String, required: true },
+  fileName: { type: String, required: true },
+  fileUrl: { type: String, required: true },
+  uploadedAt: { type: Date, default: Date.now },
 });
 const SyllabusFile = mongoose.model("SyllabusFile", syllabusFileSchema);
-
-
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -422,6 +423,89 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // API Routes
 
 
+/ Upload syllabus file using existing multer upload middleware
+app.post(
+  "/api/faculty/syllabus/upload",
+  authenticateJWT,
+  authorizeRole(["faculty", "admin"]),
+  upload.single("file"), // use existing multer instance here
+  async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      if (!req.body.unitKey) return res.status(400).json({ error: "unitKey is required" });
+
+      // Construct fileUrl accessible by frontend
+      const fileUrl = `/uploads/syllabus/${req.file.filename}`;
+
+      const syllabusFile = new SyllabusFile({
+        uploadedBy: req.user.id,
+        unitKey: req.body.unitKey,
+        fileName: req.file.originalname,
+        fileUrl,
+      });
+
+      await syllabusFile.save();
+
+      res.json({ success: true, message: "File uploaded successfully", file: syllabusFile });
+    } catch (error) {
+      console.error("Syllabus upload error:", error);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  }
+);
+
+// Fetch syllabus files for a particular unitKey
+app.get(
+  "/api/faculty/syllabus/files",
+  authenticateJWT,
+  authorizeRole(["faculty", "admin"]),
+  async (req, res) => {
+    try {
+      const { unitKey } = req.query;
+      if (!unitKey) return res.status(400).json({ error: "unitKey query param required" });
+
+      const files = await SyllabusFile.find({ unitKey }).sort({ uploadedAt: -1 });
+
+      res.json({ files });
+    } catch (error) {
+      console.error("Syllabus fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch files" });
+    }
+  }
+);
+
+// Delete a syllabus file by ID
+app.delete(
+  "/api/faculty/syllabus/files/:id",
+  authenticateJWT,
+  authorizeRole(["faculty", "admin"]),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const file = await SyllabusFile.findById(id);
+      if (!file) return res.status(404).json({ error: "File not found" });
+
+      // Only uploader or admin can delete
+      if (file.uploadedBy.toString() !== req.user.id && req.user.role !== "admin") {
+        return res.status(403).json({ error: "Not authorized to delete this file" });
+      }
+
+      const uploadDir = path.join(__dirname, "uploads", "syllabus");
+      const filePath = path.join(uploadDir, path.basename(file.fileUrl));
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      await SyllabusFile.deleteOne({ _id: id });
+      res.json({ success: true, message: "File deleted" });
+    } catch (error) {
+      console.error("Syllabus delete error:", error);
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  }
+);
+
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
   if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
 
@@ -510,71 +594,9 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch student answers" });
   }
 });
-// Upload syllabus file for unitKey
-const syllabusUpload = multer({ storage }).single("file");
-app.post(
-  "/faculty/syllabus/upload",
-  authenticateJWT,
-  authorizeRole(["faculty"]),
-  syllabusUpload,
-  async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-      const { unitKey } = req.body;
-      if (!unitKey) return res.status(400).json({ error: "Unit key required" });
-      const file = await SyllabusFile.create({
-        fileName: req.file.originalname,
-        fileUrl: "/uploads/" + req.file.filename,
-        unitKey,
-        uploadedBy: req.user._id,
-      });
-      res.json({ message: "File uploaded successfully", file });
-    } catch (err) {
-      console.error("Syllabus upload failed:", err);
-      res.status(500).json({ error: "Upload failed" });
-    }
-  }
-);
-// Get syllabus files by unitKey
-app.get(
-  "/faculty/syllabus/files",
-  authenticateJWT,
-  authorizeRole(["faculty"]),
-  async (req, res) => {
-    try {
-      const { unitKey } = req.query;
-      if (!unitKey) return res.status(400).json({ error: "Unit key required" });
-      const files = await SyllabusFile.find({ unitKey }).sort({ createdAt: -1 });
-      res.json({ files });
-    } catch (err) {
-      console.error("Failed to get syllabus files:", err);
-      res.status(500).json({ error: "Failed to fetch syllabus files" });
-    }
-  }
-);
-// Delete syllabus file by id
-app.delete(
-  "/faculty/syllabus/files/:id",
-  authenticateJWT,
-  authorizeRole(["faculty"]),
-  async (req, res) => {
-    try {
-      const file = await SyllabusFile.findById(req.params.id);
-      if (!file) return res.status(404).json({ error: "File not found" });
-      if (file.uploadedBy.toString() !== req.user._id.toString())
-        return res.status(403).json({ error: "Not authorized to delete this file" });
 
-      const filePath = path.join(uploadDir, path.basename(file.fileUrl));
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-      await SyllabusFile.deleteOne({ _id: req.params.id });
-      res.json({ message: "File deleted" });
-    } catch (err) {
-      console.error("Delete syllabus file error:", err);
-      res.status(500).json({ error: "Failed to delete file" });
-    }
-  }
-);
+
 // Signup
 app.post("/api/signup", async (req, res) => {
   try {
