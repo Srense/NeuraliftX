@@ -405,6 +405,7 @@ export default function Student() {
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
   const [assignments, setAssignments] = useState([]); // for storing fetched assignments
+  const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -715,16 +716,47 @@ export default function Student() {
                 </button>
                 {activeMain === main.label && main.subLinks.length > 0 && (
                   <ul className="sub-links open">
-                    {main.subLinks.map((sub) => (
-                      <li key={sub.key}>
-                        <button
-                          className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-                          onClick={() => handleSubClick(sub.key)}
-                        >
-                          {sub.label}
-                        </button>
-                      </li>
-                    ))}
+                    {main.subLinks.map((sub) => {
+  const isSyllabus = main.label === "Syllabus";
+  const isExpanded = expandedSyllabusSubject === sub.key;
+
+  return (
+    <li key={sub.key}>
+      <button
+        className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+        // For syllabus, toggle expanded units; otherwise, just select
+        onClick={() => {
+          if (isSyllabus) {
+            // Toggle expand/collapse of subject units on click
+            setExpandedSyllabusSubject(isExpanded ? null : sub.key);
+            setActiveSub(sub.key);
+          } else {
+            handleSubClick(sub.key);
+          }
+        }}
+      >
+        {sub.label}
+      </button>
+
+      {/* If this subject in syllabus is expanded, show its units */}
+      {isSyllabus && isExpanded && sub.subLinks && (
+        <ul className="unit-sub-links">
+          {sub.subLinks.map((unit) => (
+            <li key={unit.key}>
+              <button
+                className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+                onClick={() => handleSubClick(unit.key)}
+              >
+                {unit.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+})}
+
                   </ul>
                 )}
               </li>
