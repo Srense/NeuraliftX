@@ -257,6 +257,14 @@ const answerVerificationSchema = new mongoose.Schema({
 
 const AnswerVerification = mongoose.model("AnswerVerification", answerVerificationSchema);
 
+const syllabusFileSchema = new mongoose.Schema({
+  fileName: String,
+  fileUrl: String,
+  unitKey: String,
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  createdAt: { type: Date, default: Date.now },
+});
+const SyllabusFile = mongoose.model("SyllabusFile", syllabusFileSchema);
 
 
 // Disposable email checks (using AbstractAPI and deep-email-validator)
@@ -503,6 +511,78 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
   }
 });
 
+
+app.post(
+  "/api/faculty/syllabus/upload",
+  authenticateJWT,        // Your JWT authentication middleware
+  authorizeRole(["faculty"]), // Your role authorization middleware
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      const { unitKey } = req.body;
+      if (!unitKey) return res.status(400).json({ message: "unitKey is required" });
+      if (!req.file) return res.status(400).json({ message: "File is required" });
+
+      const fileUrl = `/uploads/${req.file.filename}`;
+
+      const syllabusFile = new SyllabusFile({
+        fileName: req.file.originalname,
+        fileUrl,
+        unitKey,
+        uploadedBy: req.user._id, // Adjust per your user object
+      });
+
+      await syllabusFile.save();
+      res.status(201).json({ message: "File uploaded successfully", file: syllabusFile });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// Get syllabus files by unitKey route
+app.get(
+  "/api/faculty/syllabus/files",
+  authenticateJWT,
+  authorizeRole(["faculty"]),
+  async (req, res) => {
+    try {
+      const { unitKey } = req.query;
+      if (!unitKey) return res.status(400).json({ message: "unitKey is required" });
+
+      const files = await SyllabusFile.find({ unitKey }).sort({ createdAt: -1 });
+      res.json(files);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// Delete syllabus file by ID route
+app.delete(
+  "/api/faculty/syllabus/files/:fileId",
+  authenticateJWT,
+  authorizeRole(["faculty"]),
+  async (req, res) => {
+    try {
+      const { fileId } = req.params;
+      const file = await SyllabusFile.findById(fileId);
+      if (!file) return res.status(404).json({ message: "File not found" });
+
+      // Delete the physical file from disk
+      const filePath = path.join(__dirname, "uploads", path.basename(file.fileUrl));
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      await file.deleteOne();
+      res.json({ message: "File deleted successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
 // Signup
 app.post("/api/signup", async (req, res) => {
   try {
