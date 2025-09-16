@@ -635,12 +635,12 @@ export default function Faculty() {
     }
   };
 
-  const handleDeleteFile = async (fileId) => {
-  console.log("Deleting file with ID:", fileId);
+  const handleDeleteFile = async (Id) => {
+  console.log("Deleting file with ID:", Id);
   if (!window.confirm("Delete this file?")) return;
   try {
     const res = await fetch(
-      `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${fileId}`,
+      `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${Id}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
