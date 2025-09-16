@@ -59,14 +59,12 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <p><b>Name:</b> {user.firstName} {user.lastName}</p>
         <p><b>UID:</b> {user.roleIdValue}</p>
         <p><b>Email:</b> {user.email}</p>
-       <p>
-  <b>Coins Earned:</b>{" "}
-  <span className="coin-with-number">
-    <span className="coin-number">{user.coins || 0}</span>
-  </span>
-</p>
-
-
+        <p>
+          <b>Coins Earned:</b>{" "}
+          <span className="coin-with-number">
+            <span className="coin-number">{user.coins || 0}</span>
+          </span>
+        </p>
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
@@ -182,7 +180,6 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// ======================= THEME SYNC LOGIC: fetch global theme and apply ====================
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
@@ -199,7 +196,6 @@ function useGlobalTheme() {
   }, []);
 }
 
-// ========== Student Task Section Component ==========
 function StudentTasks({ token }) {
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
@@ -210,8 +206,6 @@ function StudentTasks({ token }) {
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
 
-
-  // Fetch tasks uploaded by faculty
   useEffect(() => {
     async function fetchTasks() {
       setLoadingTasks(true);
@@ -231,13 +225,11 @@ function StudentTasks({ token }) {
     fetchTasks();
   }, [token]);
 
-  // Fetch student's existing answer for the selected task
   useEffect(() => {
     if (!selectedTask) {
       setStudentAnswer(null);
       return;
     }
-
     async function fetchAnswer() {
       try {
         const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
@@ -260,59 +252,59 @@ function StudentTasks({ token }) {
     setAnswerFile(e.target.files[0]);
   };
 
-const handleSubmitAnswer = async () => {
-  if (!answerFile || !selectedTask) {
-    alert("Select a file and task first.");
-    return;
-  }
-  setUploadingAnswer(true);
-  const formData = new FormData();
-  formData.append('answerFile', answerFile);
+  const handleSubmitAnswer = async () => {
+    if (!answerFile || !selectedTask) {
+      alert("Select a file and task first.");
+      return;
+    }
+    setUploadingAnswer(true);
+    const formData = new FormData();
+    formData.append('answerFile', answerFile);
 
-  try {
-    const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
 
-    if (!res.ok) throw new Error("Answer upload failed");
-    const data = await res.json();
-    alert("Answer uploaded successfully");
-    setStudentAnswer(data);
-    setAnswerFile(null);
-  } catch (e) {
-    alert(e.message || "Failed to upload answer");
-  } finally {
-    setUploadingAnswer(false);
-  }
-};
+      if (!res.ok) throw new Error("Answer upload failed");
+      const data = await res.json();
+      alert("Answer uploaded successfully");
+      setStudentAnswer(data);
+      setAnswerFile(null);
+    } catch (e) {
+      alert(e.message || "Failed to upload answer");
+    } finally {
+      setUploadingAnswer(false);
+    }
+  };
 
-const handleCheck = async () => {
-  if (!selectedTask) {
-    alert("Select a task first");
-    return;
-  }
-  setVerifying(true);
-  setVerificationResult(null);
-  try {
-    const res = await fetch(`https://neuraliftx.onrender.com/api/check-answer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ taskId: selectedTask._id }),
-    });
-    if (!res.ok) throw new Error("Verification failed");
-    const data = await res.json();
-    setVerificationResult(data);
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    setVerifying(false);
-  }
-};
+  const handleCheck = async () => {
+    if (!selectedTask) {
+      alert("Select a task first");
+      return;
+    }
+    setVerifying(true);
+    setVerificationResult(null);
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/check-answer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ taskId: selectedTask._id }),
+      });
+      if (!res.ok) throw new Error("Verification failed");
+      const data = await res.json();
+      setVerificationResult(data);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   return (
     <div>
@@ -347,23 +339,23 @@ const handleCheck = async () => {
             )}
 
             {studentAnswer && (
-         <>
-    <button
-      onClick={handleCheck}
-      disabled={verifying}
-      style={{ marginTop: 10 }}
-    >
-      {verifying ? "Checking..." : "Check"}
-    </button>
+              <>
+                <button
+                  onClick={handleCheck}
+                  disabled={verifying}
+                  style={{ marginTop: 10 }}
+                >
+                  {verifying ? "Checking..." : "Check"}
+                </button>
 
-    {verificationResult && (
-      <div style={{ marginTop: 10, padding: 10, border: "1px solid #ccc" }}>
-        <strong>Score: </strong>{verificationResult.score ?? "N/A"} <br />
-        <strong>Feedback: </strong>{verificationResult.feedback ?? "No feedback"}
-      </div>
-    )}
-  </>
-)}
+                {verificationResult && (
+                  <div style={{ marginTop: 10, padding: 10, border: "1px solid #ccc" }}>
+                    <strong>Score: </strong>{verificationResult.score ?? "N/A"} <br />
+                    <strong>Feedback: </strong>{verificationResult.feedback ?? "No feedback"}
+                  </div>
+                )}
+              </>
+            )}
 
             <input type="file" accept="application/pdf" onChange={handleAnswerChange} disabled={uploadingAnswer} />
             <button onClick={handleSubmitAnswer} disabled={!answerFile || uploadingAnswer}>
@@ -375,8 +367,6 @@ const handleCheck = async () => {
     </div>
   );
 }
-// ===========================================================================================
-
 
 export default function Student() {
   useGlobalTheme();
@@ -397,15 +387,18 @@ export default function Student() {
   const [filteredMenu, setFilteredMenu] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Announcement popup states
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementError, setAnnouncementError] = useState(null);
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
-  const [assignments, setAssignments] = useState([]); // for storing fetched assignments
+  const [assignments, setAssignments] = useState([]);
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
+
+  // START Added state for faculty-uploaded syllabus files per unit
+  const [uploadedSyllabusFiles, setUploadedSyllabusFiles] = useState([]);
+  // END Added
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -414,30 +407,45 @@ export default function Student() {
       icon: "📚",
       subLinks: [
         { label: "Attendance", key: "academics-attendance" },
-         { label: "Courses", key: "academics-courses" },
+        { label: "Courses", key: "academics-courses" },
         { label: "Grades", key: "academics-grades" },
-       
       ],
     },
-    { label: "Syllabus", icon: "📄", 
-      subLinks: [{label:"Physics",key:"syllabus-physics",subLinks:[
-        {label:"UNIT-I",key:"syllabus-physics-unit1"},
-        {label:"UNIT-II",key:"syallabus-physics-unit2"},
-        {label:"UNIT-III",key:"syallabus-physics-unit3"},
-      ]},
-        {label:"Chemistry",key:"syllabus-chemistry",subLinks:[
-        {label:"UNIT-I",key:"syllabus-chemistry-unit1"},
-        {label:"UNIT-II",key:"syallabus-chemistry-unit2"},
-        {label:"UNIT-III",key:"syallabus-chemistry-unit3"},
-        ]},
-        {label:"Maths",key:"syllabus-maths",subLinks:[
-        {label:"UNIT-I",key:"syllabus-maths-unit1"},
-        {label:"UNIT-II",key:"syallabus-maths-unit2"},
-        {label:"UNIT-III",key:"syallabus-maths-unit3"},
-        ]},
-      ] },
+    {
+      label: "Syllabus",
+      icon: "📄",
+      subLinks: [
+        {
+          label: "Physics",
+          key: "syllabus-physics",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-physics-unit1" },
+            { label: "UNIT-II", key: "syllabus-physics-unit2" },
+            { label: "UNIT-III", key: "syllabus-physics-unit3" },
+          ],
+        },
+        {
+          label: "Chemistry",
+          key: "syllabus-chemistry",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-chemistry-unit1" },
+            { label: "UNIT-II", key: "syllabus-chemistry-unit2" },
+            { label: "UNIT-III", key: "syllabus-chemistry-unit3" },
+          ],
+        },
+        {
+          label: "Maths",
+          key: "syllabus-maths",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-maths-unit1" },
+            { label: "UNIT-II", key: "syllabus-maths-unit2" },
+            { label: "UNIT-III", key: "syllabus-maths-unit3" },
+          ],
+        },
+      ],
+    },
     { label: "Quiz/Assignments", icon: "📝", subLinks: [] },
-    { label: "Tasks", icon: "📝", subLinks: [] }, 
+    { label: "Tasks", icon: "📝", subLinks: [] },
     { label: "Personalisation Tracker", icon: "📈", subLinks: [] },
     { label: "Internships", icon: "💼", subLinks: [] },
     { label: "Live Projects", icon: "💻", subLinks: [] },
@@ -451,8 +459,26 @@ export default function Student() {
         { label: "School Ranking", key: "toprankers-school" },
       ],
     },
-    
   ];
+
+  // START Added function to fetch uploaded files for syllabus unit after student clicks unit
+  async function fetchFilesForSyllabusUnit(unitKey) {
+    try {
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/faculty/syllabus/files?unitKey=${unitKey}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to fetch syllabus files");
+      const data = await res.json();
+      setUploadedSyllabusFiles(data.files || []);
+    } catch (e) {
+      alert(e.message);
+      setUploadedSyllabusFiles([]);
+    }
+  }
+  // END Added
 
   useEffect(() => {
     async function fetchUser() {
@@ -478,7 +504,6 @@ export default function Student() {
     fetchUser();
   }, [token, navigate]);
 
-  // Fetch announcements after user loads
   useEffect(() => {
     if (!user) return;
     async function fetchAnnouncements() {
@@ -491,7 +516,6 @@ export default function Student() {
         if (!res.ok) throw new Error("Failed to fetch announcements");
         const data = await res.json();
         setAnnouncements(Array.isArray(data) ? data : []);
-        // Show first announcement immediately
         if (data.length > 0) {
           setCurrentAnnouncement(data[0]);
           setShowAnnouncementPopup(true);
@@ -506,7 +530,6 @@ export default function Student() {
     fetchAnnouncements();
   }, [user, token]);
 
-  // Fetch assignments when "Quiz/Assignments" menu is active
   useEffect(() => {
     if (activeMain === "Quiz/Assignments") {
       fetchAssignments();
@@ -528,10 +551,7 @@ export default function Student() {
 
   useEffect(() => {
     if (user) {
-      if (
-        window.location.pathname.startsWith("/student") &&
-        user.role !== "student"
-      ) {
+      if (window.location.pathname.startsWith("/student") && user.role !== "student") {
         if (user.role === "faculty") navigate("/faculty");
         else if (user.role === "admin") navigate("/admin");
         else if (user.role === "alumni") navigate("/alumni");
@@ -551,10 +571,7 @@ export default function Student() {
         const filteredSubs = item.subLinks.filter((sub) =>
           sub.label.toLowerCase().includes(lowerSearch)
         );
-        if (
-          item.label.toLowerCase().includes(lowerSearch) ||
-          filteredSubs.length > 0
-        ) {
+        if (item.label.toLowerCase().includes(lowerSearch) || filteredSubs.length > 0) {
           return { ...item, subLinks: filteredSubs };
         }
         return null;
@@ -575,7 +592,30 @@ export default function Student() {
     }
   };
 
-  const handleSubClick = (key) => setActiveSub(key);
+  // Modified handleSubClick to fetch files if syllabus unit clicked
+  const handleSubClick = (key) => {
+    setActiveSub(key);
+
+    // Check if key belongs to a unit within syllabus
+    let isSyllabusUnit = false;
+    for (const mainItem of menu) {
+      if (mainItem.label === "Syllabus") {
+        for (const subject of mainItem.subLinks) {
+          const foundUnit = subject.subLinks.find((u) => u.key === key);
+          if (foundUnit) {
+            isSyllabusUnit = true;
+            break;
+          }
+        }
+      }
+      if (isSyllabusUnit) break;
+    }
+    if (isSyllabusUnit) {
+      fetchFilesForSyllabusUnit(key);
+    } else {
+      setUploadedSyllabusFiles([]);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token_student");
@@ -587,11 +627,8 @@ export default function Student() {
     setShowProfileModal(false);
   };
 
-  // Close announcement and show next if any
   const closeAnnouncementPopup = () => {
-    const currentIndex = announcements.findIndex(
-      (a) => a._id === currentAnnouncement?._id
-    );
+    const currentIndex = announcements.findIndex((a) => a._id === currentAnnouncement?._id);
     const nextIndex = currentIndex + 1;
     if (nextIndex < announcements.length) {
       setCurrentAnnouncement(announcements[nextIndex]);
@@ -604,10 +641,7 @@ export default function Student() {
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
-  } else if (
-    activeMain === "Academics" &&
-    activeSub === "academics-attendance"
-  ) {
+  } else if (activeMain === "Academics" && activeSub === "academics-attendance") {
     contentArea = <AttendanceDashboard token={token} />;
   } else if (activeMain === "Quiz/Assignments") {
     contentArea = (
@@ -624,10 +658,7 @@ export default function Student() {
               >
                 {originalName}
               </a>
-              <button
-                className="generate-quiz-btn"
-                onClick={() => handleGenerateQuiz(_id)}
-              >
+              <button className="generate-quiz-btn" onClick={() => handleGenerateQuiz(_id)}>
                 Generate Quiz
               </button>
             </div>
@@ -647,6 +678,25 @@ export default function Student() {
     contentArea = <IndividualLeaderboard />;
   } else if (activeMain === "Tasks") {
     contentArea = <StudentTasks token={token} />;
+  } else if (activeMain === "Syllabus") {
+    contentArea = (
+      <div>
+        <h2>Syllabus Content</h2>
+        {uploadedSyllabusFiles.length > 0 ? (
+          <ul>
+            {uploadedSyllabusFiles.map((file) => (
+              <li key={file._id}>
+                <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
+                  {file.fileName}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No files uploaded for this unit.</p>
+        )}
+      </div>
+    );
   } else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
@@ -657,11 +707,7 @@ export default function Student() {
   return (
     <div className="student-root">
       <header className="student-header">
-        <button
-          className="hamburger"
-          aria-label="Toggle menu"
-          onClick={toggleSidebar}
-        >
+        <button className="hamburger" aria-label="Toggle menu" onClick={toggleSidebar}>
           <span />
           <span />
           <span />
@@ -691,15 +737,9 @@ export default function Student() {
           style={{ cursor: "pointer" }}
           onClick={() => setShowProfileModal(true)}
         >
-          <span className="profile-name">
-            {user.firstName} {user.lastName}
-          </span>
+          <span className="profile-name">{user.firstName} {user.lastName}</span>
           <span className="profile-uid">{user.roleIdValue}</span>
-          <img
-            src={getProfileImageUrl(user.profilePicUrl)}
-            alt="Profile"
-            className="profile-pic"
-          />
+          <img src={getProfileImageUrl(user.profilePicUrl)} alt="Profile" className="profile-pic" />
         </div>
       </header>
 
@@ -710,58 +750,67 @@ export default function Student() {
               <li key={main.label}>
                 <button
                   className={`main-link${activeMain === main.label ? " active" : ""}`}
-                  onClick={() => handleMainClick(main.label)}
+                  onClick={() => {
+                    setActiveMain(main.label);
+                    if (main.subLinks.length > 0) {
+                      setActiveSub(main.subLinks[0].key);
+                    } else {
+                      setActiveSub(null);
+                    }
+                    setUploadedSyllabusFiles([]); // Clear files when switching main menu
+                  }}
                 >
                   <span className="main-icon">{main.icon}</span> {main.label}
                 </button>
                 {activeMain === main.label && main.subLinks.length > 0 && (
                   <ul className="sub-links open">
                     {main.subLinks.map((sub) => {
-  const isSyllabus = main.label === "Syllabus";
-  const isExpanded = expandedSyllabusSubject === sub.key;
-
-  return (
-    <li key={sub.key}>
-      <button
-        className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-        // For syllabus, toggle expanded units; otherwise, just select
-        onClick={() => {
-          if (isSyllabus) {
-            // Toggle expand/collapse of subject units on click
-            setExpandedSyllabusSubject(isExpanded ? null : sub.key);
-            setActiveSub(sub.key);
-          } else {
-            handleSubClick(sub.key);
-          }
-        }}
-      >
-        {sub.label}
-      </button>
-
-      {/* If this subject in syllabus is expanded, show its units */}
-      {isSyllabus && isExpanded && sub.subLinks && (
-        <ul className="unit-sub-links">
-          {sub.subLinks.map((unit) => (
-            <li key={unit.key}>
-              <button
-                className={`sub-link${activeSub === unit.key ? " active" : ""}`}
-                onClick={() => handleSubClick(unit.key)}
-              >
-                {unit.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-})}
-
+                      const isSyllabus = main.label === "Syllabus";
+                      const isExpanded = expandedSyllabusSubject === sub.key;
+                      return (
+                        <li key={sub.key}>
+                          <button
+                            className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                            onClick={() => {
+                              if (isSyllabus) {
+                                if (isExpanded) {
+                                  setExpandedSyllabusSubject(null);
+                                  setUploadedSyllabusFiles([]);
+                                } else {
+                                  setExpandedSyllabusSubject(sub.key);
+                                  setActiveSub(sub.key);
+                                  setUploadedSyllabusFiles([]); // Clear files when switching subjects
+                                }
+                              } else {
+                                setActiveSub(sub.key);
+                                setUploadedSyllabusFiles([]);
+                              }
+                            }}
+                          >
+                            {sub.label}
+                          </button>
+                          {/* Show units under expanded syllabus subject */}
+                          {isSyllabus && isExpanded && sub.subLinks && (
+                            <ul className="unit-sub-links">
+                              {sub.subLinks.map((unit) => (
+                                <li key={unit.key}>
+                                  <button
+                                    className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+                                    onClick={() => handleSubClick(unit.key)}
+                                  >
+                                    {unit.label}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </li>
             ))}
-            
           </ul>
         </nav>
 
