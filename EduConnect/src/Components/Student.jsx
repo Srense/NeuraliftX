@@ -418,7 +418,23 @@ export default function Student() {
        
       ],
     },
-    { label: "Syllabus", icon: "📄", subLinks: [] },
+    { label: "Syllabus", icon: "📄", 
+      subLinks: [{label:"Physics",key:"syllabus-physics",subLinks:[
+        {label:"UNIT-I",key:"syllabus-physics-unit1"},
+        {label:"UNIT-II",key:"syallabus-physics-unit2"},
+        {label:"UNIT-III",key:"syallabus-physics-unit3"},
+      ]},
+        {label:"Chemistry",key:"syllabus-chemistry",subLinks:[
+        {label:"UNIT-I",key:"syllabus-chemistry-unit1"},
+        {label:"UNIT-II",key:"syallabus-chemistry-unit2"},
+        {label:"UNIT-III",key:"syallabus-chemistry-unit3"},
+        ]},
+        {label:"Maths",key:"syllabus-maths",subLinks:[
+        {label:"UNIT-I",key:"syllabus-maths-unit1"},
+        {label:"UNIT-II",key:"syallabus-maths-unit2"},
+        {label:"UNIT-III",key:"syallabus-maths-unit3"},
+        ]},
+      ] },
     { label: "Quiz/Assignments", icon: "📝", subLinks: [] },
     { label: "Tasks", icon: "📝", subLinks: [] }, 
     { label: "Personalisation Tracker", icon: "📈", subLinks: [] },
