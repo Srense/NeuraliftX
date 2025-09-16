@@ -493,7 +493,7 @@ app.get("/api/faculty/syllabus/files", authenticateJWT, async (req, res) => {
 
 // Delete syllabus file (faculty can delete only own file)
 app.delete(
-  `/api/faculty/syllabus/files/${file._id}`,
+  `/api/faculty/syllabus/files/${fileId}`,
   authenticateJWT,
   authorizeRole(["faculty"]),
   async (req, res) => {
