@@ -943,25 +943,24 @@ export default function Faculty() {
               {!uploadedSyllabusFiles.length && <p>No files uploaded yet.</p>}
               <ul>
                 {uploadedSyllabusFiles.map((file) => (
-                  <li key={file.fileId} style={{ marginBottom: 6 }}>
-                    <a href={file.fileUrl} target="_blank" rel="noreferrer">
-                      {file.fileName}
-                    </a>
-                    <button
-                      onClick={() => handleDeleteFile(file.fileId)}
-                      style={{
-                        marginLeft: 10,
-                        color: "red",
-                        border: "none",
-                        background: "none",
-                        cursor: "pointer",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))}
+  <li key={file._id} style={{ marginBottom: 6 }}>
+    <a href={file.fileUrl} target="_blank" rel="noreferrer">{file.fileName}</a>
+    <button
+      onClick={() => handleDeleteFile(file._id)}
+      style={{
+        marginLeft: 10,
+        color: "red",
+        border: "none",
+        background: "none",
+        cursor: "pointer",
+        fontWeight: "bold",
+      }}
+    >
+      Delete
+    </button>
+  </li>
+))}
+
               </ul>
             </div>
           )}
