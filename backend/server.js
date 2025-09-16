@@ -474,7 +474,7 @@ app.get(
   }
 );
 
-/app.delete("/api/faculty/syllabus/files/:id",
+app.delete("/api/faculty/syllabus/files/:id",
   authenticateJWT, authorizeRole(["faculty", "admin"]),
   async (req, res) => {
     try {
