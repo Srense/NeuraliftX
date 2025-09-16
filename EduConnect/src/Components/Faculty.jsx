@@ -804,25 +804,22 @@ export default function Faculty() {
                           <button
                             className={`sub-link${activeSub === sub.key ? " active" : ""}`}
                             onClick={() => {
-                              if (hasUnits) {
-                                // When clicking syllabus subject, default select first unit
-                                setActiveSub(sub.key);
-                                if (sub.subLinks.length > 0) {
-                                  handleSyllabusUnitClick(sub.subLinks[0]);
-                                } else {
-                                  setSelectedSyllabusUnit(null);
-                                  setUploadedSyllabusFiles([]);
-                                }
-                                setActiveMain("Syllabus");
-                              } else if (isSyllabus) {
-                                // Clicking a unit
-                                handleSyllabusUnitClick(sub);
-                              } else {
-                                setActiveSub(sub.key);
-                                if (sub.key === "create-assignment") setShowCreateAssignment(true);
-                                if (sub.key === "upload-task") setShowUploadTask(true);
-                                if (sub.key === "my-tasks") setActiveMain("My Tasks");
-                              }
+                             if (hasUnits) {
+  setActiveSub(sub.key);
+  // Remove auto selection of first unit
+  setSelectedSyllabusUnit(null);
+  setUploadedSyllabusFiles([]);
+  setActiveMain("Syllabus");
+} else if (isSyllabus) {
+  // Clicking a unit directly
+  handleSyllabusUnitClick(sub);
+} else {
+  setActiveSub(sub.key);
+  if (sub.key === "create-assignment") setShowCreateAssignment(true);
+  if (sub.key === "upload-task") setShowUploadTask(true);
+  if (sub.key === "my-tasks") setActiveMain("My Tasks");
+}
+
                             }}
                           >
                             {sub.label}
