@@ -160,8 +160,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                             }
                           }}
                           required={q.inputType === "radio"}
-                        />
-                        {" "}
+                        />{" "}
                         {opt}
                       </label>
                     ))}
@@ -605,6 +604,24 @@ export default function Faculty() {
     }
   }
 
+  // Fixed sidebar click handler to show all units for selection
+  const handleSidebarSubClick = (sub, hasUnits, isSyllabus) => {
+    if (hasUnits) {
+      setActiveSub(sub.key);
+      // Remove auto select first unit to allow manual unit selection
+      setSelectedSyllabusUnit(null);
+      setUploadedSyllabusFiles([]);
+      setActiveMain("Syllabus");
+    } else if (isSyllabus) {
+      handleSyllabusUnitClick(sub);
+    } else {
+      setActiveSub(sub.key);
+      if (sub.key === "create-assignment") setShowCreateAssignment(true);
+      if (sub.key === "upload-task") setShowUploadTask(true);
+      if (sub.key === "my-tasks") setActiveMain("My Tasks");
+    }
+  };
+
   const handleSyllabusUnitClick = (unit) => {
     setSelectedSyllabusUnit(unit);
     fetchFilesForSyllabusUnit(unit.key);
@@ -805,17 +822,12 @@ export default function Faculty() {
                             className={`sub-link${activeSub === sub.key ? " active" : ""}`}
                             onClick={() => {
                               if (hasUnits) {
-                                // When clicking syllabus subject, default select first unit
                                 setActiveSub(sub.key);
-                                if (sub.subLinks.length > 0) {
-                                  handleSyllabusUnitClick(sub.subLinks[0]);
-                                } else {
-                                  setSelectedSyllabusUnit(null);
-                                  setUploadedSyllabusFiles([]);
-                                }
+                                // changed here to remove auto selection of first unit
+                                setSelectedSyllabusUnit(null);
+                                setUploadedSyllabusFiles([]);
                                 setActiveMain("Syllabus");
                               } else if (isSyllabus) {
-                                // Clicking a unit
                                 handleSyllabusUnitClick(sub);
                               } else {
                                 setActiveSub(sub.key);
@@ -943,24 +955,23 @@ export default function Faculty() {
               {!uploadedSyllabusFiles.length && <p>No files uploaded yet.</p>}
               <ul>
                 {uploadedSyllabusFiles.map((file) => (
-  <li key={file._id} style={{ marginBottom: 6 }}>
-    <a href={file.fileUrl} target="_blank" rel="noreferrer">{file.fileName}</a>
-    <button
-      onClick={() => handleDeleteFile(file._id)}
-      style={{
-        marginLeft: 10,
-        color: "red",
-        border: "none",
-        background: "none",
-        cursor: "pointer",
-        fontWeight: "bold",
-      }}
-    >
-      Delete
-    </button>
-  </li>
-))}
-
+                  <li key={file._id} style={{ marginBottom: 6 }}>
+                    <a href={file.fileUrl} target="_blank" rel="noreferrer">{file.fileName}</a>
+                    <button
+                      onClick={() => handleDeleteFile(file._id)}
+                      style={{
+                        marginLeft: 10,
+                        color: "red",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
           )}
