@@ -636,22 +636,27 @@ export default function Faculty() {
   };
 
   const handleDeleteFile = async (fileId) => {
-    if (!window.confirm("Delete this file?")) return;
-    try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${fileId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!res.ok) throw new Error("Delete failed");
-      alert("File deleted");
-      fetchFilesForSyllabusUnit(selectedSyllabusUnit.key);
-    } catch (e) {
-      alert(e.message);
+  console.log("Deleting file with ID:", fileId);
+  if (!window.confirm("Delete this file?")) return;
+  try {
+    const res = await fetch(
+      `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${fileId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Delete failed");
     }
-  };
+    alert("File deleted");
+    fetchFilesForSyllabusUnit(selectedSyllabusUnit.key);
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
 
   const handleUploadSuccess = (newAssignment) => {
     setAssignments((prev) => [newAssignment, ...prev]);
