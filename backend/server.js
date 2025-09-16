@@ -512,79 +512,77 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
 });
 
 
-const syllabusUploadDir = path.join(uploadDir, "syllabus");
-if (!fs.existsSync(syllabusUploadDir)) fs.mkdirSync(syllabusUploadDir, { recursive: true });
+app.post(
+  "/api/faculty/syllabus/upload",
+  authenticateJWT,        // Your JWT authentication middleware
+  authorizeRole(["faculty"]), // Your role authorization middleware
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      const { unitKey } = req.body;
+      if (!unitKey) return res.status(400).json({ message: "unitKey is required" });
+      if (!req.file) return res.status(400).json({ message: "File is required" });
 
-const syllabusStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, syllabusUploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const uniqueName = `${req.user.id}-${Date.now()}${ext}`;
-    cb(null, uniqueName);
-  },
-});
+      const fileUrl = `/uploads/${req.file.filename}`;
 
-const syllabusUpload = multer({ storage: syllabusStorage });
+      const syllabusFile = new SyllabusFile({
+        fileName: req.file.originalname,
+        fileUrl,
+        unitKey,
+        uploadedBy: req.user._id, // Adjust per your user object
+      });
 
-app.post('/api/faculty/syllabus/upload', authenticateJWT, authorizeRole('faculty'), syllabusUpload.single('file'), async (req, res) => {
-  try {
-    const facultyId = req.user.id;
-    const { unitKey } = req.body;
-    if (!unitKey || !req.file) {
-      return res.status(400).json({ message: "unitKey and file required" });
+      await syllabusFile.save();
+      res.status(201).json({ message: "File uploaded successfully", file: syllabusFile });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
     }
-
-    // Derive subjectKey from unitKey (assuming format: syllabus-subject-unitX)
-    const subjectKey = unitKey.split('-')[1] || '';
-
-    const newFile = new SyllabusFile({
-      facultyId,
-      subjectKey,
-      unitKey,
-      fileName: req.file.originalname,
-      fileUrl: `/uploads/syllabus/${req.file.filename}`,
-      uploadedAt: new Date(),
-    });
-
-    await newFile.save();
-
-    res.json({ message: "File uploaded successfully", file: newFile });
-  } catch (err) {
-    console.error("Syllabus file upload error", err);
-    res.status(500).json({ message: "Failed to upload file" });
   }
-});
+);
 
+// Get syllabus files by unitKey route
+app.get(
+  "/api/faculty/syllabus/files",
+  authenticateJWT,
+  authorizeRole(["faculty"]),
+  async (req, res) => {
+    try {
+      const { unitKey } = req.query;
+      if (!unitKey) return res.status(400).json({ message: "unitKey is required" });
 
-app.delete('/api/faculty/syllabus/files/:id', authenticateJWT, authorizeRole('faculty'), async (req, res) => {
-  try {
-    const facultyId = req.user.id;
-    const file = await SyllabusFile.findById(req.params.id);
-    if (!file) {
-      return res.status(404).json({ message: "File not found" });
+      const files = await SyllabusFile.find({ unitKey }).sort({ createdAt: -1 });
+      res.json(files);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
     }
-    if (!file.facultyId.equals(facultyId)) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
+  }
+);
 
-    // Delete physical file
-    const filePath = path.join(__dirname, file.fileUrl.replace(/^\//, ''));
-    fs.unlink(filePath, async (err) => {
-      if (err) {
-        console.warn("Failed to delete syllabus file", err);
-        return res.status(500).json({ message: "Failed to delete physical file" });
-      }
+// Delete syllabus file by ID route
+app.delete(
+  "/api/faculty/syllabus/files/:fileId",
+  authenticateJWT,
+  authorizeRole(["faculty"]),
+  async (req, res) => {
+    try {
+      const { fileId } = req.params;
+      const file = await SyllabusFile.findById(fileId);
+      if (!file) return res.status(404).json({ message: "File not found" });
+
+      // Delete the physical file from disk
+      const filePath = path.join(__dirname, "uploads", path.basename(file.fileUrl));
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
       await file.deleteOne();
-      res.json({ message: "File deleted" });
-    });
-  } catch (err) {
-    console.error("Syllabus file delete error", err);
-    res.status(500).json({ message: "Failed to delete file" });
+      res.json({ message: "File deleted successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
   }
-});
-
+);
 // Signup
 app.post("/api/signup", async (req, res) => {
   try {
