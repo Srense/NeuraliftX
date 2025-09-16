@@ -805,10 +805,8 @@ export default function Faculty() {
                             className={`sub-link${activeSub === sub.key ? " active" : ""}`}
                             onClick={() => {
                               if (hasUnits) {
+                                // When clicking syllabus subject, default select first unit
                                 setActiveSub(sub.key);
-  setSelectedSyllabusUnit(null);              // clear selected unit
-  setUploadedSyllabusFiles([]);
-  setActiveMain("Syllabus");
                                 if (sub.subLinks.length > 0) {
                                   handleSyllabusUnitClick(sub.subLinks[0]);
                                 } else {
