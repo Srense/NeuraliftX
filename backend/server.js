@@ -504,23 +504,27 @@ app.delete(
       if (!file.facultyId.equals(facultyId))
         return res.status(403).json({ message: "Unauthorized" });
 
-      const filePath = path.join(__dirname, file.fileUrl.startsWith("/") ? file.fileUrl.slice(1) : file.fileUrl);
+      // Safely resolve the path (remove leading slash if present)
+      const fileUrl = file.fileUrl.startsWith('/') ? file.fileUrl.slice(1) : file.fileUrl;
+      const filePath = path.join(__dirname, fileUrl);
 
-try {
-  await fs.promises.unlink(filePath);
-  console.log("Deleted file at", filePath);
-} catch (err) {
-  console.warn("Failed to delete syllabus file:", err);
-  // Optionally: return res.status(500).json({ message: "Failed to delete physical file" });
-}
-await file.deleteOne();
-res.json({ message: "File deleted" });
+      try {
+        await fs.promises.unlink(filePath);
+        console.log("Deleted file at", filePath);
+      } catch (err) {
+        console.warn("Failed to delete syllabus file:", err);
+        return res.status(500).json({ message: "Failed to delete file on disk: " + err.message });
+      }
+
+      await file.deleteOne();
+      res.json({ message: "File deleted" });
     } catch (err) {
       console.error("Syllabus file delete error:", err);
       res.status(500).json({ message: "Failed to delete file" });
     }
   }
 );
+
 
 
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
