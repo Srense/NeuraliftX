@@ -510,76 +510,68 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch student answers" });
   }
 });
-
-
+// Upload syllabus file for unitKey
+const syllabusUpload = multer({ storage }).single("file");
 app.post(
-  "/api/faculty/syllabus/upload",
-  authenticateJWT,        // Your JWT authentication middleware
-  authorizeRole(["faculty"]), // Your role authorization middleware
-  upload.single("file"),
+  "/faculty/syllabus/upload",
+  authenticateJWT,
+  authorizeRole(["faculty"]),
+  syllabusUpload,
   async (req, res) => {
     try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       const { unitKey } = req.body;
-      if (!unitKey) return res.status(400).json({ message: "unitKey is required" });
-      if (!req.file) return res.status(400).json({ message: "File is required" });
-
-      const fileUrl = `/uploads/${req.file.filename}`;
-
-      const syllabusFile = new SyllabusFile({
+      if (!unitKey) return res.status(400).json({ error: "Unit key required" });
+      const file = await SyllabusFile.create({
         fileName: req.file.originalname,
-        fileUrl,
+        fileUrl: "/uploads/" + req.file.filename,
         unitKey,
-        uploadedBy: req.user._id, // Adjust per your user object
+        uploadedBy: req.user._id,
       });
-
-      await syllabusFile.save();
-      res.status(201).json({ message: "File uploaded successfully", file: syllabusFile });
+      res.json({ message: "File uploaded successfully", file });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Server error" });
+      console.error("Syllabus upload failed:", err);
+      res.status(500).json({ error: "Upload failed" });
     }
   }
 );
-
-// Get syllabus files by unitKey route
+// Get syllabus files by unitKey
 app.get(
-  "/api/faculty/syllabus/files",
+  "/faculty/syllabus/files",
   authenticateJWT,
   authorizeRole(["faculty"]),
   async (req, res) => {
     try {
       const { unitKey } = req.query;
-      if (!unitKey) return res.status(400).json({ message: "unitKey is required" });
-
+      if (!unitKey) return res.status(400).json({ error: "Unit key required" });
       const files = await SyllabusFile.find({ unitKey }).sort({ createdAt: -1 });
-      res.json(files);
+      res.json({ files });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Server error" });
+      console.error("Failed to get syllabus files:", err);
+      res.status(500).json({ error: "Failed to fetch syllabus files" });
     }
   }
 );
-
-// Delete syllabus file by ID route
+// Delete syllabus file by id
 app.delete(
-  "/api/faculty/syllabus/files/:fileId",
+  "/faculty/syllabus/files/:id",
   authenticateJWT,
   authorizeRole(["faculty"]),
   async (req, res) => {
     try {
-      const { fileId } = req.params;
-      const file = await SyllabusFile.findById(fileId);
-      if (!file) return res.status(404).json({ message: "File not found" });
+      const file = await SyllabusFile.findById(req.params.id);
+      if (!file) return res.status(404).json({ error: "File not found" });
+      if (file.uploadedBy.toString() !== req.user._id.toString())
+        return res.status(403).json({ error: "Not authorized to delete this file" });
 
-      // Delete the physical file from disk
-      const filePath = path.join(__dirname, "uploads", path.basename(file.fileUrl));
+      const filePath = path.join(uploadDir, path.basename(file.fileUrl));
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-      await file.deleteOne();
-      res.json({ message: "File deleted successfully" });
+      await SyllabusFile.deleteOne({ _id: req.params.id });
+      res.json({ message: "File deleted" });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Server error" });
+      console.error("Delete syllabus file error:", err);
+      res.status(500).json({ error: "Failed to delete file" });
     }
   }
 );
