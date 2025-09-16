@@ -640,7 +640,7 @@ export default function Faculty() {
   if (!window.confirm("Delete this file?")) return;
   try {
     const res = await fetch(
-      `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${Id}`,
+      `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${fileId}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },

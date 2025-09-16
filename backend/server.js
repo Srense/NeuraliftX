@@ -407,28 +407,23 @@ const authorizeRole = (allowedRoles) => (req, res, next) => {
 };
 
 
-// Ensure upload directories exist
 const answerDir = path.join(uploadDir, "student_answers");
 if (!fs.existsSync(answerDir)) fs.mkdirSync(answerDir, { recursive: true });
+
+const answerStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, answerDir),
+  filename: (req, file, cb) => {
+    cb(null, `${req.user._id}-${req.params.taskId}-${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+
+const uploadAnswer = multer({ storage: answerStorage });
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const syllabusUploadDir = path.join(uploadDir, "syllabus");
 if (!fs.existsSync(syllabusUploadDir)) fs.mkdirSync(syllabusUploadDir, { recursive: true });
 
-// Multer storage configurations for student_answers
-const answerStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, answerDir);
-  },
-  filename: (req, file, cb) => {
-    cb(
-      null,
-      `${req.user._id}-${req.params.taskId}-${Date.now()}${path.extname(file.originalname)}`
-    );
-  },
-});
-const uploadAnswer = multer({ storage: answerStorage });
-
-// Multer storage configurations for syllabus uploads
 const syllabusStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, syllabusUploadDir);
@@ -439,10 +434,13 @@ const syllabusStorage = multer.diskStorage({
     cb(null, uniqueName);
   },
 });
+
 const syllabusUpload = multer({ storage: syllabusStorage });
 
-// Serve the uploads folder statically
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
+// API Routes
+
 
 // Upload a syllabus file (faculty only)
 app.post(
@@ -495,7 +493,7 @@ app.get("/api/faculty/syllabus/files", authenticateJWT, async (req, res) => {
 
 // Delete syllabus file (faculty can delete only own file)
 app.delete(
-  "/api/faculty/syllabus/files/:id",
+  `/api/faculty/syllabus/files/${file._id}`,
   authenticateJWT,
   authorizeRole(["faculty"]),
   async (req, res) => {
@@ -506,26 +504,11 @@ app.delete(
       if (!file.facultyId.equals(facultyId))
         return res.status(403).json({ message: "Unauthorized" });
 
-      // Properly build physical file path
-      const filename = path.basename(file.fileUrl);
-      const filePath = path.join(syllabusUploadDir, filename);
-      console.log("Attempting to delete syllabus file:", filePath);
-
-      if (!fs.existsSync(filePath)) {
-        console.warn("File does not exist on disk:", filePath);
-        // Optionally: return res.status(404).json({ message: "Physical file not found" });
-        // But continue to delete DB record to avoid orphan data
-      } else {
-        try {
-          await fs.promises.unlink(filePath);
-          console.log("Physical file deleted:", filePath);
-        } catch (err) {
-          console.error("Failed to delete physical file:", err);
-          return res
-            .status(500)
-            .json({ message: "Failed to delete file on disk: " + err.message });
-        }
-      }
+      // Delete physical file
+      const filePath = path.join(__dirname, file.fileUrl);
+      fs.unlink(filePath, (err) => {
+        if (err) console.warn("Failed to delete syllabus file:", err);
+      });
 
       await file.deleteOne();
       res.json({ message: "File deleted" });
@@ -535,7 +518,6 @@ app.delete(
     }
   }
 );
-
 
 
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
