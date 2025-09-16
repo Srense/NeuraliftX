@@ -784,71 +784,78 @@ export default function Faculty() {
       </header>
 
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
-        <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
-          <ul>
-            {filteredMenu.map((item) => (
-              <li key={item.label}>
-                <button
-                  className={activeMain === item.label ? "active main-link" : "main-link"}
-                  onClick={() => setActiveMain(item.label)}
-                >
-                  <span className="main-icon">{item.icon}</span> {item.label}
-                </button>
-                {activeMain === item.label && item.subLinks && (
-                  <ul className="sub-links open">
-                    {item.subLinks.map((sub) => {
-                      const isSyllabus = item.label === "Syllabus";
-                      const hasUnits = isSyllabus && sub.subLinks && sub.subLinks.length > 0;
-                      return (
-                        <li key={sub.key}>
+       <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
+  <ul>
+    {filteredMenu.map((item) => (
+      <li key={item.label}>
+        <button
+          className={activeMain === item.label ? "active main-link" : "main-link"}
+          onClick={() => setActiveMain(item.label)}
+        >
+          <span className="main-icon">{item.icon}</span> {item.label}
+        </button>
+        {activeMain === item.label && item.subLinks && (
+          <ul className="sub-links open">
+            {item.subLinks.map((sub) => {
+              const isSyllabus = item.label === "Syllabus";
+              const hasUnits = isSyllabus && sub.subLinks && sub.subLinks.length > 0;
+              return (
+                <li key={sub.key}>
+                  <button
+                    className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                    onClick={() => {
+                      if (hasUnits) {
+                        // Toggle expansion for subject submenu
+                        if (activeSub === sub.key) {
+                          setActiveSub(null);
+                          setSelectedSyllabusUnit(null);
+                          setUploadedSyllabusFiles([]);
+                        } else {
+                          setActiveSub(sub.key);
+                          setSelectedSyllabusUnit(null);
+                          setUploadedSyllabusFiles([]);
+                          setActiveMain("Syllabus");
+                        }
+                      } else if (isSyllabus) {
+                        // Clicking unit selects it and fetches files
+                        handleSyllabusUnitClick(sub);
+                      } else {
+                        // Other menu item actions
+                        setActiveSub(sub.key);
+                        if (sub.key === "create-assignment") setShowCreateAssignment(true);
+                        if (sub.key === "upload-task") setShowUploadTask(true);
+                        if (sub.key === "my-tasks") setActiveMain("My Tasks");
+                      }
+                    }}
+                  >
+                    {sub.label}
+                  </button>
+
+                  {/* Show units if subject expanded */}
+                  {hasUnits && activeSub === sub.key && (
+                    <ul className="sub-links nested-unit-list">
+                      {sub.subLinks.map((unit) => (
+                        <li key={unit.key}>
                           <button
-                            className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-                            onClick={() => {
-                              if (hasUnits) {
-  // When clicking a syllabus subject, expand all units but do NOT auto-select any unit
-  setActiveSub(sub.key);
-  setSelectedSyllabusUnit(null);
-  setUploadedSyllabusFiles([]);
-  setActiveMain("Syllabus");
-} else if (isSyllabus) {
-  // Clicking a unit selects it and loads its content
-  handleSyllabusUnitClick(sub);
-} else {
-  setActiveSub(sub.key);
-  if (sub.key === "create-assignment") setShowCreateAssignment(true);
-  if (sub.key === "upload-task") setShowUploadTask(true);
-  if (sub.key === "my-tasks") setActiveMain("My Tasks");
-}
-
-                            }}
+                            className={`sub-link${selectedSyllabusUnit?.key === unit.key ? " active" : ""}`}
+                            onClick={() => handleSyllabusUnitClick(unit)}
                           >
-                            {sub.label}
+                            {unit.label}
                           </button>
-
-                          {/* Show units if subject clicked */}
-                          {hasUnits && activeSub === sub.key && (
-                            <ul className="sub-links nested-unit-list">
-                              {sub.subLinks.map((unit) => (
-                                <li key={unit.key}>
-                                  <button
-                                    className={`sub-link${selectedSyllabusUnit?.key === unit.key ? " active" : ""}`}
-                                    onClick={() => handleSyllabusUnitClick(unit)}
-                                  >
-                                    {unit.label}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
                         </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </li>
-            ))}
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
           </ul>
-        </nav>
+        )}
+      </li>
+    ))}
+  </ul>
+</nav>
+
 
         <main className="student-content">
           {activeMain === "Assignments Submission" && (
