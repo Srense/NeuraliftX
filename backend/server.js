@@ -504,14 +504,17 @@ app.delete(
       if (!file.facultyId.equals(facultyId))
         return res.status(403).json({ message: "Unauthorized" });
 
-      // Delete physical file
-      const filePath = path.join(__dirname, file.fileUrl);
-      fs.unlink(filePath, (err) => {
-        if (err) console.warn("Failed to delete syllabus file:", err);
-      });
+      const filePath = path.join(__dirname, file.fileUrl.startsWith("/") ? file.fileUrl.slice(1) : file.fileUrl);
 
-      await file.deleteOne();
-      res.json({ message: "File deleted" });
+try {
+  await fs.promises.unlink(filePath);
+  console.log("Deleted file at", filePath);
+} catch (err) {
+  console.warn("Failed to delete syllabus file:", err);
+  // Optionally: return res.status(500).json({ message: "Failed to delete physical file" });
+}
+await file.deleteOne();
+res.json({ message: "File deleted" });
     } catch (err) {
       console.error("Syllabus file delete error:", err);
       res.status(500).json({ message: "Failed to delete file" });
