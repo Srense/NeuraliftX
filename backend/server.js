@@ -492,32 +492,31 @@ app.get("/api/faculty/syllabus/files", authenticateJWT, async (req, res) => {
 });
 
 // Delete syllabus file (faculty can delete only own file)
-app.delete(
-  "/api/faculty/syllabus/files/:id",
-  authenticateJWT,
-  authorizeRole(["faculty"]),
-  async (req, res) => {
+app.delete('/api/faculty/syllabus/files/:id', authenticateJWT, authorizeRole('faculty'), async (req, res) => {
+  try {
+    const facultyId = req.user.id;
+    const file = await SyllabusFile.findById(req.params.id);
+    if (!file) return res.status(404).json({ message: "File not found" });
+    if (!file.facultyId.equals(facultyId)) return res.status(403).json({ message: "Unauthorized" });
+
+    // Correctly resolve path to physical file
+    const filePath = path.join(__dirname, file.fileUrl.replace(/^\//, ''));
+
     try {
-      const facultyId = req.user._id;
-      const file = await SyllabusFile.findById(req.params.id);
-      if (!file) return res.status(404).json({ message: "File not found" });
-      if (!file.facultyId.equals(facultyId))
-        return res.status(403).json({ message: "Unauthorized" });
-
-      // Delete physical file
-      const filePath = path.join(__dirname, file.fileUrl);
-      fs.unlink(filePath, (err) => {
-        if (err) console.warn("Failed to delete syllabus file:", err);
-      });
-
-      await file.deleteOne();
-      res.json({ message: "File deleted" });
+      await fs.promises.unlink(filePath);
     } catch (err) {
-      console.error("Syllabus file delete error:", err);
-      res.status(500).json({ message: "Failed to delete file" });
+      console.warn("Failed to delete syllabus file", err);
+      return res.status(500).json({ message: "Failed to delete physical file" });
     }
+
+    await file.deleteOne();
+    res.json({ message: "File deleted" });
+  } catch (err) {
+    console.error("Syllabus file delete error", err);
+    res.status(500).json({ message: "Failed to delete file" });
   }
-);
+});
+
 
 
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
