@@ -474,33 +474,29 @@ app.get(
   }
 );
 
-// Delete a syllabus file by ID
-app.delete(
-  "/api/faculty/syllabus/files/:id",
-  authenticateJWT,
-  authorizeRole(["faculty", "admin"]),
+/app.delete("/api/faculty/syllabus/files/:id",
+  authenticateJWT, authorizeRole(["faculty", "admin"]),
   async (req, res) => {
     try {
-      const { id } = req.params;
-      const file = await SyllabusFile.findById(id);
-      if (!file) return res.status(404).json({ error: "File not found" });
-
-      // Only uploader or admin can delete
-      if (file.uploadedBy.toString() !== req.user.id && req.user.role !== "admin") {
-        return res.status(403).json({ error: "Not authorized to delete this file" });
+      console.log("Delete request, ID:", req.params.id);
+      const file = await SyllabusFile.findById(req.params.id);
+      if (!file) {
+        console.log("No DB doc for:", req.params.id);
+        return res.status(404).json({ error: "File not found" });
       }
-
-      const uploadDir = path.join(__dirname, "uploads", "syllabus");
-      const filePath = path.join(uploadDir, path.basename(file.fileUrl));
-
+      // Adjust this according to your actual storage layout!
+      const filePath = path.join(__dirname, "uploads", "syllabus", path.basename(file.fileUrl));
+      console.log("Attempt file removal:", filePath);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
+        console.log("Removed file:", filePath);
+      } else {
+        console.log("File not physically present:", filePath);
       }
-
-      await SyllabusFile.deleteOne({ _id: id });
+      await SyllabusFile.deleteOne({ _id: req.params.id });
       res.json({ success: true, message: "File deleted" });
-    } catch (error) {
-      console.error("Syllabus delete error:", error);
+    } catch (e) {
+      console.error("Delete failed", e);
       res.status(500).json({ error: "Failed to delete file" });
     }
   }
