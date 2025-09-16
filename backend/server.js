@@ -257,17 +257,6 @@ const answerVerificationSchema = new mongoose.Schema({
 
 const AnswerVerification = mongoose.model("AnswerVerification", answerVerificationSchema);
 
-const syllabusFileSchema = new mongoose.Schema({
-  facultyId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  subjectKey: { type: String, required: true },
-  unitKey: { type: String, required: true },
-  fileName: { type: String, required: true },
-  fileUrl: { type: String, required: true },
-  uploadedAt: { type: Date, default: Date.now },
-});
-const SyllabusFile = mongoose.model("SyllabusFile", syllabusFileSchema);
-
-
 
 
 // Disposable email checks (using AbstractAPI and deep-email-validator)
@@ -421,102 +410,8 @@ const uploadAnswer = multer({ storage: answerStorage });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const syllabusUploadDir = path.join(uploadDir, "syllabus");
-if (!fs.existsSync(syllabusUploadDir)) fs.mkdirSync(syllabusUploadDir, { recursive: true });
-
-const syllabusStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, syllabusUploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const uniqueName = `${req.user._id}-${Date.now()}${ext}`;
-    cb(null, uniqueName);
-  },
-});
-
-const syllabusUpload = multer({ storage: syllabusStorage });
-
-
 
 // API Routes
-
-
-// Upload a syllabus file (faculty only)
-app.post(
-  "/api/faculty/syllabus/upload",
-  authenticateJWT,
-  authorizeRole(["faculty"]),
-  syllabusUpload.single("file"),
-  async (req, res) => {
-    try {
-      const facultyId = req.user._id;
-      const { unitKey } = req.body;
-      if (!unitKey || !req.file)
-        return res.status(400).json({ message: "unitKey and file required" });
-
-      // Derive subjectKey from unitKey (assumed format 'syllabus-subject-unitX')
-      const subjectKey = unitKey.split("-unit")[0];
-
-      const newFile = new SyllabusFile({
-        facultyId,
-        subjectKey,
-        unitKey,
-        fileName: req.file.originalname,
-        fileUrl: `/uploads/syllabus/${req.file.filename}`,
-      });
-
-      await newFile.save();
-      res.json({ message: "File uploaded successfully", file: newFile });
-    } catch (err) {
-      console.error("Syllabus file upload error:", err);
-      res.status(500).json({ message: "Failed to upload file" });
-    }
-  }
-);
-
-// Get all files for a syllabus unit (accessible to faculty and students)
-app.get("/api/faculty/syllabus/files", authenticateJWT, async (req, res) => {
-  try {
-    const { unitKey } = req.query;
-    if (!unitKey) return res.status(400).json({ message: "unitKey is required" });
-
-    const files = await SyllabusFile.find({ unitKey }).select(
-      "fileName fileUrl uploadedAt"
-    );
-    res.json({ files });
-  } catch (err) {
-    console.error("Fetch syllabus files error:", err);
-    res.status(500).json({ message: "Failed to fetch files" });
-  }
-});
-
-// Delete syllabus file (faculty can delete only own file)
-app.delete('/api/faculty/syllabus/files/:id', authenticateJWT, authorizeRole('faculty'), async (req, res) => {
-  try {
-    const facultyId = req.user.id;
-    const file = await SyllabusFile.findById(req.params.id);
-    if (!file) return res.status(404).json({ message: "File not found" });
-    if (!file.facultyId.equals(facultyId)) return res.status(403).json({ message: "Unauthorized" });
-
-    // Correctly resolve path to physical file
-    const filePath = path.join(__dirname, file.fileUrl.replace(/^\//, ''));
-
-    try {
-      await fs.promises.unlink(filePath);
-    } catch (err) {
-      console.warn("Failed to delete syllabus file", err);
-      return res.status(500).json({ message: "Failed to delete physical file" });
-    }
-
-    await file.deleteOne();
-    res.json({ message: "File deleted" });
-  } catch (err) {
-    console.error("Syllabus file delete error", err);
-    res.status(500).json({ message: "Failed to delete file" });
-  }
-});
-
 
 
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
