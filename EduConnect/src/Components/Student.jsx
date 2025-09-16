@@ -413,8 +413,9 @@ export default function Student() {
       icon: "📚",
       subLinks: [
         { label: "Attendance", key: "academics-attendance" },
+         { label: "Courses", key: "academics-courses" },
         { label: "Grades", key: "academics-grades" },
-        { label: "Courses", key: "academics-courses" },
+       
       ],
     },
     { label: "Syllabus", icon: "📄", subLinks: [] },
