@@ -423,7 +423,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // API Routes
 
 
-/ Upload syllabus file using existing multer upload middleware
+
 app.post(
   "/api/faculty/syllabus/upload",
   authenticateJWT,
