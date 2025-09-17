@@ -953,6 +953,36 @@ app.get("/api/syllabus", authenticateJWT, authorizeRole("faculty"), async (req, 
   res.json(units);
 });
 
+// Delete syllabus unit uploaded file (optional: clear fileUrl)
+app.delete(
+  "/api/syllabus/unit-upload",
+  authenticateJWT,
+  authorizeRole("faculty"),
+  async (req, res) => {
+    try {
+      const unitKey = req.query.unitKey;
+      if (!unitKey) return res.status(400).json({ error: "unitKey is required" });
+
+      const unit = await SyllabusUnit.findOne({ key: unitKey });
+      if (!unit || !unit.uploadedFileUrl) return res.status(404).json({ error: "No file found for this unit" });
+
+      // Remove file from disk
+      const filePath = path.join(__dirname, "uploads", path.basename(unit.uploadedFileUrl));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // Remove file URL from DB
+      unit.uploadedFileUrl = "";
+      await unit.save();
+
+      res.json({ message: "Syllabus unit file deleted" });
+    } catch (err) {
+      console.error("Delete syllabus unit file error:", err);
+      res.status(500).json({ error: "Failed to delete syllabus file" });
+    }
+  }
+);
 // Get announcements
 app.get("/api/announcements", authenticateJWT, async (req, res) => {
   try {
