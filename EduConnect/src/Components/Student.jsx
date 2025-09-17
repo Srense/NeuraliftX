@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Admin.css"; // Shared theme CSS
-import "./Student.css"; // Student specific styles
+import "./Admin.css";
+import "./Student.css";
 import logo from "../assets/Logo.png";
 import HomeDashboard from "./HomeDashboard";
 import AttendanceDashboard from "./AttendanceDashboard";
@@ -9,11 +9,9 @@ import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 
-// Helper for profile image URL
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
 
-// Profile modal component
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -52,13 +50,21 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="close-btn">✕</button>
+      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">
+          ×
+        </button>
         <h2>My Profile</h2>
         <img src={previewUrl} alt="Profile" className="profile-large-pic" />
-        <p><b>Name:</b> {user.firstName} {user.lastName}</p>
-        <p><b>UID:</b> {user.roleIdValue}</p>
-        <p><b>Email:</b> {user.email}</p>
+        <p>
+          <b>Name:</b> {user.firstName} {user.lastName}
+        </p>
+        <p>
+          <b>UID:</b> {user.roleIdValue}
+        </p>
+        <p>
+          <b>Email:</b> {user.email}
+        </p>
         <p>
           <b>Coins Earned:</b>{" "}
           <span className="coin-with-number">
@@ -69,26 +75,31 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
         </button>
-        <button onClick={onLogout} className="logout-button">Logout</button>
+        <button onClick={onLogout} className="logout-button">
+          Logout
+        </button>
       </div>
     </div>
   );
 }
 
-// Announcement popup with feedback form
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleChange = (qIndex, value) => setResponses(prev => ({ ...prev, [qIndex]: value }));
+  const handleChange = (qIndex, value) =>
+    setResponses((prev) => ({ ...prev, [qIndex]: value }));
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ announcementId: announcement._id, responses }),
       });
       if (!res.ok) throw new Error("Feedback submission failed");
@@ -103,20 +114,37 @@ function AnnouncementPopup({ announcement, onClose, token }) {
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: "600px" }}>
-        <button onClick={onClose} className="close-btn">✕</button>
+      <div
+        className="profile-modal"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "600px" }}
+      >
+        <button onClick={onClose} className="close-btn">
+          ×
+        </button>
         <h2>{announcement.title}</h2>
         {announcement.contentType === "text" ? (
           <p>{announcement.message}</p>
         ) : submitted ? (
           <p>Thank you for your feedback!</p>
         ) : (
-          <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
-            {announcement.surveyQuestions.map((q, idx) => (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+          >
+            {announcement.surveyQuestions?.map((q, idx) => (
               <div key={idx} style={{ marginBottom: "1rem" }}>
                 <label style={{ fontWeight: "600" }}>{q.question}</label>
                 {q.inputType === "text" && (
-                  <textarea rows={3} value={responses[idx] || ""} onChange={e => handleChange(idx, e.target.value)} required />
+                  <textarea
+                    rows={3}
+                    value={responses[idx] || ""}
+                    onChange={(e) => handleChange(idx, e.target.value)}
+                    required
+                    style={{ width: "100%" }}
+                  />
                 )}
                 {(q.inputType === "radio" || q.inputType === "checkbox") && (
                   <div>
@@ -127,17 +155,20 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                           name={`question-${idx}`}
                           value={opt}
                           checked={
-                            q.inputType === "radio" ? responses[idx] === opt : Array.isArray(responses[idx]) && responses[idx].includes(opt)
+                            q.inputType === "radio"
+                              ? responses[idx] === opt
+                              : Array.isArray(responses[idx]) &&
+                                responses[idx].includes(opt)
                           }
-                          onChange={e => {
+                          onChange={(e) => {
                             if (q.inputType === "radio") {
                               handleChange(idx, e.target.value);
                             } else {
-                              const prevSelection = responses[idx] || [];
+                              const prev = responses[idx] || [];
                               if (e.target.checked) {
-                                handleChange(idx, [...prevSelection, e.target.value]);
+                                handleChange(idx, [...prev, e.target.value]);
                               } else {
-                                handleChange(idx, prevSelection.filter(v => v !== e.target.value));
+                                handleChange(idx, prev.filter((v) => v !== e.target.value));
                               }
                             }
                           }}
@@ -149,10 +180,17 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                   </div>
                 )}
                 {q.inputType === "select" && (
-                  <select value={responses[idx] || ""} onChange={e => handleChange(idx, e.target.value)} required>
+                  <select
+                    value={responses[idx] || ""}
+                    onChange={(e) => handleChange(idx, e.target.value)}
+                    required
+                    style={{ width: "100%" }}
+                  >
                     <option value="">Select...</option>
                     {q.options.map((opt, i) => (
-                      <option key={i} value={opt}>{opt}</option>
+                      <option key={i} value={opt}>
+                        {opt}
+                      </option>
                     ))}
                   </select>
                 )}
@@ -168,7 +206,6 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// THEME SYNC HOOK
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
@@ -221,9 +258,12 @@ function StudentTasks({ token }) {
     }
     async function fetchAnswer() {
       try {
-        const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          `https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (!res.ok) {
           setStudentAnswer(null);
           return;
@@ -249,11 +289,14 @@ function StudentTasks({ token }) {
     formData.append("answerFile", answerFile);
 
     try {
-      const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        }
+      );
       if (!res.ok) throw new Error("Answer upload failed");
       const data = await res.json();
       alert("Answer uploaded successfully");
@@ -276,7 +319,10 @@ function StudentTasks({ token }) {
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/check-answer", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ taskId: selectedTask._id }),
       });
       if (!res.ok) throw new Error("Verification failed");
@@ -297,10 +343,16 @@ function StudentTasks({ token }) {
       {!loadingTasks && tasks.length > 0 && (
         <ul>
           {tasks.map((task) => (
-            <li key={task._id} style={{ marginBottom: 12, cursor: "pointer" }}>
+            <li
+              key={task._id}
+              style={{ marginBottom: 12, cursor: "pointer" }}
+            >
               <button
                 onClick={() => setSelectedTask(task)}
-                style={{ background: selectedTask?._id === task._id ? "#ccc" : "transparent" }}
+                style={{
+                  background:
+                    selectedTask?._id === task._id ? "#ccc" : "transparent",
+                }}
               >
                 {task.originalName}
               </button>
@@ -313,7 +365,11 @@ function StudentTasks({ token }) {
         <>
           <h3>Task Details</h3>
           <p>
-            <a href={`https://neuraliftx.onrender.com${selectedTask.fileUrl}`} target="_blank" rel="noreferrer">
+            <a
+              href={`https://neuraliftx.onrender.com${selectedTask.fileUrl}`}
+              target="_blank"
+              rel="noreferrer"
+            >
               View Task PDF
             </a>
           </p>
@@ -322,7 +378,11 @@ function StudentTasks({ token }) {
             <h4>Your Answer</h4>
             {studentAnswer ? (
               <p>
-                <a href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`} target="_blank" rel="noreferrer">
+                <a
+                  href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   View uploaded answer
                 </a>
               </p>
@@ -332,12 +392,22 @@ function StudentTasks({ token }) {
 
             {studentAnswer && (
               <>
-                <button onClick={handleCheck} disabled={verifying} style={{ marginTop: 10 }}>
+                <button
+                  onClick={handleCheck}
+                  disabled={verifying}
+                  style={{ marginTop: 10 }}
+                >
                   {verifying ? "Checking..." : "Check"}
                 </button>
 
                 {verificationResult && (
-                  <div style={{ marginTop: 10, padding: 10, border: "1px solid #ccc" }}>
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: 10,
+                      border: "1px solid #ccc",
+                    }}
+                  >
                     <strong>Score: </strong>
                     {verificationResult.score ?? "N/A"} <br />
                     <strong>Feedback: </strong>
@@ -347,8 +417,16 @@ function StudentTasks({ token }) {
               </>
             )}
 
-            <input type="file" accept="application/pdf" onChange={handleAnswerChange} disabled={uploadingAnswer} />
-            <button onClick={handleSubmitAnswer} disabled={!answerFile || uploadingAnswer}>
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={handleAnswerChange}
+              disabled={uploadingAnswer}
+            />
+            <button
+              onClick={handleSubmitAnswer}
+              disabled={!answerFile || uploadingAnswer}
+            >
               {uploadingAnswer ? "Uploading..." : "Upload Answer"}
             </button>
           </div>
@@ -360,15 +438,14 @@ function StudentTasks({ token }) {
 
 export default function Student() {
   useGlobalTheme();
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token_student");
-  const handleGenerateQuiz = (assignmentId) => {
-    navigate(`/quiz/${assignmentId}`);
-  };
 
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState(null);
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
   const [activeSub, setActiveSub] = useState(null);
@@ -376,20 +453,17 @@ export default function Student() {
   const [filteredMenu, setFilteredMenu] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Announcement popup states
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementError, setAnnouncementError] = useState(null);
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
-  // Assignments state
   const [assignments, setAssignments] = useState([]);
-  // Syllabus expanded subject and uploaded files
+
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
   const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
 
-  // The syllabus menu with corrected keys (typos fixed)
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
     {
@@ -451,7 +525,6 @@ export default function Student() {
     },
   ];
 
-  // Fetch syllabus units and uploaded files from backend on mount
   useEffect(() => {
     async function fetchSyllabusUnits() {
       try {
@@ -472,7 +545,6 @@ export default function Student() {
     if (token) fetchSyllabusUnits();
   }, [token]);
 
-  // Fetch user profile on mount
   useEffect(() => {
     async function fetchUser() {
       if (!token) {
@@ -497,7 +569,6 @@ export default function Student() {
     fetchUser();
   }, [token, navigate]);
 
-  // Fetch announcements after user loads
   useEffect(() => {
     if (!user) return;
     async function fetchAnnouncements() {
@@ -524,7 +595,6 @@ export default function Student() {
     fetchAnnouncements();
   }, [user, token]);
 
-  // Fetch assignments on Quiz/Assignments menu active
   useEffect(() => {
     if (activeMain === "Quiz/Assignments") {
       fetchAssignments();
@@ -544,7 +614,6 @@ export default function Student() {
     }
   }
 
-  // Redirect based on role on user load
   useEffect(() => {
     if (user) {
       if (
@@ -559,7 +628,6 @@ export default function Student() {
     }
   }, [user, navigate]);
 
-  // Filter menu based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredMenu(menu);
@@ -607,7 +675,6 @@ export default function Student() {
     setShowProfileModal(false);
   };
 
-  // Close announcement popup and show next if any
   const closeAnnouncementPopup = () => {
     const currentIndex = announcements.findIndex(
       (a) => a._id === currentAnnouncement?._id
@@ -644,12 +711,6 @@ export default function Student() {
               >
                 {originalName}
               </a>
-              <button
-                className="generate-quiz-btn"
-                onClick={() => handleGenerateQuiz(_id)}
-              >
-                Generate Quiz
-              </button>
             </div>
           ))}
         </div>
@@ -661,18 +722,16 @@ export default function Student() {
         <QuizPerformanceChart />
       </div>
     );
-  } else if (activeMain === "Certifications") {
-    contentArea = <CourseraCertifications />;
-  } else if (activeMain === "Top Rankers" && activeSub === "toprankers-individual") {
+  } else if (
+    activeMain === "Top Rankers" &&
+    activeSub === "toprankers-individual"
+  ) {
     contentArea = <IndividualLeaderboard />;
   } else if (activeMain === "Tasks") {
     contentArea = <StudentTasks token={token} />;
   } else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
-
-  if (loadingUser) return <div className="loading">Loading user info...</div>;
-  if (error) return <div className="error">{error}</div>;
 
   return (
     <div className="student-root">
@@ -701,10 +760,18 @@ export default function Student() {
           <span className="search-icon">&#128269;</span>
         </div>
         <div className="header-icons">
-          <span className="icon" title="Notifications">&#128276;</span>
-          <span className="icon" title="Library">&#128214;</span>
-          <span className="icon" title="Home">&#8962;</span>
-          <span className="icon" title="Settings">&#9881;</span>
+          <span className="icon" title="Notifications">
+            &#128276;
+          </span>
+          <span className="icon" title="Library">
+            &#128214;
+          </span>
+          <span className="icon" title="Home">
+            &#8962;
+          </span>
+          <span className="icon" title="Settings">
+            &#9881;
+          </span>
         </div>
         <div
           className="profile-info"
@@ -712,11 +779,11 @@ export default function Student() {
           onClick={() => setShowProfileModal(true)}
         >
           <span className="profile-name">
-            {user.firstName} {user.lastName}
+            {user?.firstName} {user?.lastName}
           </span>
-          <span className="profile-uid">{user.roleIdValue}</span>
+          <span className="profile-uid">{user?.roleIdValue}</span>
           <img
-            src={getProfileImageUrl(user.profilePicUrl)}
+            src={getProfileImageUrl(user?.profilePicUrl)}
             alt="Profile"
             className="profile-pic"
           />
@@ -802,11 +869,7 @@ export default function Student() {
       )}
 
       {showAnnouncementPopup && currentAnnouncement && (
-        <AnnouncementPopup
-          announcement={currentAnnouncement}
-          onClose={closeAnnouncementPopup}
-          token={token}
-        />
+        <AnnouncementPopup announcement={currentAnnouncement} onClose={closeAnnouncementPopup} token={token} />
       )}
     </div>
   );
