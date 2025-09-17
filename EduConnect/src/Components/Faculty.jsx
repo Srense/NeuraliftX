@@ -4,6 +4,7 @@ import "./Admin.css"; // Universal theme CSS for all dashboards
 import logo from "../assets/Logo.png";
 import "./Student.css";
 
+
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
@@ -18,15 +19,18 @@ function useGlobalTheme() {
   }, []);
 }
 
+
 function UploadTaskModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+
 
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("pdf", selectedFile);
+
 
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/tasks", {
@@ -45,6 +49,7 @@ function UploadTaskModal({ token, onClose, onUpload }) {
       setUploading(false);
     }
   };
+
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
@@ -70,13 +75,16 @@ function UploadTaskModal({ token, onClose, onUpload }) {
   );
 }
 
+
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+
   const handleChange = (qIndex, value) =>
     setResponses((prev) => ({ ...prev, [qIndex]: value }));
+
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -97,7 +105,9 @@ function AnnouncementPopup({ announcement, onClose, token }) {
     setSubmitting(false);
   };
 
+
   if (!announcement) return null;
+
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
@@ -195,17 +205,21 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
+
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
+
   const handleChange = (e) => setSelectedFile(e.target.files[0]);
+
 
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("pdf", selectedFile);
+
 
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
@@ -224,6 +238,7 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
       setUploading(false);
     }
   };
+
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
@@ -245,12 +260,14 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
   );
 }
 
+
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreview] = useState(
     user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : ""
   );
+
 
   const handleChange = (e) => {
     const file = e.target.files[0];
@@ -259,6 +276,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
       setPreview(URL.createObjectURL(file));
     }
   };
+
 
   const handleUpload = async () => {
     if (!selectedFile) return;
@@ -283,6 +301,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
       setUploading(false);
     }
   };
+
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
@@ -321,11 +340,14 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   );
 }
 
+
 // ====== NEW FACULTY ANSWERS MODAL ======
+
 
 function FacultyAnswersModal({ token, task, onClose }) {
   const [loading, setLoading] = useState(false);
   const [studentAnswers, setStudentAnswers] = useState([]);
+
 
   useEffect(() => {
     async function fetchAnswers() {
@@ -345,6 +367,7 @@ function FacultyAnswersModal({ token, task, onClose }) {
     }
     fetchAnswers();
   }, [task, token]);
+
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
@@ -381,16 +404,20 @@ function FacultyAnswersModal({ token, task, onClose }) {
   );
 }
 
+
 // ========== FACULTY ROOT COMPONENT WITH SYLLABUS UPLOAD AND VIEW ==========
+
 
 export default function Faculty() {
   useGlobalTheme();
   const navigate = useNavigate();
   const token = localStorage.getItem("token_faculty");
 
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
@@ -398,9 +425,11 @@ export default function Faculty() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredMenu, setFilteredMenu] = useState([]);
 
+
   const [assignments, setAssignments] = useState([]);
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+
 
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
@@ -408,13 +437,17 @@ export default function Faculty() {
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
+
   const [showUploadTask, setShowUploadTask] = useState(false);
+
 
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
 
+
   const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
   const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
+
 
   // SYLLABUS STATE
   const syllabusMenu = {
@@ -451,6 +484,7 @@ export default function Faculty() {
     ],
   };
 
+
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -471,12 +505,15 @@ export default function Faculty() {
     syllabusMenu,
   ];
 
+
   // SYLLABUS FILE UPLOAD AND VIEW STATES
   const [selectedSyllabusUnit, setSelectedSyllabusUnit] = useState(null);
   const [uploadedSyllabusFiles, setUploadedSyllabusFiles] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [fileToUpload, setFileToUpload] = useState(null);
- const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
+  // Removed expandedSyllabusSubject as it is no longer needed
+
+
   useEffect(() => {
     async function fetchUser() {
       if (!token) {
@@ -501,6 +538,7 @@ export default function Faculty() {
     fetchUser();
   }, [token, navigate]);
 
+
   useEffect(() => {
     if (user) {
       if (
@@ -515,9 +553,11 @@ export default function Faculty() {
     }
   }, [user, navigate]);
 
+
   useEffect(() => {
     setFilteredMenu(menu);
   }, []);
+
 
   useEffect(() => {
     if (user) {
@@ -544,6 +584,7 @@ export default function Faculty() {
     }
   }, [user, token]);
 
+
   useEffect(() => {
     if (activeMain === "Assignments Submission") {
       fetchAssignments();
@@ -552,6 +593,7 @@ export default function Faculty() {
     }
   }, [activeMain]);
 
+
   useEffect(() => {
     if (activeMain === "My Tasks") {
       fetchTasks();
@@ -559,6 +601,7 @@ export default function Faculty() {
       setTasks([]);
     }
   }, [activeMain]);
+
 
   async function fetchAssignments() {
     try {
@@ -572,6 +615,7 @@ export default function Faculty() {
       alert("Failed to load assignments");
     }
   }
+
 
   async function fetchTasks() {
     setLoadingTasks(true);
@@ -589,6 +633,7 @@ export default function Faculty() {
     }
   }
 
+
   // SYLLABUS FILE FETCH
   async function fetchFilesForSyllabusUnit(unitKey) {
     try {
@@ -605,6 +650,7 @@ export default function Faculty() {
     }
   }
 
+
   const handleSyllabusUnitClick = (unit) => {
     setSelectedSyllabusUnit(unit);
     fetchFilesForSyllabusUnit(unit.key);
@@ -612,12 +658,14 @@ export default function Faculty() {
     setActiveSub(unit.key);
   };
 
+
   const handleUploadFile = async () => {
     if (!fileToUpload || !selectedSyllabusUnit) return;
     setUploadingFile(true);
     const formData = new FormData();
     formData.append("file", fileToUpload);
     formData.append("unitKey", selectedSyllabusUnit.key);
+
 
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/faculty/syllabus/upload", {
@@ -635,6 +683,7 @@ export default function Faculty() {
       setUploadingFile(false);
     }
   };
+
 
   const handleDeleteFile = async (Id) => {
     console.log("Deleting file with ID:", Id);
@@ -658,9 +707,11 @@ export default function Faculty() {
     }
   };
 
+
   const handleUploadSuccess = (newAssignment) => {
     setAssignments((prev) => [newAssignment, ...prev]);
   };
+
 
   const handleDeleteAssignment = async (id) => {
     if (!window.confirm("Delete this assignment?")) return;
@@ -675,6 +726,7 @@ export default function Faculty() {
       alert("Failed to delete assignment");
     }
   };
+
 
   const handleDeleteTask = async (id) => {
     if (!window.confirm("Delete this task?")) return;
@@ -691,6 +743,7 @@ export default function Faculty() {
     }
   };
 
+
   const handleViewAnswers = (task) => {
     setSelectedTaskForAnswers(task);
     setShowFacultyAnswersModal(true);
@@ -700,17 +753,21 @@ export default function Faculty() {
     setSelectedTaskForAnswers(null);
   };
 
+
   const toggleSidebar = () => setSidebarOpen((v) => !v);
+
 
   const handleLogout = () => {
     localStorage.removeItem("token_faculty");
     navigate("/login");
   };
 
+
   const handleProfileUpdate = (url) => {
     setUser((prev) => ({ ...prev, profilePicUrl: url }));
     setShowProfile(false);
   };
+
 
   const closeAnnouncementPopup = () => {
     const idx = announcements.findIndex((a) => a._id === currentAnnouncement._id);
@@ -723,8 +780,10 @@ export default function Faculty() {
     }
   };
 
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
+
 
   return (
     <div className="student-root">
@@ -783,6 +842,7 @@ export default function Faculty() {
         </div>
       </header>
 
+
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
@@ -828,21 +888,21 @@ export default function Faculty() {
                             {sub.label}
                           </button>
 
-                         {/* Show units only if this subject is expanded */}
-    {hasUnits && expandedSyllabusSubject === sub.key && (
-      <ul className="sub-links nested-unit-list">
-        {sub.subLinks.map((unit) => (
-          <li key={unit.key}>
-            <button
-              className={`sub-link${selectedSyllabusUnit?.key === unit.key ? " active" : ""}`}
-              onClick={() => handleSyllabusUnitClick(unit)}
-            >
-              {unit.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-    )}
+                          {/* Show units always for all syllabus subjects */}
+                          {hasUnits && (
+                            <ul className="sub-links nested-unit-list">
+                              {sub.subLinks.map((unit) => (
+                                <li key={unit.key}>
+                                  <button
+                                    className={`sub-link${selectedSyllabusUnit?.key === unit.key ? " active" : ""}`}
+                                    onClick={() => handleSyllabusUnitClick(unit)}
+                                  >
+                                    {unit.label}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </li>
                       );
                     })}
@@ -852,6 +912,7 @@ export default function Faculty() {
             ))}
           </ul>
         </nav>
+
 
         <main className="student-content">
           {activeMain === "Assignments Submission" && (
@@ -886,6 +947,7 @@ export default function Faculty() {
               </ul>
             </>
           )}
+
 
           {activeMain === "My Tasks" && (
             <>
@@ -923,6 +985,7 @@ export default function Faculty() {
             </>
           )}
 
+
           {activeMain === "Syllabus" && selectedSyllabusUnit && (
             <div>
               <h2>Upload Content for {selectedSyllabusUnit.label}</h2>
@@ -939,37 +1002,39 @@ export default function Faculty() {
                 {uploadingFile ? "Uploading..." : "Upload File"}
               </button>
 
+
               <h3 style={{ marginTop: "1.5rem" }}>Uploaded Files</h3>
               {!uploadedSyllabusFiles.length && <p>No files uploaded yet.</p>}
               <ul>
                 {uploadedSyllabusFiles.map((file) => (
-  <li key={file._id} style={{ marginBottom: 6 }}>
-    <a href={file.fileUrl} target="_blank" rel="noreferrer">{file.fileName}</a>
-    <button
-      onClick={() => handleDeleteFile(file._id)}
-      style={{
-        marginLeft: 10,
-        color: "red",
-        border: "none",
-        background: "none",
-        cursor: "pointer",
-        fontWeight: "bold",
-      }}
-    >
-      Delete
-    </button>
-  </li>
-))}
-
+                  <li key={file._id} style={{ marginBottom: 6 }}>
+                    <a href={file.fileUrl} target="_blank" rel="noreferrer">{file.fileName}</a>
+                    <button
+                      onClick={() => handleDeleteFile(file._id)}
+                      style={{
+                        marginLeft: 10,
+                        color: "red",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
           )}
+
 
           {activeMain !== "Assignments Submission" &&
             activeMain !== "My Tasks" &&
             activeMain !== "Syllabus" && <h2>{activeMain} content here</h2>}
         </main>
       </div>
+
 
       {showCreateAssignment && (
         <CreateAssignmentModal
