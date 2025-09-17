@@ -435,7 +435,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Upload syllabus unit PDF
 app.post(
   "/api/syllabus/unit-upload",
-  authMiddleware,
+  
   upload.single("pdf"),
   async (req, res) => {
     const unitKey = req.query.unitKey;
