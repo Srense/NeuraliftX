@@ -921,7 +921,7 @@ app.get("/api/coursera-courses", async (req, res) => {
 
 // Upload syllabus unit PDF
 app.post(
-  "/api/syllabus/unit-upload",
+  "/api/syllabusunit-upload",
   authenticateJWT,
   authorizeRole("faculty"),
   upload.single("pdf"),
