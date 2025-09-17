@@ -260,14 +260,18 @@ const AnswerVerification = mongoose.model("AnswerVerification", answerVerificati
 
 
 
-const syllabusFileSchema = new mongoose.Schema({
-  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  unitKey: { type: String, required: true },
-  fileName: { type: String, required: true },
-  fileUrl: { type: String, required: true },
+
+// Syllabus Content schema and model
+const syllabusContentSchema = new mongoose.Schema({
+  subject: { type: String, required: true },
+  unit: { type: String, required: true },
+  filePath: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 });
-const SyllabusFile = mongoose.model("SyllabusFile", syllabusFileSchema);
+
+const SyllabusContent = mongoose.model("SyllabusContent", syllabusContentSchema);
+module.exports = SyllabusContent;
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -424,80 +428,42 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 
+const SyllabusContent = require("./path/to/syllabusContentModel"); // Adjust the path
+
 app.post(
-  "/api/faculty/syllabus/upload",
-  authenticateJWT,
-  authorizeRole(["faculty", "admin"]),
-  upload.single("file"), // use existing multer instance here
+  "/api/syllabus-content",
+  authenticateJWT, // Your existing JWT auth middleware
+  upload.single("pdf"), // Your existing multer instance
   async (req, res) => {
     try {
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-      if (!req.body.unitKey) return res.status(400).json({ error: "unitKey is required" });
+      const { subject, unit } = req.body;
+      if (!subject || !unit) {
+        return res.status(400).json({ message: "Subject and unit are required" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "PDF file is required" });
+      }
 
-      // Construct fileUrl accessible by frontend
-      const fileUrl = `/uploads/syllabus/${req.file.filename}`;
+      // Construct file path accessible by frontend
+      const filePath = `/uploads/${req.file.filename}`;
 
-      const syllabusFile = new SyllabusFile({
-        uploadedBy: req.user.id,
-        unitKey: req.body.unitKey,
-        fileName: req.file.originalname,
-        fileUrl,
+      // Save syllabus content metadata to MongoDB
+      const newContent = new SyllabusContent({
+        subject,
+        unit,
+        filePath,
+        uploadedBy: req.user.id, // set by authenticateJWT middleware
       });
 
-      await syllabusFile.save();
+      await newContent.save();
 
-      res.json({ success: true, message: "File uploaded successfully", file: syllabusFile });
+      return res.json({
+        message: "Syllabus content uploaded successfully",
+        content: newContent,
+      });
     } catch (error) {
-      console.error("Syllabus upload error:", error);
-      res.status(500).json({ error: "Upload failed" });
-    }
-  }
-);
-
-// Fetch syllabus files for a particular unitKey
-app.get(
-  "/api/faculty/syllabus/files",
-  authenticateJWT,
-  authorizeRole(["faculty", "admin"]),
-  async (req, res) => {
-    try {
-      const { unitKey } = req.query;
-      if (!unitKey) return res.status(400).json({ error: "unitKey query param required" });
-
-      const files = await SyllabusFile.find({ unitKey }).sort({ uploadedAt: -1 });
-
-      res.json({ files });
-    } catch (error) {
-      console.error("Syllabus fetch error:", error);
-      res.status(500).json({ error: "Failed to fetch files" });
-    }
-  }
-);
-
-app.delete("/api/faculty/syllabus/files/:id",
-  authenticateJWT, authorizeRole(["faculty", "admin"]),
-  async (req, res) => {
-    try {
-      console.log("Delete request, ID:", req.params.id);
-      const file = await SyllabusFile.findById(req.params.id);
-      if (!file) {
-        console.log("No DB doc for:", req.params.id);
-        return res.status(404).json({ error: "File not found" });
-      }
-      // Adjust this according to your actual storage layout!
-      const filePath = path.join(__dirname, "uploads", "syllabus", path.basename(file.fileUrl));
-      console.log("Attempt file removal:", filePath);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log("Removed file:", filePath);
-      } else {
-        console.log("File not physically present:", filePath);
-      }
-      await SyllabusFile.deleteOne({ _id: req.params.id });
-      res.json({ success: true, message: "File deleted" });
-    } catch (e) {
-      console.error("Delete failed", e);
-      res.status(500).json({ error: "Failed to delete file" });
+      console.error("Error uploading syllabus content:", error);
+      res.status(500).json({ message: "Server error while uploading" });
     }
   }
 );
