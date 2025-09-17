@@ -671,7 +671,7 @@ export default function Faculty() {
 
   try {
     const res = await fetch(
-      `https://neuraliftx.onrender.com/api/syllabus/unit-upload?unitKey=${selectedUnitKey},
+      `https://neuraliftx.onrender.com/api/syllabus/unit-upload?unitKey=${selectedUnitKey}`,
       {
         method: "POST",
         headers: {
