@@ -738,7 +738,7 @@ else if (activeMain === "Academics" && activeSub === "academics-grades") {
 }
 
   return (
-    <div className="student-root">
+    <div className="student-root"
       <header className="student-header">
         <button
           className="hamburger"
