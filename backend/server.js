@@ -273,7 +273,7 @@ const syllabusSchema = new mongoose.Schema({
   subjects: [syllabusSubjectSchema]
 }, { timestamps: true });
 
-const Syllabus = mongoose.model("Syllabus", syllabusSchema);
+
 
 
 // Disposable email checks (using AbstractAPI and deep-email-validator)
@@ -431,108 +431,37 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // API Routes
 
 app.post(
-  '/unit-upload',
+  '/api/syllabus/unit-upload',
   authenticateJWT,
   upload.single('pdf'),
   async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-    const { unitKey } = req.query;
-    if (!unitKey) return res.status(400).json({ error: 'Missing unitKey' });
-
-    const fileUrl = '/uploads/' + req.file.filename;
-
     try {
-      const syllabus = await Syllabus.findOne();
-      if (!syllabus) return res.status(404).json({ error: 'No syllabus found' });
+      const unitKey = req.query.unitKey;
+      if (!unitKey || !req.file)
+        return res.status(400).json({ error: 'Missing unitKey or PDF file' });
 
-      let found = false;
-      for (const subject of syllabus.subjects) {
-        for (const unit of subject.units) {
-          if (unit.key === unitKey) {
-            if (unit.uploadedFileUrl) {
-              const oldPath = path.join(__dirname, '../', unit.uploadedFileUrl);
-              if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-            }
-            unit.uploadedFileUrl = fileUrl;
-            found = true;
-            break;
-          }
-        }
-        if (found) break;
+      const fileUrl = `/uploads/${req.file.filename}`;
+
+      // Find existing unit or create new
+      let unit = await SyllabusUnit.findOne({ key: unitKey });
+      if (unit) {
+        unit.uploadedFileUrl = fileUrl;
+      } else {
+        unit = new SyllabusUnit({
+          key: unitKey,
+          label: unitKey.toUpperCase(), // or customize the label
+          uploadedFileUrl: fileUrl,
+        });
       }
+      await unit.save();
 
-      if (!found) return res.status(404).json({ error: 'Unit not found' });
-
-      await syllabus.save();
-
-      res.json({ fileUrl, message: 'Upload successful' });
-    } catch (e) {
-      console.error('Upload error:', e);
-      res.status(500).json({ error: 'Server error' });
+      res.json({ message: 'File uploaded successfully', fileUrl });
+    } catch (err) {
+      console.error('Syllabus unit upload error:', err);
+      res.status(500).json({ error: 'Upload failed' });
     }
   }
 );
-
-
-// GET – Get full syllabus data
-app.get("/", authenticateJWT, async (req, res) => {
-  try {
-    const syllabus = await Syllabus.findOne();
-    if (!syllabus) {
-      return res.status(404).json({ error: "Syllabus not found" });
-    }
-    res.json(syllabus);
-  } catch (error) {
-    console.error("Error fetching syllabus:", error);
-    res.status(500).json({ error: "Server error fetching syllabus" });
-  }
-});
-
-// DELETE – Delete uploaded PDF for a syllabus unit
-app.delete("/unit-upload", authenticateJWT, async (req, res) => {
-  const unitKey = req.query.unitKey;
-  if (!unitKey) {
-    return res.status(400).json({ error: "Missing unitKey" });
-  }
-
-  try {
-    const syllabus = await Syllabus.findOne();
-    if (!syllabus) {
-      return res.status(404).json({ error: "Syllabus not found" });
-    }
-
-    let deleted = false;
-
-    for (const subject of syllabus.subjects) {
-      for (const unit of subject.units) {
-        if (unit.key === unitKey) {
-          if (unit.uploadedFileUrl) {
-            const filePath = path.join(__dirname, "..", "uploads", path.basename(unit.uploadedFileUrl));
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-            }
-            unit.uploadedFileUrl = "";
-            deleted = true;
-            break;
-          }
-        }
-      }
-      if (deleted) break;
-    }
-
-    if (!deleted) {
-      return res.status(404).json({ error: "Unit key not found or no file to delete" });
-    }
-
-    await syllabus.save();
-
-    return res.json({ message: "File deleted from syllabus unit", unitKey });
-  } catch (error) {
-    console.error("Error deleting syllabus unit file:", error);
-    return res.status(500).json({ error: "Server error deleting file" });
-  }
-});
 
 
 
