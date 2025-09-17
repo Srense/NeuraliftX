@@ -271,7 +271,7 @@ const syllabusContentSchema = new mongoose.Schema({
 });
 
 const SyllabusContent = mongoose.model("SyllabusContent", syllabusContentSchema);
-module.exports = SyllabusContent;
+
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -428,12 +428,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 
-const SyllabusContent = require("./path/to/syllabusContentModel"); // Adjust the path
-
 app.post(
   "/api/syllabus-content",
-  authenticateJWT, // Your existing JWT auth middleware
-  upload.single("pdf"), // Your existing multer instance
+  authenticateJWT,
+  upload.single("pdf"), // Your existing multer middleware
   async (req, res) => {
     try {
       const { subject, unit } = req.body;
@@ -441,32 +439,25 @@ app.post(
         return res.status(400).json({ message: "Subject and unit are required" });
       }
       if (!req.file) {
-        return res.status(400).json({ message: "PDF file is required" });
+        return res.status(400).json({ message: "No PDF uploaded" });
       }
-
-      // Construct file path accessible by frontend
+      // Save metadata with file path
       const filePath = `/uploads/${req.file.filename}`;
-
-      // Save syllabus content metadata to MongoDB
       const newContent = new SyllabusContent({
         subject,
         unit,
         filePath,
-        uploadedBy: req.user.id, // set by authenticateJWT middleware
+        uploadedBy: req.user.id,
       });
-
       await newContent.save();
-
-      return res.json({
-        message: "Syllabus content uploaded successfully",
-        content: newContent,
-      });
+      res.json({ message: "Syllabus content uploaded successfully", content: newContent });
     } catch (error) {
-      console.error("Error uploading syllabus content:", error);
-      res.status(500).json({ message: "Server error while uploading" });
+      console.error(error);
+      res.status(500).json({ message: "Upload failed" });
     }
   }
 );
+
 
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
   if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
