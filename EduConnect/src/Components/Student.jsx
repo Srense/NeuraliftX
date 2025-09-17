@@ -739,7 +739,7 @@ else if (activeMain === "Academics" && activeSub === "academics-grades") {
 
   return (
     <div className="student-root">
-      <header className="student-header"
+      <header className="student-header">
         <button
           className="hamburger"
           aria-label="Toggle menu"
