@@ -706,64 +706,58 @@ export default function Student() {
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
-            {filteredMenu.map((main) => (
-              <li key={main.label}>
-                <button
-                  className={`main-link${activeMain === main.label ? " active" : ""}`}
-                  onClick={() => handleMainClick(main.label)}
-                >
-                  <span className="main-icon">{main.icon}</span> {main.label}
-                </button>
-                {activeMain === main.label && main.subLinks.length > 0 && (
-                  <ul className="sub-links open">
-                    {main.subLinks.map((sub) => {
-  const isSyllabus = main.label === "Syllabus";
-  const isExpanded = expandedSyllabusSubject === sub.key;
-
-  return (
-    <li key={sub.key}>
+  {filteredMenu.map((main) => (
+    <li key={main.label}>
       <button
-        className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-        // For syllabus, toggle expanded units; otherwise, just select
-        onClick={() => {
-          if (isSyllabus) {
-            // Toggle expand/collapse of subject units on click
-            setExpandedSyllabusSubject(isExpanded ? null : sub.key);
-            setActiveSub(sub.key);
-          } else {
-            handleSubClick(sub.key);
-          }
-        }}
+        className={`main-link${activeMain === main.label ? " active" : ""}`}
+        onClick={() => handleMainClick(main.label)}
       >
-        {sub.label}
+        <span className="main-icon">{main.icon}</span> {main.label}
       </button>
-
-      {/* If this subject in syllabus is expanded, show its units */}
-      {isSyllabus && isExpanded && sub.subLinks && (
-        <ul className="unit-sub-links">
-          {sub.subLinks.map((unit) => (
-            <li key={unit.key}>
-              <button
-                className={`sub-link${activeSub === unit.key ? " active" : ""}`}
-                onClick={() => handleSubClick(unit.key)}
-              >
-                {unit.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-})}
-
+      {activeMain === main.label && main.subLinks.length > 0 && (
+        <ul className="sub-links open">
+          {main.subLinks.map((sub) => {
+            const isSyllabus = main.label === "Syllabus";
+            const isExpanded = expandedSyllabusSubject === sub.key;
+            return (
+              <li key={sub.key}>
+                <button
+                  className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                  onClick={() => {
+                    if (isSyllabus) {
+                      setExpandedSyllabusSubject(isExpanded ? null : sub.key);
+                      setActiveSub(sub.key);
+                    } else {
+                      handleSubClick(sub.key);
+                    }
+                  }}
+                >
+                  {sub.label}
+                </button>
+                {/* Unit logic—this will always work now */}
+                {isSyllabus && isExpanded && sub.subLinks && (
+                  <ul className="unit-sub-links">
+                    {sub.subLinks.map((unit) => (
+                      <li key={unit.key}>
+                        <button
+                          className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+                          onClick={() => handleSubClick(unit.key)}
+                        >
+                          {unit.label}
+                        </button>
+                      </li>
+                    ))}
                   </ul>
                 )}
               </li>
-            ))}
-            
-          </ul>
-        </nav>
+            );
+          })}
+        </ul>
+      )}
+    </li>
+  ))}
+</ul>
+ </nav>
 
         <main className="student-content">{contentArea}</main>
       </div>
