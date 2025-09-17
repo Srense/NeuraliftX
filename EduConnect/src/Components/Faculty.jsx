@@ -662,34 +662,40 @@ export default function Faculty() {
     setSelectedUnitKey(unitKey);
   };
 
-  // Upload file for a unit after selecting a syllabus unit
-  const handleUnitFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !selectedUnitKey) return;
-    const formData = new FormData();
-    formData.append("pdf", file);
-    // Including unitKey info in query param or body for backend to associate file with unit
-    try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/syllabus/unit-upload?unitKey=${selectedUnitKey}`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        }
-      );
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      // Store uploaded file URL for this unit in state
-      setUnitUploadedFiles((prev) => ({
-        ...prev,
-        [selectedUnitKey]: data.fileUrl,
-      }));
-      alert("File uploaded successfully");
-    } catch {
-      alert("Failed to upload file for unit");
-    }
-  };
+ const handleUnitFileUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file || !selectedUnitKey) return;
+
+  const formData = new FormData();
+  formData.append("pdf", file);
+
+  try {
+    const res = await fetch(
+      `https://neuraliftx.onrender.com/api/syllabus/unit-upload?unitKey=${selectedUnitKey}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Do NOT set Content-Type header explicitly here; browser sets it for FormData
+        },
+        body: formData,
+      }
+    );
+
+    if (!res.ok) throw new Error("Upload failed");
+
+    const data = await res.json();
+
+    setUnitUploadedFiles((prev) => ({
+      ...prev,
+      [selectedUnitKey]: data.fileUrl,
+    }));
+
+    alert("File uploaded successfully");
+  } catch (e) {
+    alert("Failed to upload file for unit: " + e.message);
+  }
+};
 
   let contentArea = null;
   if (activeMain === "Assignments Submission") {
