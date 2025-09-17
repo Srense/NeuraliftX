@@ -383,19 +383,8 @@ export default function Faculty() {
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
     { label: "Credits Check", icon: "🧾" },
-    {
-      label: "Assignments Submission",
-      icon: "📤",
-      subLinks: [{ label: "Create Assignment", key: "create-assignment" }],
-    },
-    {
-      label: "Tasks",
-      icon: "📝",
-      subLinks: [
-        { label: "Upload Task", key: "upload-task" },
-        { label: "My Tasks", key: "my-tasks" },
-      ],
-    },
+   
+    
     syllabusMenu,
   ];
 
