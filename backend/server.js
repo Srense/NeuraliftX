@@ -258,20 +258,12 @@ const answerVerificationSchema = new mongoose.Schema({
 const AnswerVerification = mongoose.model("AnswerVerification", answerVerificationSchema);
 
 const syllabusUnitSchema = new mongoose.Schema({
-  key: { type: String, required: true },
-  label: { type: String, required: true },
-  uploadedFileUrl: { type: String, default: "" }
+  key: { type: String, unique: true, required: true },
+  label: String,
+  uploadedFileUrl: String,
 });
+const SyllabusUnit = mongoose.model("SyllabusUnit", syllabusUnitSchema);
 
-const syllabusSubjectSchema = new mongoose.Schema({
-  key: { type: String, required: true },
-  label: { type: String, required: true },
-  units: [syllabusUnitSchema]
-});
-
-const syllabusSchema = new mongoose.Schema({
-  subjects: [syllabusSubjectSchema]
-}, { timestamps: true });
 
 
 
@@ -430,38 +422,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 
-app.post(
-  '/api/syllabus/unit-upload',
-  authenticateJWT,
-  upload.single('pdf'),
-  async (req, res) => {
-    try {
-      const unitKey = req.query.unitKey;
-      if (!unitKey || !req.file)
-        return res.status(400).json({ error: 'Missing unitKey or PDF file' });
-
-      const fileUrl = `/uploads/${req.file.filename}`;
-
-      // Find existing unit or create new
-      let unit = await SyllabusUnit.findOne({ key: unitKey });
-      if (unit) {
-        unit.uploadedFileUrl = fileUrl;
-      } else {
-        unit = new SyllabusUnit({
-          key: unitKey,
-          label: unitKey.toUpperCase(), // or customize the label
-          uploadedFileUrl: fileUrl,
-        });
-      }
-      await unit.save();
-
-      res.json({ message: 'File uploaded successfully', fileUrl });
-    } catch (err) {
-      console.error('Syllabus unit upload error:', err);
-      res.status(500).json({ error: 'Upload failed' });
-    }
-  }
-);
 
 
 
@@ -951,6 +911,46 @@ app.get("/api/coursera-courses", async (req, res) => {
     console.error("Coursera fetch error:", error.message);
     res.status(500).json({ error: "Failed to fetch Coursera courses" });
   }
+});
+
+// Upload syllabus unit PDF
+app.post(
+  "/api/syllabus/unit-upload",
+  authenticateJWT,
+  authorizeRole("faculty"),
+  upload.single("pdf"),
+  async (req, res) => {
+    try {
+      const unitKey = req.query.unitKey;
+      if (!unitKey || !req.file)
+        return res.status(400).json({ error: "Missing unitKey or PDF file" });
+
+      const fileUrl = `/uploads/${req.file.filename}`;
+
+      let unit = await SyllabusUnit.findOne({ key: unitKey });
+      if (unit) {
+        unit.uploadedFileUrl = fileUrl;
+      } else {
+        unit = new SyllabusUnit({
+          key: unitKey,
+          label: unitKey.toUpperCase(),
+          uploadedFileUrl: fileUrl,
+        });
+      }
+      await unit.save();
+
+      res.json({ message: "File uploaded successfully", fileUrl });
+    } catch (err) {
+      console.error("Syllabus unit upload error:", err);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  }
+);
+
+// Get syllabus units with files
+app.get("/api/syllabus", authenticateJWT, authorizeRole("faculty"), async (req, res) => {
+  const units = await SyllabusUnit.find();
+  res.json(units);
 });
 
 // Get announcements
