@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Admin.css"; // Notice: Use the shared theme CSS for all dashboards!
+import "./Admin.css"; // Shared theme CSS
 import "./Student.css"; // Student specific styles
 import logo from "../assets/Logo.png";
 import HomeDashboard from "./HomeDashboard";
@@ -9,9 +9,11 @@ import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 
+// Helper for profile image URL
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
 
+// Profile modal component
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -20,9 +22,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setSelectedFile(file);
-    if (file) {
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+    if (file) setPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleUpload = async () => {
@@ -52,21 +52,19 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="close-btn">✕</button>
         <h2>My Profile</h2>
         <img src={previewUrl} alt="Profile" className="profile-large-pic" />
         <p><b>Name:</b> {user.firstName} {user.lastName}</p>
         <p><b>UID:</b> {user.roleIdValue}</p>
         <p><b>Email:</b> {user.email}</p>
-       <p>
-  <b>Coins Earned:</b>{" "}
-  <span className="coin-with-number">
-    <span className="coin-number">{user.coins || 0}</span>
-  </span>
-</p>
-
-
+        <p>
+          <b>Coins Earned:</b>{" "}
+          <span className="coin-with-number">
+            <span className="coin-number">{user.coins || 0}</span>
+          </span>
+        </p>
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
@@ -77,14 +75,13 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
   );
 }
 
+// Announcement popup with feedback form
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleChange = (qIndex, value) => {
-    setResponses((prev) => ({ ...prev, [qIndex]: value }));
-  };
+  const handleChange = (qIndex, value) => setResponses(prev => ({ ...prev, [qIndex]: value }));
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -106,7 +103,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
 
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px" }}>
+      <div className="profile-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: "600px" }}>
         <button onClick={onClose} className="close-btn">✕</button>
         <h2>{announcement.title}</h2>
         {announcement.contentType === "text" ? (
@@ -114,17 +111,12 @@ function AnnouncementPopup({ announcement, onClose, token }) {
         ) : submitted ? (
           <p>Thank you for your feedback!</p>
         ) : (
-          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+          <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
             {announcement.surveyQuestions.map((q, idx) => (
               <div key={idx} style={{ marginBottom: "1rem" }}>
                 <label style={{ fontWeight: "600" }}>{q.question}</label>
                 {q.inputType === "text" && (
-                  <textarea
-                    rows={3}
-                    value={responses[idx] || ""}
-                    onChange={(e) => handleChange(idx, e.target.value)}
-                    required
-                  />
+                  <textarea rows={3} value={responses[idx] || ""} onChange={e => handleChange(idx, e.target.value)} required />
                 )}
                 {(q.inputType === "radio" || q.inputType === "checkbox") && (
                   <div>
@@ -135,35 +127,29 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                           name={`question-${idx}`}
                           value={opt}
                           checked={
-                            q.inputType === "radio"
-                              ? responses[idx] === opt
-                              : Array.isArray(responses[idx]) && responses[idx].includes(opt)
+                            q.inputType === "radio" ? responses[idx] === opt : Array.isArray(responses[idx]) && responses[idx].includes(opt)
                           }
-                          onChange={(e) => {
+                          onChange={e => {
                             if (q.inputType === "radio") {
                               handleChange(idx, e.target.value);
                             } else {
-                              const prev = responses[idx] || [];
+                              const prevSelection = responses[idx] || [];
                               if (e.target.checked) {
-                                handleChange(idx, [...prev, e.target.value]);
+                                handleChange(idx, [...prevSelection, e.target.value]);
                               } else {
-                                handleChange(idx, prev.filter((v) => v !== e.target.value));
+                                handleChange(idx, prevSelection.filter(v => v !== e.target.value));
                               }
                             }
                           }}
                           required={q.inputType === "radio"}
-                        />
-                        {" "}{opt}
+                        />{" "}
+                        {opt}
                       </label>
                     ))}
                   </div>
                 )}
                 {q.inputType === "select" && (
-                  <select
-                    value={responses[idx] || ""}
-                    onChange={(e) => handleChange(idx, e.target.value)}
-                    required
-                  >
+                  <select value={responses[idx] || ""} onChange={e => handleChange(idx, e.target.value)} required>
                     <option value="">Select...</option>
                     {q.options.map((opt, i) => (
                       <option key={i} value={opt}>{opt}</option>
@@ -182,7 +168,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
-// ======================= THEME SYNC LOGIC: fetch global theme and apply ====================
+// THEME SYNC HOOK
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
@@ -194,12 +180,11 @@ function useGlobalTheme() {
       }
     }
     syncTheme();
-    const interval = setInterval(syncTheme, 3000); // 3 seconds
+    const interval = setInterval(syncTheme, 3000);
     return () => clearInterval(interval);
   }, []);
 }
 
-// ========== Student Task Section Component ==========
 function StudentTasks({ token }) {
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
@@ -210,16 +195,14 @@ function StudentTasks({ token }) {
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
 
-
-  // Fetch tasks uploaded by faculty
   useEffect(() => {
     async function fetchTasks() {
       setLoadingTasks(true);
       try {
-        const res = await fetch('https://neuraliftx.onrender.com/api/tasks', {
+        const res = await fetch("https://neuraliftx.onrender.com/api/tasks", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error('Failed to fetch tasks');
+        if (!res.ok) throw new Error("Failed to fetch tasks");
         const data = await res.json();
         setTasks(data);
       } catch (e) {
@@ -231,13 +214,11 @@ function StudentTasks({ token }) {
     fetchTasks();
   }, [token]);
 
-  // Fetch student's existing answer for the selected task
   useEffect(() => {
     if (!selectedTask) {
       setStudentAnswer(null);
       return;
     }
-
     async function fetchAnswer() {
       try {
         const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
@@ -256,63 +237,57 @@ function StudentTasks({ token }) {
     fetchAnswer();
   }, [selectedTask, token]);
 
-  const handleAnswerChange = (e) => {
-    setAnswerFile(e.target.files[0]);
+  const handleAnswerChange = (e) => setAnswerFile(e.target.files[0]);
+
+  const handleSubmitAnswer = async () => {
+    if (!answerFile || !selectedTask) {
+      alert("Select a file and task first.");
+      return;
+    }
+    setUploadingAnswer(true);
+    const formData = new FormData();
+    formData.append("answerFile", answerFile);
+
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Answer upload failed");
+      const data = await res.json();
+      alert("Answer uploaded successfully");
+      setStudentAnswer(data);
+      setAnswerFile(null);
+    } catch (e) {
+      alert(e.message || "Failed to upload answer");
+    } finally {
+      setUploadingAnswer(false);
+    }
   };
 
-const handleSubmitAnswer = async () => {
-  if (!answerFile || !selectedTask) {
-    alert("Select a file and task first.");
-    return;
-  }
-  setUploadingAnswer(true);
-  const formData = new FormData();
-  formData.append('answerFile', answerFile);
-
-  try {
-    const res = await fetch(`https://neuraliftx.onrender.com/api/student-answers/${selectedTask._id}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-
-    if (!res.ok) throw new Error("Answer upload failed");
-    const data = await res.json();
-    alert("Answer uploaded successfully");
-    setStudentAnswer(data);
-    setAnswerFile(null);
-  } catch (e) {
-    alert(e.message || "Failed to upload answer");
-  } finally {
-    setUploadingAnswer(false);
-  }
-};
-
-const handleCheck = async () => {
-  if (!selectedTask) {
-    alert("Select a task first");
-    return;
-  }
-  setVerifying(true);
-  setVerificationResult(null);
-  try {
-    const res = await fetch(`https://neuraliftx.onrender.com/api/check-answer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ taskId: selectedTask._id }),
-    });
-    if (!res.ok) throw new Error("Verification failed");
-    const data = await res.json();
-    setVerificationResult(data);
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    setVerifying(false);
-  }
-};
+  const handleCheck = async () => {
+    if (!selectedTask) {
+      alert("Select a task first");
+      return;
+    }
+    setVerifying(true);
+    setVerificationResult(null);
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/check-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ taskId: selectedTask._id }),
+      });
+      if (!res.ok) throw new Error("Verification failed");
+      const data = await res.json();
+      setVerificationResult(data);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   return (
     <div>
@@ -321,9 +296,12 @@ const handleCheck = async () => {
       {!loadingTasks && tasks.length === 0 && <p>No tasks available.</p>}
       {!loadingTasks && tasks.length > 0 && (
         <ul>
-          {tasks.map(task => (
+          {tasks.map((task) => (
             <li key={task._id} style={{ marginBottom: 12, cursor: "pointer" }}>
-              <button onClick={() => setSelectedTask(task)} style={{ background: selectedTask?._id === task._id ? '#ccc' : 'transparent' }}>
+              <button
+                onClick={() => setSelectedTask(task)}
+                style={{ background: selectedTask?._id === task._id ? "#ccc" : "transparent" }}
+              >
                 {task.originalName}
               </button>
             </li>
@@ -334,36 +312,40 @@ const handleCheck = async () => {
       {selectedTask && (
         <>
           <h3>Task Details</h3>
-          <p><a href={`https://neuraliftx.onrender.com${selectedTask.fileUrl}`} target="_blank" rel="noreferrer">View Task PDF</a></p>
+          <p>
+            <a href={`https://neuraliftx.onrender.com${selectedTask.fileUrl}`} target="_blank" rel="noreferrer">
+              View Task PDF
+            </a>
+          </p>
           <hr />
           <div>
             <h4>Your Answer</h4>
             {studentAnswer ? (
               <p>
-                <a href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`} target="_blank" rel="noreferrer">View uploaded answer</a>
+                <a href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`} target="_blank" rel="noreferrer">
+                  View uploaded answer
+                </a>
               </p>
             ) : (
               <p>No answer uploaded yet.</p>
             )}
 
             {studentAnswer && (
-         <>
-    <button
-      onClick={handleCheck}
-      disabled={verifying}
-      style={{ marginTop: 10 }}
-    >
-      {verifying ? "Checking..." : "Check"}
-    </button>
+              <>
+                <button onClick={handleCheck} disabled={verifying} style={{ marginTop: 10 }}>
+                  {verifying ? "Checking..." : "Check"}
+                </button>
 
-    {verificationResult && (
-      <div style={{ marginTop: 10, padding: 10, border: "1px solid #ccc" }}>
-        <strong>Score: </strong>{verificationResult.score ?? "N/A"} <br />
-        <strong>Feedback: </strong>{verificationResult.feedback ?? "No feedback"}
-      </div>
-    )}
-  </>
-)}
+                {verificationResult && (
+                  <div style={{ marginTop: 10, padding: 10, border: "1px solid #ccc" }}>
+                    <strong>Score: </strong>
+                    {verificationResult.score ?? "N/A"} <br />
+                    <strong>Feedback: </strong>
+                    {verificationResult.feedback ?? "No feedback"}
+                  </div>
+                )}
+              </>
+            )}
 
             <input type="file" accept="application/pdf" onChange={handleAnswerChange} disabled={uploadingAnswer} />
             <button onClick={handleSubmitAnswer} disabled={!answerFile || uploadingAnswer}>
@@ -375,8 +357,6 @@ const handleCheck = async () => {
     </div>
   );
 }
-// ===========================================================================================
-
 
 export default function Student() {
   useGlobalTheme();
@@ -389,7 +369,6 @@ export default function Student() {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState(null);
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
   const [activeSub, setActiveSub] = useState(null);
@@ -404,11 +383,13 @@ export default function Student() {
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
 
-  const [assignments, setAssignments] = useState([]); // for storing fetched assignments
+  // Assignments state
+  const [assignments, setAssignments] = useState([]);
+  // Syllabus expanded subject and uploaded files
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
   const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
 
-
+  // The syllabus menu with corrected keys (typos fixed)
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
     {
@@ -416,30 +397,45 @@ export default function Student() {
       icon: "📚",
       subLinks: [
         { label: "Attendance", key: "academics-attendance" },
-         { label: "Courses", key: "academics-courses" },
+        { label: "Courses", key: "academics-courses" },
         { label: "Grades", key: "academics-grades" },
-       
       ],
     },
-    { label: "Syllabus", icon: "📄", 
-      subLinks: [{label:"Physics",key:"syllabus-physics",subLinks:[
-        {label:"UNIT-I",key:"syllabus-physics-unit1"},
-        {label:"UNIT-II",key:"syallabus-physics-unit2"},
-        {label:"UNIT-III",key:"syallabus-physics-unit3"},
-      ]},
-        {label:"Chemistry",key:"syllabus-chemistry",subLinks:[
-        {label:"UNIT-I",key:"syllabus-chemistry-unit1"},
-        {label:"UNIT-II",key:"syallabus-chemistry-unit2"},
-        {label:"UNIT-III",key:"syallabus-chemistry-unit3"},
-        ]},
-        {label:"Maths",key:"syllabus-maths",subLinks:[
-        {label:"UNIT-I",key:"syllabus-maths-unit1"},
-        {label:"UNIT-II",key:"syallabus-maths-unit2"},
-        {label:"UNIT-III",key:"syallabus-maths-unit3"},
-        ]},
-      ] },
+    {
+      label: "Syllabus",
+      icon: "📄",
+      subLinks: [
+        {
+          label: "Physics",
+          key: "syllabus-physics",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-physics-unit1" },
+            { label: "UNIT-II", key: "syllabus-physics-unit2" },
+            { label: "UNIT-III", key: "syllabus-physics-unit3" },
+          ],
+        },
+        {
+          label: "Chemistry",
+          key: "syllabus-chemistry",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-chemistry-unit1" },
+            { label: "UNIT-II", key: "syllabus-chemistry-unit2" },
+            { label: "UNIT-III", key: "syllabus-chemistry-unit3" },
+          ],
+        },
+        {
+          label: "Maths",
+          key: "syllabus-maths",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-maths-unit1" },
+            { label: "UNIT-II", key: "syllabus-maths-unit2" },
+            { label: "UNIT-III", key: "syllabus-maths-unit3" },
+          ],
+        },
+      ],
+    },
     { label: "Quiz/Assignments", icon: "📝", subLinks: [] },
-    { label: "Tasks", icon: "📝", subLinks: [] }, 
+    { label: "Tasks", icon: "📝", subLinks: [] },
     { label: "Personalisation Tracker", icon: "📈", subLinks: [] },
     { label: "Internships", icon: "💼", subLinks: [] },
     { label: "Live Projects", icon: "💻", subLinks: [] },
@@ -453,30 +449,30 @@ export default function Student() {
         { label: "School Ranking", key: "toprankers-school" },
       ],
     },
-    
   ];
 
+  // Fetch syllabus units and uploaded files from backend on mount
   useEffect(() => {
-  async function fetchSyllabusUnits() {
-    try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/syllabus", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch syllabus units");
-      const syllabusUnits = await res.json();
-      const uploadsMap = {};
-      syllabusUnits.forEach((unit) => {
-        if (unit.uploadedFileUrl) uploadsMap[unit.key] = unit.uploadedFileUrl;
-      });
-      setUnitUploadedFiles(uploadsMap);
-    } catch (e) {
-      console.error("Error fetching syllabus units uploads", e);
+    async function fetchSyllabusUnits() {
+      try {
+        const res = await fetch("https://neuraliftx.onrender.com/api/syllabus", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch syllabus units");
+        const syllabusUnits = await res.json();
+        const uploadsMap = {};
+        syllabusUnits.forEach((unit) => {
+          if (unit.uploadedFileUrl) uploadsMap[unit.key] = unit.uploadedFileUrl;
+        });
+        setUnitUploadedFiles(uploadsMap);
+      } catch (e) {
+        console.error("Error fetching syllabus units uploads", e);
+      }
     }
-  }
-  if (token) fetchSyllabusUnits();
-}, [token]);
+    if (token) fetchSyllabusUnits();
+  }, [token]);
 
-
+  // Fetch user profile on mount
   useEffect(() => {
     async function fetchUser() {
       if (!token) {
@@ -514,7 +510,6 @@ export default function Student() {
         if (!res.ok) throw new Error("Failed to fetch announcements");
         const data = await res.json();
         setAnnouncements(Array.isArray(data) ? data : []);
-        // Show first announcement immediately
         if (data.length > 0) {
           setCurrentAnnouncement(data[0]);
           setShowAnnouncementPopup(true);
@@ -529,7 +524,7 @@ export default function Student() {
     fetchAnnouncements();
   }, [user, token]);
 
-  // Fetch assignments when "Quiz/Assignments" menu is active
+  // Fetch assignments on Quiz/Assignments menu active
   useEffect(() => {
     if (activeMain === "Quiz/Assignments") {
       fetchAssignments();
@@ -549,6 +544,7 @@ export default function Student() {
     }
   }
 
+  // Redirect based on role on user load
   useEffect(() => {
     if (user) {
       if (
@@ -563,6 +559,7 @@ export default function Student() {
     }
   }, [user, navigate]);
 
+  // Filter menu based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredMenu(menu);
@@ -610,7 +607,7 @@ export default function Student() {
     setShowProfileModal(false);
   };
 
-  // Close announcement and show next if any
+  // Close announcement popup and show next if any
   const closeAnnouncementPopup = () => {
     const currentIndex = announcements.findIndex(
       (a) => a._id === currentAnnouncement?._id
@@ -729,69 +726,67 @@ export default function Student() {
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
-  {filteredMenu.map((main) => (
-    <li key={main.label}>
-      <button
-        className={`main-link${activeMain === main.label ? " active" : ""}`}
-        onClick={() => handleMainClick(main.label)}
-      >
-        <span className="main-icon">{main.icon}</span> {main.label}
-      </button>
-      {activeMain === main.label && main.subLinks.length > 0 && (
-        <ul className="sub-links open">
-          {main.subLinks.map((sub) => {
-            const isSyllabus = main.label === "Syllabus";
-            const isExpanded = expandedSyllabusSubject === sub.key;
-            return (
-              <li key={sub.key}>
+            {filteredMenu.map((main) => (
+              <li key={main.label}>
                 <button
-                  className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-                  onClick={() => {
-                    if (isSyllabus) {
-                      setExpandedSyllabusSubject(isExpanded ? null : sub.key);
-                      setActiveSub(sub.key);
-                    } else {
-                      handleSubClick(sub.key);
-                    }
-                  }}
+                  className={`main-link${activeMain === main.label ? " active" : ""}`}
+                  onClick={() => handleMainClick(main.label)}
                 >
-                  {sub.label}
+                  <span className="main-icon">{main.icon}</span> {main.label}
                 </button>
-                {/* Unit logic—this will always work now */}
-                {isSyllabus && isExpanded && sub.subLinks && (
-                  <ul className="unit-sub-links">
-                   {sub.subLinks.map((unit) => (
-  <li key={unit.key}>
-    <button
-      className={`sub-link${activeSub === unit.key ? " active" : ""}`}
-      onClick={() => handleSubClick(unit.key)}
-    >
-      {unit.label}
-    </button>
-    {unitUploadedFiles[unit.key] && (
-      <a
-        href={`https://neuraliftx.onrender.com${unitUploadedFiles[unit.key]}`}
-        target="_blank"
-        rel="noreferrer"
-        style={{ marginLeft: 8 }}
-      >
-        View PDF
-      </a>
-    )}
-  </li>
-))}
-
+                {activeMain === main.label && main.subLinks.length > 0 && (
+                  <ul className="sub-links open">
+                    {main.subLinks.map((sub) => {
+                      const isSyllabus = main.label === "Syllabus";
+                      const isExpanded = expandedSyllabusSubject === sub.key;
+                      return (
+                        <li key={sub.key}>
+                          <button
+                            className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                            onClick={() => {
+                              if (isSyllabus) {
+                                setExpandedSyllabusSubject(isExpanded ? null : sub.key);
+                                setActiveSub(sub.key);
+                              } else {
+                                handleSubClick(sub.key);
+                              }
+                            }}
+                          >
+                            {sub.label}
+                          </button>
+                          {isSyllabus && isExpanded && sub.subLinks && (
+                            <ul className="unit-sub-links">
+                              {sub.subLinks.map((unit) => (
+                                <li key={unit.key}>
+                                  <button
+                                    className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+                                    onClick={() => handleSubClick(unit.key)}
+                                  >
+                                    {unit.label}
+                                  </button>
+                                  {unitUploadedFiles[unit.key] && (
+                                    <a
+                                      href={`https://neuraliftx.onrender.com${unitUploadedFiles[unit.key]}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{ marginLeft: 8 }}
+                                    >
+                                      View PDF
+                                    </a>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </li>
-            );
-          })}
-        </ul>
-      )}
-    </li>
-  ))}
-</ul>
- </nav>
+            ))}
+          </ul>
+        </nav>
 
         <main className="student-content">{contentArea}</main>
       </div>
