@@ -412,6 +412,13 @@ export default function Faculty() {
   const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
   const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
 
+  // Syllabus state
+  const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
+  const [selectedUnitKey, setSelectedUnitKey] = useState(null);
+  // Files uploaded per unit key, managing uploaded files state here:
+  const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
+
+  // Menu with syllabus like Student menu, adding nested units for syllabus subjects
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -427,6 +434,39 @@ export default function Faculty() {
       subLinks: [
         { label: "Upload Task", key: "upload-task" },
         { label: "My Tasks", key: "my-tasks" },
+      ],
+    },
+    {
+      label: "Syllabus",
+      icon: "📄",
+      subLinks: [
+        {
+          label: "Physics",
+          key: "syllabus-physics",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-physics-unit1" },
+            { label: "UNIT-II", key: "syllabus-physics-unit2" },
+            { label: "UNIT-III", key: "syllabus-physics-unit3" },
+          ],
+        },
+        {
+          label: "Chemistry",
+          key: "syllabus-chemistry",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-chemistry-unit1" },
+            { label: "UNIT-II", key: "syllabus-chemistry-unit2" },
+            { label: "UNIT-III", key: "syllabus-chemistry-unit3" },
+          ],
+        },
+        {
+          label: "Maths",
+          key: "syllabus-maths",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-maths-unit1" },
+            { label: "UNIT-II", key: "syllabus-maths-unit2" },
+            { label: "UNIT-III", key: "syllabus-maths-unit3" },
+          ],
+        },
       ],
     },
   ];
@@ -608,8 +648,202 @@ export default function Faculty() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  // Handle Syllabus subject expansion toggle
+  const handleSyllabusSubjectClick = (key) => {
+    setExpandedSyllabusSubject(expandedSyllabusSubject === key ? null : key);
+    setActiveMain("Syllabus");
+    setActiveSub(key);
+    // Reset selected unit when changing subject
+    setSelectedUnitKey(null);
+  };
+
+  // Handle Unit click
+  const handleUnitClick = (unitKey) => {
+    setSelectedUnitKey(unitKey);
+  };
+
+  // Upload file for a unit after selecting a syllabus unit
+  const handleUnitFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selectedUnitKey) return;
+    const formData = new FormData();
+    formData.append("pdf", file);
+    // Including unitKey info in query param or body for backend to associate file with unit
+    try {
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/syllabus/unit-upload?unitKey=${selectedUnitKey}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        }
+      );
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      // Store uploaded file URL for this unit in state
+      setUnitUploadedFiles((prev) => ({
+        ...prev,
+        [selectedUnitKey]: data.fileUrl,
+      }));
+      alert("File uploaded successfully");
+    } catch {
+      alert("Failed to upload file for unit");
+    }
+  };
+
+  let contentArea = null;
+  if (activeMain === "Assignments Submission") {
+    contentArea = (
+      <>
+        <h2>Uploaded Assignments</h2>
+        {assignments.length === 0 && <p>No assignments uploaded.</p>}
+        <ul>
+          {assignments.map(({ _id, originalName, fileUrl }) => (
+            <li key={_id} style={{ marginBottom: 12 }}>
+              <a
+                href={`https://neuraliftx.onrender.com${fileUrl}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontWeight: 500, marginRight: 10 }}
+              >
+                {originalName}
+              </a>
+              <button
+                style={{
+                  color: "red",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+                onClick={() => handleDeleteAssignment(_id)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  } else if (activeMain === "My Tasks") {
+    contentArea = (
+      <>
+        <h2>My Uploaded Tasks</h2>
+        {loadingTasks && <p>Loading tasks...</p>}
+        {!loadingTasks && tasks.length === 0 && <p>No tasks uploaded yet.</p>}
+        {!loadingTasks && tasks.length > 0 && (
+          <ul>
+            {tasks.map((task) => (
+              <li key={task._id} style={{ marginBottom: 18 }}>
+                <a
+                  href={`https://neuraliftx.onrender.com${task.fileUrl}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ marginRight: 10 }}
+                >
+                  {task.originalName}
+                </a>
+                <button
+                  onClick={() => handleDeleteTask(task._id)}
+                  style={{ color: "red", cursor: "pointer", marginRight: 8 }}
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => handleViewAnswers(task)}
+                  style={{ color: "#0066cc", cursor: "pointer" }}
+                >
+                  View Answers
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </>
+    );
+  } else if (activeMain === "Syllabus") {
+    // Render syllabus with subjects, expandable units, and file upload for selected unit
+    const currentSubject = menu
+      .find((m) => m.label === "Syllabus")
+      ?.subLinks.find((sub) => sub.key === activeSub);
+
+    contentArea = (
+      <div style={{ padding: "1rem" }}>
+        <h2>Syllabus</h2>
+        <nav>
+          <ul style={{ paddingLeft: 0 }}>
+            {menu
+              .find((m) => m.label === "Syllabus")
+              .subLinks.map((subject) => {
+                const isExpanded = expandedSyllabusSubject === subject.key;
+                return (
+                  <li key={subject.key} style={{ marginBottom: 12 }}>
+                    <button
+                      onClick={() => handleSyllabusSubjectClick(subject.key)}
+                      style={{
+                        fontWeight: activeSub === subject.key ? "700" : "500",
+                        fontSize: "1.2rem",
+                        cursor: "pointer",
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        textDecoration: "underline",
+                      }}
+                    >
+                      {subject.label}
+                    </button>
+                    {isExpanded && (
+                      <ul style={{ paddingLeft: "1rem", marginTop: 8 }}>
+                        {subject.subLinks?.map((unit) => (
+                          <li key={unit.key} style={{ marginBottom: 8 }}>
+                            <button
+                              onClick={() => handleUnitClick(unit.key)}
+                              style={{
+                                fontWeight: selectedUnitKey === unit.key ? "700" : "400",
+                                cursor: "pointer",
+                                background: "none",
+                                border: "none",
+                                padding: 0,
+                                textDecoration: "underline",
+                              }}
+                            >
+                              {unit.label}
+                            </button>
+                            {selectedUnitKey === unit.key && (
+                              <div style={{ marginTop: 8 }}>
+                                <input
+                                  type="file"
+                                  accept="application/pdf"
+                                  onChange={handleUnitFileUpload}
+                                />
+                                {unitUploadedFiles[unit.key] && (
+                                  <p>
+                                    Uploaded File:{" "}
+                                    <a
+                                      href={`https://neuraliftx.onrender.com${unitUploadedFiles[unit.key]}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      View PDF
+                                    </a>
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+          </ul>
+        </nav>
+      </div>
+    );
+  } else {
+    contentArea = <h2>{activeMain} content here</h2>;
+  }
 
   return (
     <div className="student-root">
@@ -675,108 +909,72 @@ export default function Faculty() {
               <li key={item.label}>
                 <button
                   className={activeMain === item.label ? "active main-link" : "main-link"}
-                  onClick={() => setActiveMain(item.label)}
+                  onClick={() => {
+                    setActiveMain(item.label);
+                    setActiveSub(item.subLinks && item.subLinks.length > 0 ? item.subLinks[0].key : null);
+                    if (item.label === "Syllabus") {
+                      setExpandedSyllabusSubject(null);
+                      setSelectedUnitKey(null);
+                    }
+                    // Close modals on main menu change
+                    setShowCreateAssignment(false);
+                    setShowUploadTask(false);
+                  }}
                 >
                   <span className="main-icon">{item.icon}</span> {item.label}
                 </button>
                 {activeMain === item.label && item.subLinks && (
                   <ul className="sub-links open">
-                    {item.subLinks.map((sub) => (
-                      <li key={sub.key}>
-                        <button
-                          className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-                          onClick={() => {
-                            setActiveSub(sub.key);
-                            if (sub.key === "create-assignment") setShowCreateAssignment(true);
-                            if (sub.key === "upload-task") setShowUploadTask(true);
-                            if (sub.key === "my-tasks") setActiveMain("My Tasks");
-                          }}
-                        >
-                          {sub.label}
-                        </button>
-                      </li>
-                    ))}
+                    {item.subLinks.map((sub) => {
+                      const isSyllabus = item.label === "Syllabus";
+                      const isExpanded = expandedSyllabusSubject === sub.key;
+                      return (
+                        <li key={sub.key}>
+                          <button
+                            className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                            onClick={() => {
+                              if (isSyllabus) {
+                                handleSyllabusSubjectClick(sub.key);
+                              } else {
+                                setActiveSub(sub.key);
+                                if (sub.key === "create-assignment") setShowCreateAssignment(true);
+                                else setShowCreateAssignment(false);
+                                if (sub.key === "upload-task") setShowUploadTask(true);
+                                else setShowUploadTask(false);
+                                if (sub.key === "my-tasks") setActiveMain("My Tasks");
+                              }
+                            }}
+                          >
+                            {sub.label}
+                          </button>
+                          {/* Render units nested for syllabus */}
+                          {isSyllabus && isExpanded && sub.subLinks && (
+                            <ul className="unit-sub-links">
+                              {sub.subLinks.map((unit) => (
+                                <li key={unit.key}>
+                                  <button
+                                    className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+                                    onClick={() => {
+                                      handleUnitClick(unit.key);
+                                      setActiveSub(unit.key);
+                                    }}
+                                  >
+                                    {unit.label}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </li>
             ))}
           </ul>
         </nav>
-
-        <main className="student-content">
-          {activeMain === "Assignments Submission" && (
-            <>
-              <h2>Uploaded Assignments</h2>
-              {assignments.length === 0 && <p>No assignments uploaded.</p>}
-              <ul>
-                {assignments.map(({ _id, originalName, fileUrl }) => (
-                  <li key={_id} style={{ marginBottom: 12 }}>
-                    <a
-                      href={`https://neuraliftx.onrender.com${fileUrl}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ fontWeight: 500, marginRight: 10 }}
-                    >
-                      {originalName}
-                    </a>
-                    <button
-                      style={{
-                        color: "red",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                      }}
-                      onClick={() => handleDeleteAssignment(_id)}
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {activeMain === "My Tasks" && (
-            <>
-              <h2>My Uploaded Tasks</h2>
-              {loadingTasks && <p>Loading tasks...</p>}
-              {!loadingTasks && tasks.length === 0 && <p>No tasks uploaded yet.</p>}
-              {!loadingTasks && tasks.length > 0 && (
-                <ul>
-                  {tasks.map((task) => (
-                    <li key={task._id} style={{ marginBottom: 18 }}>
-                      <a
-                        href={`https://neuraliftx.onrender.com${task.fileUrl}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ marginRight: 10 }}
-                      >
-                        {task.originalName}
-                      </a>
-                      <button
-                        onClick={() => handleDeleteTask(task._id)}
-                        style={{ color: "red", cursor: "pointer", marginRight: 8 }}
-                      >
-                        Delete
-                      </button>
-                      <button
-                        onClick={() => handleViewAnswers(task)}
-                        style={{ color: "#0066cc", cursor: "pointer" }}
-                      >
-                        View Answers
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-
-          {activeMain !== "Assignments Submission" && activeMain !== "My Tasks" && (
-            <h2>{activeMain} content here</h2>
-          )}
-        </main>
+        <main className="student-content">{contentArea}</main>
       </div>
 
       {showCreateAssignment && (
