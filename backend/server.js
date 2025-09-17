@@ -430,7 +430,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 
-router.post(
+app.post(
   '/unit-upload',
   authenticateJWT,
   upload.single('pdf'),
