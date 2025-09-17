@@ -418,6 +418,7 @@ export default function Faculty() {
   // Files uploaded per unit key, managing uploaded files state here:
   const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
 
+
   // Menu with syllabus like Student menu, adding nested units for syllabus subjects
   const menu = [
     { label: "Home", icon: "🏠" },
@@ -472,26 +473,25 @@ export default function Faculty() {
   ];
 
   useEffect(() => {
-  async function fetchSyllabusUploads() {
-    if (!token) return;
+  const fetchSyllabusUnits = async () => {
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/syllabus", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to fetch syllabus uploads");
-      const syllabusUnits = await res.json();
-
-      const uploadsMap = {};
-      syllabusUnits.forEach((unit) => {
-        if (unit.uploadedFileUrl) uploadsMap[unit.key] = unit.uploadedFileUrl;
+      if (!res.ok) throw new Error("Failed to fetch syllabus units");
+      const units = await res.json();
+      let uploadsMap = {};
+      units.forEach((unit) => {
+        if (unit.uploadedFiles && unit.uploadedFiles.length) {
+          uploadsMap[unit.key] = unit.uploadedFiles;
+        }
       });
-
       setUnitUploadedFiles(uploadsMap);
-    } catch (e) {
-      console.error("Error loading syllabus uploads:", e);
+    } catch (error) {
+      console.error("Error loading syllabus units:", error);
     }
-  }
-  fetchSyllabusUploads();
+  };
+  if (token) fetchSyllabusUnits();
 }, [token]);
 
 
@@ -981,18 +981,23 @@ export default function Faculty() {
                           {isSyllabus && isExpanded && sub.subLinks && (
                             <ul className="unit-sub-links">
                               {sub.subLinks.map((unit) => (
-                                <li key={unit.key}>
-                                  <button
-                                    className={`sub-link${activeSub === unit.key ? " active" : ""}`}
-                                    onClick={() => {
-                                      handleUnitClick(unit.key);
-                                      setActiveSub(unit.key);
-                                    }}
-                                  >
-                                    {unit.label}
-                                  </button>
-                                </li>
-                              ))}
+  <li key={unit.key}>
+    <button
+      className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+      onClick={() => handleUnitClick(unit.key)}
+    >
+      {unit.label}
+    </button>
+    {unitUploadedFiles[unit.key]?.map((file, idx) => (
+      <div key={idx} style={{ marginLeft: '12px' }}>
+        <a href={`https://neuraliftx.onrender.com${file.url}`} target="_blank" rel="noreferrer">
+          {file.filename}
+        </a> <small>({new Date(file.uploadedAt).toLocaleDateString()})</small>
+      </div>
+    ))}
+  </li>
+))}
+
                             </ul>
                           )}
                         </li>

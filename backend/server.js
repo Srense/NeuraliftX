@@ -260,9 +260,15 @@ const AnswerVerification = mongoose.model("AnswerVerification", answerVerificati
 const syllabusUnitSchema = new mongoose.Schema({
   key: { type: String, unique: true, required: true },
   label: String,
-  uploadedFileUrl: String,
+  uploadedFiles: [
+    {
+      url: String,
+      filename: String,
+      uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      uploadedAt: { type: Date, default: Date.now }
+    }
+  ],
 });
-const SyllabusUnit = mongoose.model("SyllabusUnit", syllabusUnitSchema);
 
 
 
@@ -923,35 +929,51 @@ app.post(
     try {
       const unitKey = req.query.unitKey;
       if (!unitKey || !req.file)
-        return res.status(400).json({ error: "Missing unitKey or PDF file" });
+        return res.status(400).json({ error: "Missing unitKey or file" });
 
       const fileUrl = `/uploads/${req.file.filename}`;
+      const fileData = {
+        url: fileUrl,
+        filename: req.file.originalname,
+        uploadedBy: req.user._id,
+        uploadedAt: new Date(),
+      };
 
       let unit = await SyllabusUnit.findOne({ key: unitKey });
-      if (unit) {
-        unit.uploadedFileUrl = fileUrl;
-      } else {
+      if (!unit) {
         unit = new SyllabusUnit({
           key: unitKey,
           label: unitKey.toUpperCase(),
-          uploadedFileUrl: fileUrl,
+          uploadedFiles: [fileData],
         });
+      } else {
+        unit.uploadedFiles.push(fileData);
       }
       await unit.save();
 
-      res.json({ message: "File uploaded successfully", fileUrl });
+      res.json({ message: "File uploaded successfully", file: fileData });
     } catch (err) {
-      console.error("Syllabus unit upload error:", err);
+      console.error("Upload error:", err);
       res.status(500).json({ error: "Upload failed" });
     }
   }
 );
 
-// Get syllabus units with files
-app.get("/api/syllabus", authenticateJWT, authorizeRole("student","faculty"), async (req, res) => {
-  const units = await SyllabusUnit.find();
-  res.json(units);
-});
+app.get(
+  "/api/syllabus",
+  authenticateJWT,
+  authorizeRole("student", "faculty", "admin"),
+  async (req, res) => {
+    try {
+      const units = await SyllabusUnit.find();
+      res.json(units);
+    } catch (err) {
+      console.error("Fetch syllabus error:", err);
+      res.status(500).json({ error: "Failed to fetch syllabus" });
+    }
+  }
+);
+
 
 // Delete syllabus unit uploaded file (optional: clear fileUrl)
 app.delete(
