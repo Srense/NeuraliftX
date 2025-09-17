@@ -948,7 +948,7 @@ app.post(
 );
 
 // Get syllabus units with files
-app.get("/api/syllabus", authenticateJWT, authorizeRole("faculty"), async (req, res) => {
+app.get("/api/syllabus", authenticateJWT, authorizeRole("student","faculty"), async (req, res) => {
   const units = await SyllabusUnit.find();
   res.json(units);
 });
