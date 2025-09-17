@@ -261,17 +261,25 @@ const AnswerVerification = mongoose.model("AnswerVerification", answerVerificati
 
 
 
-// Syllabus Content schema and model
-const syllabusContentSchema = new mongoose.Schema({
-  subject: { type: String, required: true },
-  unit: { type: String, required: true },
-  filePath: { type: String, required: true },
-  uploadedAt: { type: Date, default: Date.now },
-  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+// Define schema and models
+
+const syllabusUnitSchema = new mongoose.Schema({
+  key: { type: String, required: true },
+  label: { type: String, required: true },
+  uploadedFileUrl: { type: String, default: "" },
 });
 
-const SyllabusContent = mongoose.model("SyllabusContent", syllabusContentSchema);
+const syllabusSubjectSchema = new mongoose.Schema({
+  key: { type: String, required: true },
+  label: { type: String, required: true },
+  units: [syllabusUnitSchema],
+});
 
+const syllabusSchema = new mongoose.Schema({
+  subjects: [syllabusSubjectSchema],
+});
+
+const Syllabus = mongoose.model("Syllabus", syllabusSchema);
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -428,80 +436,56 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 
+// POST /api/syllabus/unit-upload?unitKey=syllabus-physics-unit1
 app.post(
-  "/api/syllabus-content",
-  authenticateJWT,
-  upload.single("pdf"), // Your existing multer middleware
+  "/api/syllabus/unit-upload",
+  authMiddleware,
+  upload.single("pdf"),
   async (req, res) => {
-    try {
-      const { subject, unit } = req.body;
-      if (!subject || !unit) {
-        return res.status(400).json({ message: "Subject and unit are required" });
-      }
-      if (!req.file) {
-        return res.status(400).json({ message: "No PDF uploaded" });
-      }
-      // Save metadata with file path
-      const filePath = `/uploads/${req.file.filename}`;
-      const newContent = new SyllabusContent({
-        subject,
-        unit,
-        filePath,
-        uploadedBy: req.user.id,
-      });
-      await newContent.save();
-      res.json({ message: "Syllabus content uploaded successfully", content: newContent });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Upload failed" });
+    const unitKey = req.query.unitKey;
+    if (!unitKey) {
+      return res.status(400).json({ error: "Missing unitKey parameter" });
     }
-  }
-);
-
-app.get(
-  "/api/syllabus-content",
-  authenticateJWT, // Optional: add auth if you want to restrict access
-  async (req, res) => {
-    try {
-      const contents = await SyllabusContent.find()
-        .populate("uploadedBy", "firstName lastName email") // optional: populate uploader info
-        .sort({ uploadedAt: -1 }); // newest first
-
-      res.json(contents);
-    } catch (error) {
-      console.error("Error fetching syllabus content:", error);
-      res.status(500).json({ message: "Failed to fetch syllabus contents" });
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
     }
-  }
-);
 
+    const fileUrl = `/uploads/syllabusUnits/${req.file.filename}`;
 
-app.delete(
-  "/api/syllabus-content/:id",
-  authenticateJWT, // Add auth to protect deletion
-  async (req, res) => {
     try {
-      const contentId = req.params.id;
-      const content = await SyllabusContent.findById(contentId);
-      if (!content) {
-        return res.status(404).json({ message: "Syllabus content not found" });
+      // Update the uploadedFileUrl field for the specific unit with the file URL
+      // Assuming there is only one Syllabus document, adjust as per your design
+      const syllabus = await Syllabus.findOne();
+      if (!syllabus) {
+        return res.status(404).json({ error: "Syllabus data not found" });
       }
 
-      // Optional: Check if uploader matches req.user.id or if user is admin before delete
+      let unitUpdated = false;
+      for (const subject of syllabus.subjects) {
+        for (const unit of subject.units) {
+          if (unit.key === unitKey) {
+            unit.uploadedFileUrl = fileUrl;
+            unitUpdated = true;
+            break;
+          }
+        }
+        if (unitUpdated) break;
+      }
 
-      // Delete file from disk
-      const fileAbsolutePath = path.join(__dirname, content.filePath);
-      fs.unlink(fileAbsolutePath, err => {
-        if (err) console.warn("Failed to delete file:", err);
+      if (!unitUpdated) {
+        return res.status(404).json({ error: "Unit key not found in syllabus" });
+      }
+
+      await syllabus.save();
+
+      return res.json({
+        message: "File uploaded and syllabus unit updated successfully",
+        fileUrl,
+        unitKey,
       });
-
-      // Delete from DB
-      await SyllabusContent.findByIdAndDelete(contentId);
-
-      res.json({ message: "Syllabus content deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting syllabus content:", error);
-      res.status(500).json({ message: "Failed to delete syllabus content" });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Server error" });
     }
   }
 );
