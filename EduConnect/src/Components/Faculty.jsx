@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Admin.css"; // Universal theme CSS for all dashboards
 import logo from "../assets/Logo.png";
-import "./Student.css";
 
 function useGlobalTheme() {
   useEffect(() => {
@@ -21,16 +20,14 @@ function useGlobalTheme() {
 function UploadTaskModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
-    formData.append("pdf", selectedFile);
-
+    formData.append('pdf', selectedFile);
     try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/tasks", {
-        method: "POST",
+      const res = await fetch('https://neuraliftx.onrender.com/api/tasks', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
@@ -45,25 +42,14 @@ function UploadTaskModal({ token, onClose, onUpload }) {
       setUploading(false);
     }
   };
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}>
-          ×
-        </button>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
+        <button className="close-btn" onClick={onClose}>×</button>
         <h2>Upload Faculty Task PDF</h2>
-        <input
-          type="file"
-          accept="application/pdf"
-          onChange={(e) => setSelectedFile(e.target.files[0])}
-        />
-        <button
-          disabled={!selectedFile || uploading}
-          onClick={handleUpload}
-          className="action-btn"
-        >
-          {uploading ? "Uploading..." : "Upload Task"}
+        <input type="file" accept="application/pdf" onChange={e => setSelectedFile(e.target.files[0])}/>
+        <button disabled={!selectedFile || uploading} onClick={handleUpload} className="action-btn">
+          {uploading ? 'Uploading...' : 'Upload Task'}
         </button>
       </div>
     </div>
@@ -74,19 +60,13 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  const handleChange = (qIndex, value) =>
-    setResponses((prev) => ({ ...prev, [qIndex]: value }));
-
+  const handleChange = (qIndex, value) => setResponses((prev) => ({ ...prev, [qIndex]: value }));
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/feedback", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ announcementId: announcement._id, responses }),
       });
       if (!res.ok) throw new Error("Failed to submit feedback");
@@ -96,19 +76,11 @@ function AnnouncementPopup({ announcement, onClose, token }) {
     }
     setSubmitting(false);
   };
-
   if (!announcement) return null;
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div
-        className="profile-modal"
-        style={{ maxWidth: 600 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button onClick={onClose} className="close-btn">
-          ×
-        </button>
+      <div className="profile-modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">×</button>
         {(announcement.title || announcement.message) && (
           <>
             <h2>{announcement.title || "Announcement"}</h2>
@@ -116,12 +88,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
           </>
         )}
         {announcement.contentType === "survey" && !submitted && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-          >
+          <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
             {announcement.surveyQuestions?.map((q, i) => (
               <div key={i} style={{ marginBottom: "1rem" }}>
                 <label style={{ fontWeight: "600" }}>{q.question}</label>
@@ -129,7 +96,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                   <textarea
                     rows={3}
                     value={responses[i] || ""}
-                    onChange={(e) => handleChange(i, e.target.value)}
+                    onChange={e => handleChange(i, e.target.value)}
                     required
                     style={{ width: "100%" }}
                   />
@@ -142,43 +109,38 @@ function AnnouncementPopup({ announcement, onClose, token }) {
                           type={q.inputType}
                           name={`question-${i}`}
                           value={opt}
-                          checked={
-                            q.inputType === "radio"
-                              ? responses[i] === opt
-                              : Array.isArray(responses[i]) && responses[i].includes(opt)
-                          }
-                          onChange={(e) => {
-                            if (q.inputType === "radio") {
+                          checked={q.inputType === 'radio'
+                            ? responses[i] === opt
+                            : Array.isArray(responses[i]) && responses[i].includes(opt)}
+                          onChange={e => {
+                            if (q.inputType === 'radio') {
                               handleChange(i, e.target.value);
                             } else {
                               const prev = responses[i] || [];
                               if (e.target.checked) {
                                 handleChange(i, [...prev, e.target.value]);
                               } else {
-                                handleChange(i, prev.filter((v) => v !== e.target.value));
+                                handleChange(i, prev.filter(v => v !== e.target.value));
                               }
                             }
                           }}
-                          required={q.inputType === "radio"}
+                          required={q.inputType === 'radio'}
                         />
-                        {" "}
-                        {opt}
+                        {' '}{opt}
                       </label>
                     ))}
                   </div>
                 )}
                 {q.inputType === "select" && (
                   <select
-                    value={responses[i] || ""}
-                    onChange={(e) => handleChange(i, e.target.value)}
+                    value={responses[i] || ''}
+                    onChange={e => handleChange(i, e.target.value)}
                     required
-                    style={{ width: "100%" }}
+                    style={{ width: '100%' }}
                   >
                     <option value="">Select an option</option>
                     {q.options.map((opt, idx) => (
-                      <option key={idx} value={opt}>
-                        {opt}
-                      </option>
+                      <option key={idx} value={opt}>{opt}</option>
                     ))}
                   </select>
                 )}
@@ -198,47 +160,37 @@ function AnnouncementPopup({ announcement, onClose, token }) {
 function CreateAssignmentModal({ token, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-
-  const handleChange = (e) => setSelectedFile(e.target.files[0]);
-
+  const handleChange = e => setSelectedFile(e.target.files[0]);
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
-    formData.append("pdf", selectedFile);
-
+    formData.append('pdf', selectedFile);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
-        method: "POST",
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       onUpload(data.assignment);
-      alert("Uploaded assignment");
+      alert('Uploaded assignment');
       onClose();
     } catch {
-      alert("Upload failed");
+      alert('Upload failed');
     } finally {
       setUploading(false);
     }
   };
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="close-btn">
-          ×
-        </button>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">×</button>
         <h2>Upload Assignment PDF</h2>
         <input type="file" accept="application/pdf" onChange={handleChange} />
-        <button
-          disabled={!selectedFile || uploading}
-          onClick={handleUpload}
-          className="action-btn"
-        >
-          {uploading ? "Uploading..." : "Upload"}
+        <button disabled={!selectedFile || uploading} onClick={handleUpload} className="action-btn">
+          {uploading ? 'Uploading...' : 'Upload'}
         </button>
       </div>
     </div>
@@ -248,26 +200,22 @@ function CreateAssignmentModal({ token, onClose, onUpload }) {
 function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreview] = useState(
-    user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : ""
-  );
-
-  const handleChange = (e) => {
+  const [previewUrl, setPreview] = useState(user.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : '');
+  const handleChange = e => {
     const file = e.target.files[0];
     setSelectedFile(file);
     if (file) {
       setPreview(URL.createObjectURL(file));
     }
   };
-
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
     const formData = new FormData();
-    formData.append("profilePic", selectedFile);
+    formData.append('profilePic', selectedFile);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/profile/picture", {
-        method: "POST",
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
@@ -283,50 +231,28 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
       setUploading(false);
     }
   };
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-        <button aria-label="Close profile modal" onClick={onClose} className="close-btn">
-          ×
-        </button>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
+        <button aria-label="Close profile modal" onClick={onClose} className="close-btn">×</button>
         <h2>My Profile</h2>
-        <img
-          src={previewUrl || "https://via.placeholder.com/120"}
-          alt="Profile"
-          className="profile-large-pic"
-        />
-        <p>
-          <b>Name:</b> {user.firstName} {user.lastName}
-        </p>
-        <p>
-          <b>UID:</b> {user.roleIdValue}
-        </p>
-        <p>
-          <b>Email:</b> {user.email}
-        </p>
+        <img src={previewUrl || "https://via.placeholder.com/120"} alt="Profile" className="profile-large-pic" />
+        <p><b>Name:</b> {user.firstName} {user.lastName}</p>
+        <p><b>UID:</b> {user.roleIdValue}</p>
+        <p><b>Email:</b> {user.email}</p>
         <input type="file" accept="image/*" onChange={handleChange} />
-        <button
-          onClick={handleUpload}
-          disabled={!selectedFile || uploading}
-          className="action-btn"
-        >
-          {uploading ? "Uploading..." : "Upload Pic"}
+        <button onClick={handleUpload} disabled={!selectedFile || uploading} className="action-btn">
+          {uploading ? 'Uploading...' : 'Upload Pic'}
         </button>
-        <button onClick={onLogout} className="logout-button">
-          Logout
-        </button>
+        <button onClick={onLogout} className="logout-button">Logout</button>
       </div>
     </div>
   );
 }
 
-// ====== NEW FACULTY ANSWERS MODAL ======
-
 function FacultyAnswersModal({ token, task, onClose }) {
   const [loading, setLoading] = useState(false);
   const [studentAnswers, setStudentAnswers] = useState([]);
-
   useEffect(() => {
     async function fetchAnswers() {
       setLoading(true);
@@ -345,17 +271,10 @@ function FacultyAnswersModal({ token, task, onClose }) {
     }
     fetchAnswers();
   }, [task, token]);
-
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
-      <div
-        className="profile-modal"
-        style={{ maxWidth: 600 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button onClick={onClose} className="close-btn">
-          ×
-        </button>
+      <div className="profile-modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">×</button>
         <h2>Answers for: {task.originalName}</h2>
         {loading && <p>Loading...</p>}
         {!loading && studentAnswers.length === 0 && (
@@ -363,14 +282,9 @@ function FacultyAnswersModal({ token, task, onClose }) {
         )}
         {!loading && studentAnswers.length > 0 && (
           <ul>
-            {studentAnswers.map((a) => (
+            {studentAnswers.map(a => (
               <li key={a.id} style={{ marginBottom: 12 }}>
-                <div>
-                  <strong>{a.studentName}</strong> ({a.studentUID}) -{" "}
-                  <a href={`https://neuraliftx.onrender.com${a.fileUrl}`} target="_blank" rel="noreferrer">
-                    View Answer
-                  </a>
-                </div>
+                <div><strong>{a.studentName}</strong> ({a.studentUID}) - <a href={`https://neuraliftx.onrender.com${a.fileUrl}`} target="_blank" rel="noreferrer">View Answer</a></div>
                 <div style={{ fontSize: "0.9em", color: "#888" }}>{a.studentEmail}</div>
               </li>
             ))}
@@ -381,76 +295,36 @@ function FacultyAnswersModal({ token, task, onClose }) {
   );
 }
 
-// ========== FACULTY ROOT COMPONENT WITH SYLLABUS UPLOAD AND VIEW ==========
-
 export default function Faculty() {
   useGlobalTheme();
   const navigate = useNavigate();
   const token = localStorage.getItem("token_faculty");
-
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
   const [activeSub, setActiveSub] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredMenu, setFilteredMenu] = useState([]);
-
   const [assignments, setAssignments] = useState([]);
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementError, setAnnouncementError] = useState(null);
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(null);
-
   const [showUploadTask, setShowUploadTask] = useState(false);
-
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
-
   const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
   const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
 
-  // SYLLABUS STATE
-  const syllabusMenu = {
-    label: "Syllabus",
-    icon: "📄",
-    subLinks: [
-      {
-        label: "Physics",
-        key: "syllabus-physics",
-        subLinks: [
-          { label: "UNIT-I", key: "syllabus-physics-unit1" },
-          { label: "UNIT-II", key: "syllabus-physics-unit2" },
-          { label: "UNIT-III", key: "syllabus-physics-unit3" },
-        ],
-      },
-      {
-        label: "Chemistry",
-        key: "syllabus-chemistry",
-        subLinks: [
-          { label: "UNIT-I", key: "syllabus-chemistry-unit1" },
-          { label: "UNIT-II", key: "syllabus-chemistry-unit2" },
-          { label: "UNIT-III", key: "syllabus-chemistry-unit3" },
-        ],
-      },
-      {
-        label: "Maths",
-        key: "syllabus-maths",
-        subLinks: [
-          { label: "UNIT-I", key: "syllabus-maths-unit1" },
-          { label: "UNIT-II", key: "syllabus-maths-unit2" },
-          { label: "UNIT-III", key: "syllabus-maths-unit3" },
-        ],
-      },
-    ],
-  };
+  // New state added for expanded syllabus subjects
+  const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
 
+  // Updated menu with nested syllabus subjects and units
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -468,14 +342,40 @@ export default function Faculty() {
         { label: "My Tasks", key: "my-tasks" },
       ],
     },
-    syllabusMenu,
+    {
+      label: "Syllabus",
+      icon: "📄",
+      subLinks: [
+        {
+          label: "Physics",
+          key: "syllabus-physics",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-physics-unit1" },
+            { label: "UNIT-II", key: "syllabus-physics-unit2" },
+            { label: "UNIT-III", key: "syllabus-physics-unit3" },
+          ],
+        },
+        {
+          label: "Chemistry",
+          key: "syllabus-chemistry",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-chemistry-unit1" },
+            { label: "UNIT-II", key: "syllabus-chemistry-unit2" },
+            { label: "UNIT-III", key: "syllabus-chemistry-unit3" },
+          ],
+        },
+        {
+          label: "Maths",
+          key: "syllabus-maths",
+          subLinks: [
+            { label: "UNIT-I", key: "syllabus-maths-unit1" },
+            { label: "UNIT-II", key: "syllabus-maths-unit2" },
+            { label: "UNIT-III", key: "syllabus-maths-unit3" },
+          ],
+        },
+      ],
+    },
   ];
-
-  // SYLLABUS FILE UPLOAD AND VIEW STATES
-  const [selectedSyllabusUnit, setSelectedSyllabusUnit] = useState(null);
-  const [uploadedSyllabusFiles, setUploadedSyllabusFiles] = useState([]);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [fileToUpload, setFileToUpload] = useState(null);
 
   useEffect(() => {
     async function fetchUser() {
@@ -503,10 +403,7 @@ export default function Faculty() {
 
   useEffect(() => {
     if (user) {
-      if (
-        window.location.pathname.startsWith("/faculty") &&
-        user.role !== "faculty"
-      ) {
+      if (window.location.pathname.startsWith("/faculty") && user.role !== "faculty") {
         if (user.role === "student") navigate("/student");
         else if (user.role === "admin") navigate("/admin");
         else if (user.role === "alumni") navigate("/alumni");
@@ -518,31 +415,6 @@ export default function Faculty() {
   useEffect(() => {
     setFilteredMenu(menu);
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      setLoadingAnnouncements(true);
-      fetch("https://neuraliftx.onrender.com/api/announcements/active", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch announcements");
-          return res.json();
-        })
-        .then((data) => {
-          setAnnouncements(data);
-          if (data.length) {
-            setCurrentAnnouncement(data[0]);
-            setShowAnnouncementPopup(true);
-          }
-          setLoadingAnnouncements(false);
-        })
-        .catch((e) => {
-          setAnnouncementError(e.message);
-          setLoadingAnnouncements(false);
-        });
-    }
-  }, [user, token]);
 
   useEffect(() => {
     if (activeMain === "Assignments Submission") {
@@ -589,77 +461,8 @@ export default function Faculty() {
     }
   }
 
-  // SYLLABUS FILE FETCH
-  async function fetchFilesForSyllabusUnit(unitKey) {
-    try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/faculty/syllabus/files?unitKey=${unitKey}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) throw new Error("Failed to fetch syllabus files");
-      const data = await res.json();
-      setUploadedSyllabusFiles(data.files || []);
-    } catch (e) {
-      alert(e.message);
-      setUploadedSyllabusFiles([]);
-    }
-  }
-
-  const handleSyllabusUnitClick = (unit) => {
-    setSelectedSyllabusUnit(unit);
-    fetchFilesForSyllabusUnit(unit.key);
-    setActiveMain("Syllabus");
-    setActiveSub(unit.key);
-  };
-
-  const handleUploadFile = async () => {
-    if (!fileToUpload || !selectedSyllabusUnit) return;
-    setUploadingFile(true);
-    const formData = new FormData();
-    formData.append("file", fileToUpload);
-    formData.append("unitKey", selectedSyllabusUnit.key);
-
-    try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/faculty/syllabus/upload", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      alert("File uploaded successfully");
-      setFileToUpload(null);
-      fetchFilesForSyllabusUnit(selectedSyllabusUnit.key);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
-  const handleDeleteFile = async (Id) => {
-    console.log("Deleting file with ID:", Id);
-    if (!window.confirm("Delete this file?")) return;
-    try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${Id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Delete failed");
-      }
-      alert("File deleted");
-      fetchFilesForSyllabusUnit(selectedSyllabusUnit.key);
-    } catch (e) {
-      alert(e.message);
-    }
-  };
-
   const handleUploadSuccess = (newAssignment) => {
-    setAssignments((prev) => [newAssignment, ...prev]);
+    setAssignments(prev => [newAssignment, ...prev]);
   };
 
   const handleDeleteAssignment = async (id) => {
@@ -670,7 +473,7 @@ export default function Faculty() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Delete failed");
-      setAssignments((prev) => prev.filter((a) => a._id !== id));
+      setAssignments(prev => prev.filter(a => a._id !== id));
     } catch {
       alert("Failed to delete assignment");
     }
@@ -684,7 +487,7 @@ export default function Faculty() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Delete failed");
-      setTasks((prev) => prev.filter((t) => t._id !== id));
+      setTasks(prev => prev.filter(t => t._id !== id));
       alert("Task deleted");
     } catch (e) {
       alert(e.message || "Failed to delete task");
@@ -695,12 +498,13 @@ export default function Faculty() {
     setSelectedTaskForAnswers(task);
     setShowFacultyAnswersModal(true);
   };
+
   const closeFacultyAnswersModal = () => {
     setShowFacultyAnswersModal(false);
     setSelectedTaskForAnswers(null);
   };
 
-  const toggleSidebar = () => setSidebarOpen((v) => !v);
+  const toggleSidebar = () => setSidebarOpen(v => !v);
 
   const handleLogout = () => {
     localStorage.removeItem("token_faculty");
@@ -708,12 +512,12 @@ export default function Faculty() {
   };
 
   const handleProfileUpdate = (url) => {
-    setUser((prev) => ({ ...prev, profilePicUrl: url }));
+    setUser(prev => ({ ...prev, profilePicUrl: url }));
     setShowProfile(false);
   };
 
   const closeAnnouncementPopup = () => {
-    const idx = announcements.findIndex((a) => a._id === currentAnnouncement._id);
+    const idx = announcements.findIndex(a => a._id === currentAnnouncement._id);
     const nextIdx = idx + 1;
     if (nextIdx < announcements.length) {
       setCurrentAnnouncement(announcements[nextIdx]);
@@ -721,6 +525,51 @@ export default function Faculty() {
       setShowAnnouncementPopup(false);
       setCurrentAnnouncement(null);
     }
+  };
+
+  // Search term filter for menu - simple label matching for now
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredMenu(menu);
+      return;
+    }
+    const lowerSearch = searchTerm.toLowerCase();
+    const filtered = menu
+      .map(item => {
+        const filteredSubs = item.subLinks.filter(sub =>
+          sub.label.toLowerCase().includes(lowerSearch)
+        );
+        if (item.label.toLowerCase().includes(lowerSearch) || filteredSubs.length > 0) {
+          return { ...item, subLinks: filteredSubs };
+        }
+        return null;
+      })
+      .filter(Boolean);
+    setFilteredMenu(filtered);
+  }, [searchTerm]);
+
+  // On clicking a main menu item
+  const handleMainClick = (label) => {
+    setActiveMain(label);
+    const mainItem = menu.find(m => m.label === label);
+    if (mainItem && mainItem.subLinks && mainItem.subLinks.length > 0) {
+      setActiveSub(mainItem.subLinks[0].key);
+      // Collapse syllabus on other menu clicks
+      if (label !== "Syllabus") setExpandedSyllabusSubject(null);
+    } else {
+      setActiveSub(null);
+      if (label !== "Syllabus") setExpandedSyllabusSubject(null);
+    }
+  };
+
+  // On clicking a submenu item
+  const handleSubClick = (key) => setActiveSub(key);
+
+  // On clicking a syllabus subject, toggle its expansion
+  const handleSyllabusSubjectClick = (key) => {
+    const isExpanded = expandedSyllabusSubject === key;
+    setExpandedSyllabusSubject(isExpanded ? null : key);
+    setActiveSub(key);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -744,105 +593,77 @@ export default function Faculty() {
             placeholder="Search menu"
             aria-label="Search menu"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
           />
           <span className="search-icon">🔍</span>
         </div>
         <div className="header-icons">
-          <span className="icon" title="Notifications">
-            🔔
-          </span>
-          <span className="icon" title="Library">
-            📚
-          </span>
-          <span className="icon" title="Home">
-            🏠
-          </span>
-          <span className="icon" title="Settings">
-            ⚙️
-          </span>
+          <span className="icon" title="Notifications">🔔</span>
+          <span className="icon" title="Library">📚</span>
+          <span className="icon" title="Home">🏠</span>
+          <span className="icon" title="Settings">⚙️</span>
         </div>
-        <div
-          className="profile-info"
-          onClick={() => setShowProfile(true)}
-          style={{ cursor: "pointer" }}
-        >
-          <span className="profile-name">
-            {user?.firstName} {user?.lastName}
-          </span>
+        <div className="profile-info" onClick={() => setShowProfile(true)} style={{ cursor: "pointer" }}>
+          <span className="profile-name">{user?.firstName} {user?.lastName}</span>
           <span className="profile-uid">{user?.roleIdValue}</span>
           <img
-            src={
-              user?.profilePicUrl
-                ? `https://neuraliftx.onrender.com${user.profilePicUrl}`
-                : "https://via.placeholder.com/40"
-            }
+            src={user?.profilePicUrl ? `https://neuraliftx.onrender.com${user.profilePicUrl}` : "https://via.placeholder.com/40"}
             alt="Profile"
             className="profile-pic"
           />
         </div>
       </header>
-
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
         <nav className={`student-sidebar${sidebarOpen ? "" : " closed"}`}>
           <ul>
-            {filteredMenu.map((item) => (
+            {filteredMenu.map(item => (
               <li key={item.label}>
                 <button
                   className={activeMain === item.label ? "active main-link" : "main-link"}
-                  onClick={() => setActiveMain(item.label)}
+                  onClick={() => handleMainClick(item.label)}
                 >
                   <span className="main-icon">{item.icon}</span> {item.label}
                 </button>
                 {activeMain === item.label && item.subLinks && (
                   <ul className="sub-links open">
-                    {item.subLinks.map((sub) => {
-                      const isSyllabus = item.label === "Syllabus";
-                      const hasUnits = isSyllabus && sub.subLinks && sub.subLinks.length > 0;
+                    {item.subLinks.map(sub => {
+                      // Syllabus nested pattern
+                      if (item.label === "Syllabus") {
+                        const isExpanded = expandedSyllabusSubject === sub.key;
+                        return (
+                          <li key={sub.key}>
+                            <button
+                              className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                              onClick={() => handleSyllabusSubjectClick(sub.key)}
+                            >
+                              {sub.label}
+                            </button>
+                            {isExpanded && sub.subLinks && (
+                              <ul className="unit-sub-links">
+                                {sub.subLinks.map(unit => (
+                                  <li key={unit.key}>
+                                    <button
+                                      className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+                                      onClick={() => handleSubClick(unit.key)}
+                                    >
+                                      {unit.label}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      }
+                      // Other submenus direct rendering
                       return (
                         <li key={sub.key}>
                           <button
                             className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-                            onClick={() => {
-                              if (hasUnits) {
-                                // When clicking syllabus subject, default select first unit
-                                setActiveSub(sub.key);
-                                if (sub.subLinks.length > 0) {
-                                  handleSyllabusUnitClick(sub.subLinks[0]);
-                                } else {
-                                  setSelectedSyllabusUnit(null);
-                                  setUploadedSyllabusFiles([]);
-                                }
-                                setActiveMain("Syllabus");
-                              } else if (isSyllabus) {
-                                // Clicking a unit
-                                handleSyllabusUnitClick(sub);
-                              } else {
-                                setActiveSub(sub.key);
-                                if (sub.key === "create-assignment") setShowCreateAssignment(true);
-                                if (sub.key === "upload-task") setShowUploadTask(true);
-                                if (sub.key === "my-tasks") setActiveMain("My Tasks");
-                              }
-                            }}
+                            onClick={() => handleSubClick(sub.key)}
                           >
                             {sub.label}
                           </button>
-
-                          {/* Show units if subject clicked */}
-                          {hasUnits && activeSub === sub.key && (
-                            <ul className="sub-links nested-unit-list">
-                              {sub.subLinks.map((unit) => (
-                                <li key={unit.key}>
-                                  <button
-                                    className={`sub-link${selectedSyllabusUnit?.key === unit.key ? " active" : ""}`}
-                                    onClick={() => handleSyllabusUnitClick(unit)}
-                                  >
-                                    {unit.label}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
                         </li>
                       );
                     })}
@@ -852,7 +673,6 @@ export default function Faculty() {
             ))}
           </ul>
         </nav>
-
         <main className="student-content">
           {activeMain === "Assignments Submission" && (
             <>
@@ -861,22 +681,11 @@ export default function Faculty() {
               <ul>
                 {assignments.map(({ _id, originalName, fileUrl }) => (
                   <li key={_id} style={{ marginBottom: 12 }}>
-                    <a
-                      href={`https://neuraliftx.onrender.com${fileUrl}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ fontWeight: 500, marginRight: 10 }}
-                    >
+                    <a href={`https://neuraliftx.onrender.com${fileUrl}`} target="_blank" rel="noreferrer" style={{ fontWeight: 500, marginRight: 10 }}>
                       {originalName}
                     </a>
                     <button
-                      style={{
-                        color: "red",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                      }}
+                      style={{ color: "red", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
                       onClick={() => handleDeleteAssignment(_id)}
                     >
                       Delete
@@ -886,7 +695,6 @@ export default function Faculty() {
               </ul>
             </>
           )}
-
           {activeMain === "My Tasks" && (
             <>
               <h2>My Uploaded Tasks</h2>
@@ -896,12 +704,7 @@ export default function Faculty() {
                 <ul>
                   {tasks.map((task) => (
                     <li key={task._id} style={{ marginBottom: 18 }}>
-                      <a
-                        href={`https://neuraliftx.onrender.com${task.fileUrl}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ marginRight: 10 }}
-                      >
+                      <a href={`https://neuraliftx.onrender.com${task.fileUrl}`} target="_blank" rel="noreferrer" style={{ marginRight: 10 }}>
                         {task.originalName}
                       </a>
                       <button
@@ -922,84 +725,22 @@ export default function Faculty() {
               )}
             </>
           )}
-
-          {activeMain === "Syllabus" && selectedSyllabusUnit && (
-            <div>
-              <h2>Upload Content for {selectedSyllabusUnit.label}</h2>
-              <input
-                type="file"
-                onChange={(e) => setFileToUpload(e.target.files[0])}
-                style={{ marginBottom: "0.5rem" }}
-              />
-              <button
-                onClick={handleUploadFile}
-                disabled={!fileToUpload || uploadingFile}
-                className="action-btn"
-              >
-                {uploadingFile ? "Uploading..." : "Upload File"}
-              </button>
-
-              <h3 style={{ marginTop: "1.5rem" }}>Uploaded Files</h3>
-              {!uploadedSyllabusFiles.length && <p>No files uploaded yet.</p>}
-              <ul>
-                {uploadedSyllabusFiles.map((file) => (
-  <li key={file._id} style={{ marginBottom: 6 }}>
-    <a href={file.fileUrl} target="_blank" rel="noreferrer">{file.fileName}</a>
-    <button
-      onClick={() => handleDeleteFile(file._id)}
-      style={{
-        marginLeft: 10,
-        color: "red",
-        border: "none",
-        background: "none",
-        cursor: "pointer",
-        fontWeight: "bold",
-      }}
-    >
-      Delete
-    </button>
-  </li>
-))}
-
-              </ul>
-            </div>
+          {activeMain !== "Assignments Submission" && activeMain !== "My Tasks" && (
+            <h2>{activeMain} content here</h2>
           )}
-
-          {activeMain !== "Assignments Submission" &&
-            activeMain !== "My Tasks" &&
-            activeMain !== "Syllabus" && <h2>{activeMain} content here</h2>}
         </main>
       </div>
-
       {showCreateAssignment && (
-        <CreateAssignmentModal
-          token={token}
-          onUpload={handleUploadSuccess}
-          onClose={() => setShowCreateAssignment(false)}
-        />
+        <CreateAssignmentModal token={token} onUpload={handleUploadSuccess} onClose={() => setShowCreateAssignment(false)} />
       )}
       {showProfile && (
-        <ProfileModal
-          user={user}
-          token={token}
-          onClose={() => setShowProfile(false)}
-          onLogout={handleLogout}
-          onUpdate={handleProfileUpdate}
-        />
+        <ProfileModal user={user} token={token} onClose={() => setShowProfile(false)} onLogout={handleLogout} onUpdate={handleProfileUpdate} />
       )}
       {showAnnouncementPopup && currentAnnouncement && (
-        <AnnouncementPopup
-          announcement={currentAnnouncement}
-          onClose={closeAnnouncementPopup}
-          token={token}
-        />
+        <AnnouncementPopup announcement={currentAnnouncement} onClose={closeAnnouncementPopup} token={token} />
       )}
       {showUploadTask && (
-        <UploadTaskModal
-          token={token}
-          onClose={() => setShowUploadTask(false)}
-          onUpload={fetchTasks}
-        />
+        <UploadTaskModal token={token} onClose={() => setShowUploadTask(false)} onUpload={fetchTasks} />
       )}
       {showFacultyAnswersModal && selectedTaskForAnswers && (
         <FacultyAnswersModal
