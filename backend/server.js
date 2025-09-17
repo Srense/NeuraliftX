@@ -430,29 +430,39 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 
-// POST – Upload PDF for syllabus unit
 app.post(
   "/unit-upload",
   authenticateJWT,
   upload.single("pdf"),
   async (req, res) => {
     const unitKey = req.query.unitKey;
-    if (!unitKey) return res.status(400).json({ error: "Missing unitKey" });
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    if (!unitKey) {
+      return res.status(400).json({ error: "Missing unitKey parameter" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
 
     const fileUrl = `/uploads/${req.file.filename}`;
 
     try {
       const syllabus = await Syllabus.findOne();
-      if (!syllabus) return res.status(404).json({ error: "Syllabus not found" });
+      if (!syllabus) {
+        return res.status(404).json({ error: "Syllabus not found" });
+      }
 
       let updated = false;
+
       for (const subject of syllabus.subjects) {
         for (const unit of subject.units) {
           if (unit.key === unitKey) {
+            // Delete previous file if exists
             if (unit.uploadedFileUrl) {
-              const oldPath = path.join(__dirname, "..", "uploads", path.basename(unit.uploadedFileUrl));
-              if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+              const prevPath = path.join(__dirname, "..", unit.uploadedFileUrl);
+              if (fs.existsSync(prevPath)) {
+                fs.unlinkSync(prevPath);
+              }
             }
             unit.uploadedFileUrl = fileUrl;
             updated = true;
@@ -462,18 +472,20 @@ app.post(
         if (updated) break;
       }
 
-      if (!updated) return res.status(404).json({ error: "Unit key not found" });
+      if (!updated) {
+        return res.status(404).json({ error: "Unit key not found in syllabus" });
+      }
 
       await syllabus.save();
 
-      return res.json({
-        message: "File uploaded and syllabus updated",
+      res.json({
+        message: "File uploaded successfully",
         fileUrl,
         unitKey,
       });
-    } catch (error) {
-      console.error("Upload error:", error);
-      return res.status(500).json({ error: "Server error during upload" });
+    } catch (err) {
+      console.error("Upload error:", err);
+      res.status(500).json({ error: "Server error during file upload" });
     }
   }
 );
