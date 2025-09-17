@@ -437,31 +437,22 @@ app.post(
   upload.single("pdf"),
   async (req, res) => {
     const unitKey = req.query.unitKey;
-    if (!unitKey) {
-      return res.status(400).json({ error: "Missing unitKey" });
-    }
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+    if (!unitKey) return res.status(400).json({ error: "Missing unitKey" });
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const fileUrl = `/uploads/${req.file.filename}`; // your base folder for uploads
+    const fileUrl = `/uploads/${req.file.filename}`;
 
     try {
       const syllabus = await Syllabus.findOne();
-      if (!syllabus) {
-        return res.status(404).json({ error: "Syllabus not found" });
-      }
+      if (!syllabus) return res.status(404).json({ error: "Syllabus not found" });
 
       let updated = false;
-
       for (const subject of syllabus.subjects) {
         for (const unit of subject.units) {
           if (unit.key === unitKey) {
             if (unit.uploadedFileUrl) {
               const oldPath = path.join(__dirname, "..", "uploads", path.basename(unit.uploadedFileUrl));
-              if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-              }
+              if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
             }
             unit.uploadedFileUrl = fileUrl;
             updated = true;
@@ -471,15 +462,17 @@ app.post(
         if (updated) break;
       }
 
-      if (!updated) {
-        return res.status(404).json({ error: "Unit key not found" });
-      }
+      if (!updated) return res.status(404).json({ error: "Unit key not found" });
 
       await syllabus.save();
 
-      return res.json({ message: "File uploaded and syllabus updated", fileUrl, unitKey });
+      return res.json({
+        message: "File uploaded and syllabus updated",
+        fileUrl,
+        unitKey,
+      });
     } catch (error) {
-      console.error("Error uploading syllabus unit file:", error);
+      console.error("Upload error:", error);
       return res.status(500).json({ error: "Server error during upload" });
     }
   }
