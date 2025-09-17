@@ -321,8 +321,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
   );
 }
 
-// ====== NEW FACULTY ANSWERS MODAL ======
-
 function FacultyAnswersModal({ token, task, onClose }) {
   const [loading, setLoading] = useState(false);
   const [studentAnswers, setStudentAnswers] = useState([]);
@@ -381,8 +379,6 @@ function FacultyAnswersModal({ token, task, onClose }) {
   );
 }
 
-// ========== FACULTY ROOT COMPONENT WITH SYLLABUS UPLOAD AND VIEW ==========
-
 export default function Faculty() {
   useGlobalTheme();
   const navigate = useNavigate();
@@ -416,41 +412,6 @@ export default function Faculty() {
   const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
   const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
 
-  // SYLLABUS STATE
-  const syllabusMenu = {
-    label: "Syllabus",
-    icon: "📄",
-    subLinks: [
-      {
-        label: "Physics",
-        key: "syllabus-physics",
-        subLinks: [
-          { label: "UNIT-I", key: "syllabus-physics-unit1" },
-          { label: "UNIT-II", key: "syllabus-physics-unit2" },
-          { label: "UNIT-III", key: "syllabus-physics-unit3" },
-        ],
-      },
-      {
-        label: "Chemistry",
-        key: "syllabus-chemistry",
-        subLinks: [
-          { label: "UNIT-I", key: "syllabus-chemistry-unit1" },
-          { label: "UNIT-II", key: "syllabus-chemistry-unit2" },
-          { label: "UNIT-III", key: "syllabus-chemistry-unit3" },
-        ],
-      },
-      {
-        label: "Maths",
-        key: "syllabus-maths",
-        subLinks: [
-          { label: "UNIT-I", key: "syllabus-maths-unit1" },
-          { label: "UNIT-II", key: "syllabus-maths-unit2" },
-          { label: "UNIT-III", key: "syllabus-maths-unit3" },
-        ],
-      },
-    ],
-  };
-
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -468,14 +429,7 @@ export default function Faculty() {
         { label: "My Tasks", key: "my-tasks" },
       ],
     },
-    syllabusMenu,
   ];
-
-  // SYLLABUS FILE UPLOAD AND VIEW STATES
-  const [selectedSyllabusUnit, setSelectedSyllabusUnit] = useState(null);
-  const [uploadedSyllabusFiles, setUploadedSyllabusFiles] = useState([]);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [fileToUpload, setFileToUpload] = useState(null);
 
   useEffect(() => {
     async function fetchUser() {
@@ -588,75 +542,6 @@ export default function Faculty() {
       setLoadingTasks(false);
     }
   }
-
-  // SYLLABUS FILE FETCH
-  async function fetchFilesForSyllabusUnit(unitKey) {
-    try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/faculty/syllabus/files?unitKey=${unitKey}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) throw new Error("Failed to fetch syllabus files");
-      const data = await res.json();
-      setUploadedSyllabusFiles(data.files || []);
-    } catch (e) {
-      alert(e.message);
-      setUploadedSyllabusFiles([]);
-    }
-  }
-
-  const handleSyllabusUnitClick = (unit) => {
-    setSelectedSyllabusUnit(unit);
-    fetchFilesForSyllabusUnit(unit.key);
-    setActiveMain("Syllabus");
-    setActiveSub(unit.key);
-  };
-
-  const handleUploadFile = async () => {
-    if (!fileToUpload || !selectedSyllabusUnit) return;
-    setUploadingFile(true);
-    const formData = new FormData();
-    formData.append("file", fileToUpload);
-    formData.append("unitKey", selectedSyllabusUnit.key);
-
-    try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/faculty/syllabus/upload", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      alert("File uploaded successfully");
-      setFileToUpload(null);
-      fetchFilesForSyllabusUnit(selectedSyllabusUnit.key);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
-  const handleDeleteFile = async (Id) => {
-    console.log("Deleting file with ID:", Id);
-    if (!window.confirm("Delete this file?")) return;
-    try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/faculty/syllabus/files/${Id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Delete failed");
-      }
-      alert("File deleted");
-      fetchFilesForSyllabusUnit(selectedSyllabusUnit.key);
-    } catch (e) {
-      alert(e.message);
-    }
-  };
 
   const handleUploadSuccess = (newAssignment) => {
     setAssignments((prev) => [newAssignment, ...prev]);
@@ -796,56 +681,21 @@ export default function Faculty() {
                 </button>
                 {activeMain === item.label && item.subLinks && (
                   <ul className="sub-links open">
-                    {item.subLinks.map((sub) => {
-                      const isSyllabus = item.label === "Syllabus";
-                      const hasUnits = isSyllabus && sub.subLinks && sub.subLinks.length > 0;
-                      return (
-                        <li key={sub.key}>
-                          <button
-                            className={`sub-link${activeSub === sub.key ? " active" : ""}`}
-                            onClick={() => {
-                              if (hasUnits) {
-                                // When clicking syllabus subject, default select first unit
-                                setActiveSub(sub.key);
-                                if (sub.subLinks.length > 0) {
-                                  handleSyllabusUnitClick(sub.subLinks[0]);
-                                } else {
-                                  setSelectedSyllabusUnit(null);
-                                  setUploadedSyllabusFiles([]);
-                                }
-                                setActiveMain("Syllabus");
-                              } else if (isSyllabus) {
-                                // Clicking a unit
-                                handleSyllabusUnitClick(sub);
-                              } else {
-                                setActiveSub(sub.key);
-                                if (sub.key === "create-assignment") setShowCreateAssignment(true);
-                                if (sub.key === "upload-task") setShowUploadTask(true);
-                                if (sub.key === "my-tasks") setActiveMain("My Tasks");
-                              }
-                            }}
-                          >
-                            {sub.label}
-                          </button>
-
-                          {/* Show units if subject clicked */}
-                          {hasUnits && activeSub === sub.key && (
-                            <ul className="sub-links nested-unit-list">
-                              {sub.subLinks.map((unit) => (
-                                <li key={unit.key}>
-                                  <button
-                                    className={`sub-link${selectedSyllabusUnit?.key === unit.key ? " active" : ""}`}
-                                    onClick={() => handleSyllabusUnitClick(unit)}
-                                  >
-                                    {unit.label}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      );
-                    })}
+                    {item.subLinks.map((sub) => (
+                      <li key={sub.key}>
+                        <button
+                          className={`sub-link${activeSub === sub.key ? " active" : ""}`}
+                          onClick={() => {
+                            setActiveSub(sub.key);
+                            if (sub.key === "create-assignment") setShowCreateAssignment(true);
+                            if (sub.key === "upload-task") setShowUploadTask(true);
+                            if (sub.key === "my-tasks") setActiveMain("My Tasks");
+                          }}
+                        >
+                          {sub.label}
+                        </button>
+                      </li>
+                    ))}
                   </ul>
                 )}
               </li>
@@ -923,51 +773,9 @@ export default function Faculty() {
             </>
           )}
 
-          {activeMain === "Syllabus" && selectedSyllabusUnit && (
-            <div>
-              <h2>Upload Content for {selectedSyllabusUnit.label}</h2>
-              <input
-                type="file"
-                onChange={(e) => setFileToUpload(e.target.files[0])}
-                style={{ marginBottom: "0.5rem" }}
-              />
-              <button
-                onClick={handleUploadFile}
-                disabled={!fileToUpload || uploadingFile}
-                className="action-btn"
-              >
-                {uploadingFile ? "Uploading..." : "Upload File"}
-              </button>
-
-              <h3 style={{ marginTop: "1.5rem" }}>Uploaded Files</h3>
-              {!uploadedSyllabusFiles.length && <p>No files uploaded yet.</p>}
-              <ul>
-                {uploadedSyllabusFiles.map((file) => (
-  <li key={file._id} style={{ marginBottom: 6 }}>
-    <a href={file.fileUrl} target="_blank" rel="noreferrer">{file.fileName}</a>
-    <button
-      onClick={() => handleDeleteFile(file._id)}
-      style={{
-        marginLeft: 10,
-        color: "red",
-        border: "none",
-        background: "none",
-        cursor: "pointer",
-        fontWeight: "bold",
-      }}
-    >
-      Delete
-    </button>
-  </li>
-))}
-
-              </ul>
-            </div>
+          {activeMain !== "Assignments Submission" && activeMain !== "My Tasks" && (
+            <h2>{activeMain} content here</h2>
           )}
-
-          {activeMain !== "Assignments Submission" &&
-            activeMain !== "My Tasks" &&
-            activeMain !== "Syllabus" && <h2>{activeMain} content here</h2>}
         </main>
       </div>
 
