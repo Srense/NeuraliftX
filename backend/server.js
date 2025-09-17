@@ -260,15 +260,9 @@ const AnswerVerification = mongoose.model("AnswerVerification", answerVerificati
 const syllabusUnitSchema = new mongoose.Schema({
   key: { type: String, unique: true, required: true },
   label: String,
-  uploadedFiles: [
-    {
-      url: String,
-      filename: String,
-      uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      uploadedAt: { type: Date, default: Date.now }
-    }
-  ],
+  uploadedFileUrl: String,
 });
+const SyllabusUnit = mongoose.model("SyllabusUnit", syllabusUnitSchema);
 
 
 
