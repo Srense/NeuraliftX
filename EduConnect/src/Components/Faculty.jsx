@@ -295,6 +295,49 @@ function FacultyAnswersModal({ token, task, onClose }) {
   );
 }
 
+// NEW MODAL: Syllabus Upload Modal for unit content upload
+function SyllabusUploadModal({ token, subjectLabel, unitLabel, onClose }) {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('pdf', selectedFile);
+    formData.append('subject', subjectLabel);
+    formData.append('unit', unitLabel);
+
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/syllabus-content", {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      alert("Content uploaded successfully");
+      onClose();
+    } catch {
+      alert("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" onClick={e => e.stopPropagation()}>
+        <button className="close-btn" onClick={onClose}>×</button>
+        <h2>Upload Content: {subjectLabel} - {unitLabel}</h2>
+        <input type="file" accept="application/pdf" onChange={e => setSelectedFile(e.target.files[0])} />
+        <button disabled={!selectedFile || uploading} onClick={handleUpload} className="action-btn">
+          {uploading ? "Uploading..." : "Upload Content"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Faculty() {
   useGlobalTheme();
   const navigate = useNavigate();
@@ -321,10 +364,11 @@ export default function Faculty() {
   const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
   const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
 
-  // New state added for expanded syllabus subjects
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
+  // New states for syllabus upload modal
+  const [showSyllabusUploadModal, setShowSyllabusUploadModal] = useState(false);
+  const [selectedSyllabusUnit, setSelectedSyllabusUnit] = useState(null);
 
-  // Updated menu with nested syllabus subjects and units
   const menu = [
     { label: "Home", icon: "🏠" },
     { label: "Monitoring", icon: "🖥️" },
@@ -527,7 +571,6 @@ export default function Faculty() {
     }
   };
 
-  // Search term filter for menu - simple label matching for now
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredMenu(menu);
@@ -548,13 +591,11 @@ export default function Faculty() {
     setFilteredMenu(filtered);
   }, [searchTerm]);
 
-  // On clicking a main menu item
   const handleMainClick = (label) => {
     setActiveMain(label);
     const mainItem = menu.find(m => m.label === label);
-    if (mainItem && mainItem.subLinks && mainItem.subLinks.length > 0) {
+    if (mainItem?.subLinks?.length > 0) {
       setActiveSub(mainItem.subLinks[0].key);
-      // Collapse syllabus on other menu clicks
       if (label !== "Syllabus") setExpandedSyllabusSubject(null);
     } else {
       setActiveSub(null);
@@ -562,10 +603,8 @@ export default function Faculty() {
     }
   };
 
-  // On clicking a submenu item
   const handleSubClick = (key) => setActiveSub(key);
 
-  // On clicking a syllabus subject, toggle its expansion
   const handleSyllabusSubjectClick = (key) => {
     const isExpanded = expandedSyllabusSubject === key;
     setExpandedSyllabusSubject(isExpanded ? null : key);
@@ -627,7 +666,6 @@ export default function Faculty() {
                 {activeMain === item.label && item.subLinks && (
                   <ul className="sub-links open">
                     {item.subLinks.map(sub => {
-                      // Syllabus nested pattern
                       if (item.label === "Syllabus") {
                         const isExpanded = expandedSyllabusSubject === sub.key;
                         return (
@@ -644,7 +682,16 @@ export default function Faculty() {
                                   <li key={unit.key}>
                                     <button
                                       className={`sub-link${activeSub === unit.key ? " active" : ""}`}
-                                      onClick={() => handleSubClick(unit.key)}
+                                      onClick={() => {
+                                        handleSubClick(unit.key);
+                                        setSelectedSyllabusUnit({
+                                          subjectKey: sub.key,
+                                          unitKey: unit.key,
+                                          subjectLabel: sub.label,
+                                          unitLabel: unit.label
+                                        });
+                                        setShowSyllabusUploadModal(true);
+                                      }}
                                     >
                                       {unit.label}
                                     </button>
@@ -655,7 +702,6 @@ export default function Faculty() {
                           </li>
                         );
                       }
-                      // Other submenus direct rendering
                       return (
                         <li key={sub.key}>
                           <button
@@ -730,6 +776,7 @@ export default function Faculty() {
           )}
         </main>
       </div>
+
       {showCreateAssignment && (
         <CreateAssignmentModal token={token} onUpload={handleUploadSuccess} onClose={() => setShowCreateAssignment(false)} />
       )}
@@ -747,6 +794,14 @@ export default function Faculty() {
           token={token}
           task={selectedTaskForAnswers}
           onClose={closeFacultyAnswersModal}
+        />
+      )}
+      {showSyllabusUploadModal && selectedSyllabusUnit && (
+        <SyllabusUploadModal
+          token={token}
+          subjectLabel={selectedSyllabusUnit.subjectLabel}
+          unitLabel={selectedSyllabusUnit.unitLabel}
+          onClose={() => setShowSyllabusUploadModal(false)}
         />
       )}
     </div>
