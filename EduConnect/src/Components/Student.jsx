@@ -717,25 +717,25 @@ export default function Student() {
         </div>
       </div>
     );
-  } 
-  else if (activeMain === "academics-grades") {
+} 
+else if (activeMain === "Academics" && activeSub === "academics-grades") {
   contentArea = <Grades token={token} />;
-  } else if (activeMain === "Personalisation Tracker") {
-    contentArea = (
-      <div style={{ padding: "2rem 1rem" }}>
-        <QuizPerformanceChart />
-      </div>
-    );
-  } else if (
-    activeMain === "Top Rankers" &&
-    activeSub === "toprankers-individual"
-  ) {
-    contentArea = <IndividualLeaderboard />;
-  } else if (activeMain === "Tasks") {
-    contentArea = <StudentTasks token={token} />;
-  } else {
-    contentArea = <div>Select a menu item to view its content.</div>;
-  }
+} else if (activeMain === "Personalisation Tracker") {
+  contentArea = (
+    <div style={{ padding: "2rem 1rem" }}>
+      <QuizPerformanceChart />
+    </div>
+  );
+} else if (
+  activeMain === "Top Rankers" &&
+  activeSub === "toprankers-individual"
+) {
+  contentArea = <IndividualLeaderboard />;
+} else if (activeMain === "Tasks") {
+  contentArea = <StudentTasks token={token} />;
+} else {
+  contentArea = <div>Select a menu item to view its content.</div>;
+}
 
   return (
     <div className="student-root">
