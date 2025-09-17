@@ -458,6 +458,53 @@ app.post(
   }
 );
 
+app.get(
+  "/api/syllabus-content",
+  authenticateJWT, // Optional: add auth if you want to restrict access
+  async (req, res) => {
+    try {
+      const contents = await SyllabusContent.find()
+        .populate("uploadedBy", "firstName lastName email") // optional: populate uploader info
+        .sort({ uploadedAt: -1 }); // newest first
+
+      res.json(contents);
+    } catch (error) {
+      console.error("Error fetching syllabus content:", error);
+      res.status(500).json({ message: "Failed to fetch syllabus contents" });
+    }
+  }
+);
+
+
+app.delete(
+  "/api/syllabus-content/:id",
+  authenticateJWT, // Add auth to protect deletion
+  async (req, res) => {
+    try {
+      const contentId = req.params.id;
+      const content = await SyllabusContent.findById(contentId);
+      if (!content) {
+        return res.status(404).json({ message: "Syllabus content not found" });
+      }
+
+      // Optional: Check if uploader matches req.user.id or if user is admin before delete
+
+      // Delete file from disk
+      const fileAbsolutePath = path.join(__dirname, content.filePath);
+      fs.unlink(fileAbsolutePath, err => {
+        if (err) console.warn("Failed to delete file:", err);
+      });
+
+      // Delete from DB
+      await SyllabusContent.findByIdAndDelete(contentId);
+
+      res.json({ message: "Syllabus content deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting syllabus content:", error);
+      res.status(500).json({ message: "Failed to delete syllabus content" });
+    }
+  }
+);
 
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
   if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
