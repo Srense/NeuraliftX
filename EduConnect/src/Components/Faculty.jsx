@@ -472,6 +472,30 @@ export default function Faculty() {
   ];
 
   useEffect(() => {
+  async function fetchSyllabusUploads() {
+    if (!token) return;
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/syllabus", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch syllabus uploads");
+      const syllabusUnits = await res.json();
+
+      const uploadsMap = {};
+      syllabusUnits.forEach((unit) => {
+        if (unit.uploadedFileUrl) uploadsMap[unit.key] = unit.uploadedFileUrl;
+      });
+
+      setUnitUploadedFiles(uploadsMap);
+    } catch (e) {
+      console.error("Error loading syllabus uploads:", e);
+    }
+  }
+  fetchSyllabusUploads();
+}, [token]);
+
+
+  useEffect(() => {
     async function fetchUser() {
       if (!token) {
         navigate("/login");
