@@ -406,6 +406,8 @@ export default function Student() {
 
   const [assignments, setAssignments] = useState([]); // for storing fetched assignments
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
+  const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
+
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -453,6 +455,27 @@ export default function Student() {
     },
     
   ];
+
+  useEffect(() => {
+  async function fetchSyllabusUnits() {
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/syllabus", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch syllabus units");
+      const syllabusUnits = await res.json();
+      const uploadsMap = {};
+      syllabusUnits.forEach((unit) => {
+        if (unit.uploadedFileUrl) uploadsMap[unit.key] = unit.uploadedFileUrl;
+      });
+      setUnitUploadedFiles(uploadsMap);
+    } catch (e) {
+      console.error("Error fetching syllabus units uploads", e);
+    }
+  }
+  if (token) fetchSyllabusUnits();
+}, [token]);
+
 
   useEffect(() => {
     async function fetchUser() {
@@ -737,16 +760,27 @@ export default function Student() {
                 {/* Unit logic—this will always work now */}
                 {isSyllabus && isExpanded && sub.subLinks && (
                   <ul className="unit-sub-links">
-                    {sub.subLinks.map((unit) => (
-                      <li key={unit.key}>
-                        <button
-                          className={`sub-link${activeSub === unit.key ? " active" : ""}`}
-                          onClick={() => handleSubClick(unit.key)}
-                        >
-                          {unit.label}
-                        </button>
-                      </li>
-                    ))}
+                   {sub.subLinks.map((unit) => (
+  <li key={unit.key}>
+    <button
+      className={`sub-link${activeSub === unit.key ? " active" : ""}`}
+      onClick={() => handleSubClick(unit.key)}
+    >
+      {unit.label}
+    </button>
+    {unitUploadedFiles[unit.key] && (
+      <a
+        href={`https://neuraliftx.onrender.com${unitUploadedFiles[unit.key]}`}
+        target="_blank"
+        rel="noreferrer"
+        style={{ marginLeft: 8 }}
+      >
+        View PDF
+      </a>
+    )}
+  </li>
+))}
+
                   </ul>
                 )}
               </li>
