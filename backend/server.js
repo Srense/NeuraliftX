@@ -921,7 +921,7 @@ app.get("/api/coursera-courses", async (req, res) => {
 
 // Upload syllabus unit PDF
 app.post(
-  "/api/syllabusunit-upload",
+  "/api/syllabus/unit-upload",
   authenticateJWT,
   authorizeRole("faculty"),
   upload.single("pdf"),
@@ -929,51 +929,35 @@ app.post(
     try {
       const unitKey = req.query.unitKey;
       if (!unitKey || !req.file)
-        return res.status(400).json({ error: "Missing unitKey or file" });
+        return res.status(400).json({ error: "Missing unitKey or PDF file" });
 
       const fileUrl = `/uploads/${req.file.filename}`;
-      const fileData = {
-        url: fileUrl,
-        filename: req.file.originalname,
-        uploadedBy: req.user._id,
-        uploadedAt: new Date(),
-      };
 
       let unit = await SyllabusUnit.findOne({ key: unitKey });
-      if (!unit) {
+      if (unit) {
+        unit.uploadedFileUrl = fileUrl;
+      } else {
         unit = new SyllabusUnit({
           key: unitKey,
           label: unitKey.toUpperCase(),
-          uploadedFiles: [fileData],
+          uploadedFileUrl: fileUrl,
         });
-      } else {
-        unit.uploadedFiles.push(fileData);
       }
       await unit.save();
 
-      res.json({ message: "File uploaded successfully", file: fileData });
+      res.json({ message: "File uploaded successfully", fileUrl });
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error("Syllabus unit upload error:", err);
       res.status(500).json({ error: "Upload failed" });
     }
   }
 );
 
-app.get(
-  "/api/syllabus",
-  authenticateJWT,
-  authorizeRole("student", "faculty", "admin"),
-  async (req, res) => {
-    try {
-      const units = await SyllabusUnit.find();
-      res.json(units);
-    } catch (err) {
-      console.error("Fetch syllabus error:", err);
-      res.status(500).json({ error: "Failed to fetch syllabus" });
-    }
-  }
-);
-
+// Get syllabus units with files
+app.get("/api/syllabus", authenticateJWT, authorizeRole("student","faculty"), async (req, res) => {
+  const units = await SyllabusUnit.find();
+  res.json(units);
+});
 
 // Delete syllabus unit uploaded file (optional: clear fileUrl)
 app.delete(
