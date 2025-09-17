@@ -10,7 +10,6 @@ import QuizPage from "./Components/QuizPage";
 import VerifyEmail from "./Components/VerifyEmail";
 import PdfViewerPage from "./Components/PDFViewer";
 import Admin from "./Components/Admin";
-import Grades from "./Components/Grades"; // Your grades component
 
 
 // Role-based protected route for multi-session support
@@ -76,7 +75,6 @@ const App = () => {
         <Route path="/quiz/:assignmentId" element={<QuizPage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/pdf-viewer" element={<PdfViewerPage />} />
-        <Route path="/grades" element={<Grades />} />
 
         {/* Protected routes per role */}
         <Route element={<RoleBasedRoute allowedRoles={['student']} />}>
