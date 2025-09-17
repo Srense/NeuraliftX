@@ -8,7 +8,7 @@ import AttendanceDashboard from "./AttendanceDashboard";
 import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
-import"./Grades.jsx";
+import Grades from "./Grades.jsx";
 
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
