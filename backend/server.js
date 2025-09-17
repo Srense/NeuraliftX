@@ -430,65 +430,50 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 
-app.post(
-  "/unit-upload",
+router.post(
+  '/unit-upload',
   authenticateJWT,
-  upload.single("pdf"),
+  upload.single('pdf'),
   async (req, res) => {
-    const unitKey = req.query.unitKey;
-    if (!unitKey) {
-      return res.status(400).json({ error: "Missing unitKey parameter" });
-    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+    const { unitKey } = req.query;
+    if (!unitKey) return res.status(400).json({ error: 'Missing unitKey' });
 
-    const fileUrl = `/uploads/${req.file.filename}`;
+    const fileUrl = '/uploads/' + req.file.filename;
 
     try {
       const syllabus = await Syllabus.findOne();
-      if (!syllabus) {
-        return res.status(404).json({ error: "Syllabus not found" });
-      }
+      if (!syllabus) return res.status(404).json({ error: 'No syllabus found' });
 
-      let updated = false;
-
+      let found = false;
       for (const subject of syllabus.subjects) {
         for (const unit of subject.units) {
           if (unit.key === unitKey) {
-            // Delete previous file if exists
             if (unit.uploadedFileUrl) {
-              const prevPath = path.join(__dirname, "..", unit.uploadedFileUrl);
-              if (fs.existsSync(prevPath)) {
-                fs.unlinkSync(prevPath);
-              }
+              const oldPath = path.join(__dirname, '../', unit.uploadedFileUrl);
+              if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
             }
             unit.uploadedFileUrl = fileUrl;
-            updated = true;
+            found = true;
             break;
           }
         }
-        if (updated) break;
+        if (found) break;
       }
 
-      if (!updated) {
-        return res.status(404).json({ error: "Unit key not found in syllabus" });
-      }
+      if (!found) return res.status(404).json({ error: 'Unit not found' });
 
       await syllabus.save();
 
-      res.json({
-        message: "File uploaded successfully",
-        fileUrl,
-        unitKey,
-      });
-    } catch (err) {
-      console.error("Upload error:", err);
-      res.status(500).json({ error: "Server error during file upload" });
+      res.json({ fileUrl, message: 'Upload successful' });
+    } catch (e) {
+      console.error('Upload error:', e);
+      res.status(500).json({ error: 'Server error' });
     }
   }
 );
+
 
 // GET – Get full syllabus data
 app.get("/", authenticateJWT, async (req, res) => {
