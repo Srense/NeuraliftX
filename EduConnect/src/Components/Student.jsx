@@ -8,6 +8,7 @@ import AttendanceDashboard from "./AttendanceDashboard";
 import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
+import"./Grades.jsx";
 
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
@@ -716,6 +717,9 @@ export default function Student() {
         </div>
       </div>
     );
+  } 
+  else if (activeMain === "academics-grades") {
+  contentArea = <Grades token={token} />;
   } else if (activeMain === "Personalisation Tracker") {
     contentArea = (
       <div style={{ padding: "2rem 1rem" }}>
