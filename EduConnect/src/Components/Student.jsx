@@ -90,7 +90,9 @@ function CoinBadge({ coins }) {
         <p>
           <b>Email:</b> {user.email}
         </p>
-        
+        <p>
+          {user && <CoinBadge coins={user.coins || 0} />}
+        </p>
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
@@ -719,7 +721,7 @@ export default function Student() {
     activeMain === "Academics" &&
     activeSub === "academics-attendance"
   ) {
-    contentArea = <AttendanceDashboard token={token} />;
+    contentArea = <AttendanceDashboard token={token} /;
   }else if (activeMain === "Quiz/Assignments") {
   contentArea = (
     <div className="assignments-container">
