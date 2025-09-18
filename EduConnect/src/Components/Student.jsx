@@ -739,7 +739,11 @@ export default function Student() {
       <QuizPerformanceChart />
     </div>
   );
-} else if (
+} 
+if (activeMain === "Certifications") {
+  contentArea = <CourseraCertifications token={token} />;
+}
+else if (
   activeMain === "Top Rankers" &&
   activeSub === "toprankers-individual"
 ) {
