@@ -90,9 +90,7 @@ function CoinBadge({ coins }) {
         <p>
           <b>Email:</b> {user.email}
         </p>
-        <p>
-          {user && <CoinBadge coins={user.coins || 0} />}
-        </p>
+        
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
@@ -829,6 +827,7 @@ else if (activeMain === "Certifications") {
             className="profile-pic"
           />
         </div>
+        {user && <CoinBadge coins={user.coins || 0} />}
       </header>
 
       <div className={`student-layout ${sidebarOpen ? "" : "closed"}`}>
