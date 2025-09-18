@@ -689,6 +689,22 @@ export default function Student() {
     }
   };
 
+  // Add this function to handle quiz generation for assignments
+  const handleGenerateQuiz = async (assignmentId) => {
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/assignments/${assignmentId}/generate-quiz`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to generate quiz");
+      const data = await res.json();
+      alert("Quiz generated successfully!");
+      // Optionally, you can navigate to the quiz page or update state here
+    } catch (e) {
+      alert(e.message || "Error generating quiz");
+    }
+  };
+
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
@@ -697,10 +713,13 @@ export default function Student() {
     activeSub === "academics-attendance"
   ) {
     contentArea = <AttendanceDashboard token={token} />;
-  } else if (activeMain === "Quiz/Assignments") {
-    contentArea = (
-      <div className="assignments-container">
-        {assignments.length === 0 && <p>No assignments available.</p>}
+  }else if (activeMain === "Quiz/Assignments") {
+  contentArea = (
+    <div className="assignments-container">
+      {/* Show a message if there are no assignments */}
+      {assignments.length === 0 ? (
+        <p>No assignments available.</p>
+      ) : (
         <div className="assignment-cards">
           {assignments.map(({ _id, originalName, fileUrl }) => (
             <div key={_id} className="assignment-card">
@@ -712,12 +731,19 @@ export default function Student() {
               >
                 {originalName}
               </a>
+              <button
+                className="generate-quiz-btn"
+                onClick={() => handleGenerateQuiz(_id)}
+              >
+                Generate Quiz
+              </button>
             </div>
           ))}
         </div>
-      </div>
-    );
-} 
+      )}
+    </div>
+  );
+}
 else if (activeMain === "Academics" && activeSub === "academics-grades") {
   contentArea = <Grades token={token} />;
 } else if (activeMain === "Personalisation Tracker") {
