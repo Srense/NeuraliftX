@@ -443,8 +443,7 @@ export default function Student() {
   const navigate = useNavigate();
 
   const token = localStorage.getItem("token_student");
-  const handleGenerateQuiz = (assignmentId) => {
-navigate(`/quiz/${assignmentId}`);
+  
 };
 
   const [user, setUser] = useState(null);
@@ -692,6 +691,10 @@ navigate(`/quiz/${assignmentId}`);
       setCurrentAnnouncement(null);
     }
   };
+
+const handleGenerateQuiz = (assignmentId) => {
+  navigate(`/quiz/${assignmentId}`);
+};
 
   let contentArea = null;
   if (activeMain === "Home") {
