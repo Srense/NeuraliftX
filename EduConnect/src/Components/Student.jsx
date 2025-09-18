@@ -441,10 +441,8 @@ export default function Student() {
   useGlobalTheme();
 
   const navigate = useNavigate();
-
-  const token = localStorage.getItem("token_student");
   
-};
+  const token = localStorage.getItem("token_student");
 
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -692,10 +690,9 @@ export default function Student() {
     }
   };
 
-const handleGenerateQuiz = (assignmentId) => {
+  const handleGenerateQuiz = (assignmentId) => {
   navigate(`/quiz/${assignmentId}`);
 };
-
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
