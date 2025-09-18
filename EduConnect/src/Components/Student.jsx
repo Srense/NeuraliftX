@@ -761,10 +761,9 @@ export default function Student() {
     </div>
   );
 } 
-if (activeMain === "Certifications") {
+else if (activeMain === "Certifications") {
   contentArea = <CourseraCertifications token={token} />;
-}
-else if (
+} else if (
   activeMain === "Top Rankers" &&
   activeSub === "toprankers-individual"
 ) {
