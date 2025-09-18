@@ -519,29 +519,26 @@ body {
     height: 32px;
   }
 }
-.coin-with-number {
-  position: relative;
-  display: inline-block;
-  width: 40px;
+.coin-badge {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 22px;
+  padding: 2px 16px 2px 10px;
+  margin-left: 18px;
+  box-shadow: 0 1px 6px 0 rgba(0,0,0,0.08);
   height: 40px;
-  background: radial-gradient(circle at center, #ffd700, #b8860b);
-  border-radius: 50%;
-  box-shadow: 0 0 5px #b8860b inset;
-  vertical-align: middle;
-  text-align: center;
-  font-weight: bold;
-  font-size: 14px;
-  line-height: 40px;
-  color: white;
-  user-select: none;
+}
+.coin-badge svg {
+  margin-right: 6px;
+}
+.coin-value {
+  font-size: 1.35rem;
+  color: #222;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
-.coin-number {
-  position: relative;
-  z-index: 2;
-  color: black;
-  font-weight: bold;
-}
 .unit-sub-links {
   padding-left: 20px;
   margin-top: 4px;
