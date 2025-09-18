@@ -721,7 +721,7 @@ export default function Student() {
     activeMain === "Academics" &&
     activeSub === "academics-attendance"
   ) {
-    contentArea = <AttendanceDashboard token={token} /;
+    contentArea = <AttendanceDashboard token={token} />;
   }else if (activeMain === "Quiz/Assignments") {
   contentArea = (
     <div className="assignments-container">
