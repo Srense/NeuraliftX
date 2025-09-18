@@ -859,7 +859,7 @@ else if (activeMain === "Academics" && activeSub === "academics-grades") {
           </ul>
         </nav>
 
-        <main className="student-content">{contentArea}</main>
+        <main className="student-content">{contentArea}</main
       </div>
 
       {showProfileModal && (
