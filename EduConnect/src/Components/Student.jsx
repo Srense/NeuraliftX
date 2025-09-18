@@ -10,6 +10,34 @@ import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 import Grades from "./Grades.jsx";
 
+
+function CoinBadge({ coins }) {
+  return (
+    <div className="coin-badge">
+      <CoinIcon />
+      <span className="coin-value">{coins}</span>
+    </div>
+  );
+}
+
+function CoinIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 40 40" style={{ verticalAlign: "middle" }}>
+      <circle cx="20" cy="20" r="16" fill="#febe44" stroke="#f5a623" strokeWidth="4" />
+      <circle cx="20" cy="20" r="11" fill="#fff4c1" />
+      <polygon
+        points="20,12 22,18 28,18 23,21 25,27 20,23.5 15,27 17,21 12,18 18,18"
+        fill="#fff"
+        stroke="#f5a623"
+        strokeWidth="1"
+      />
+    </svg>
+  );
+}
+
+
+
+
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
 
@@ -49,30 +77,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     }
   };
 
-  function CoinIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 40 40" style={{ verticalAlign: "middle" }}>
-      <circle cx="20" cy="20" r="16" fill="#febe44" stroke="#f5a623" strokeWidth="4" />
-      <circle cx="20" cy="20" r="11" fill="#fff4c1" />
-      <polygon
-        points="20,12 22,18 28,18 23,21 25,27 20,23.5 15,27 17,21 12,18 18,18"
-        fill="#fff"
-        stroke="#f5a623"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
-function CoinBadge({ coins }) {
-  return (
-    <div className="coin-badge">
-      <CoinIcon />
-      <span className="coin-value">{coins}</span>
-    </div>
-  );
-}
-
-
+  
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
