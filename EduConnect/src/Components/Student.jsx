@@ -441,7 +441,11 @@ export default function Student() {
   useGlobalTheme();
 
   const navigate = useNavigate();
+
   const token = localStorage.getItem("token_student");
+  const handleGenerateQuiz = (assignmentId) => {
+navigate(`/quiz/${assignmentId}`);
+};
 
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -689,22 +693,6 @@ export default function Student() {
     }
   };
 
-  // Add this function to handle quiz generation for assignments
-  const handleGenerateQuiz = async (assignmentId) => {
-    try {
-      const res = await fetch(`https://neuraliftx.onrender.com/api/assignments/${assignmentId}/generate-quiz`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to generate quiz");
-      const data = await res.json();
-      alert("Quiz generated successfully!");
-      // Optionally, you can navigate to the quiz page or update state here
-    } catch (e) {
-      alert(e.message || "Error generating quiz");
-    }
-  };
-
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
@@ -743,8 +731,7 @@ export default function Student() {
       )}
     </div>
   );
-}
-else if (activeMain === "Academics" && activeSub === "academics-grades") {
+} else if (activeMain === "Academics" && activeSub === "academics-grades") {
   contentArea = <Grades token={token} />;
 } else if (activeMain === "Personalisation Tracker") {
   contentArea = (
