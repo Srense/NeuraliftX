@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./HomeDashboard.css";
 
+// Simple Spinner Style - place in HomeDashboard.css or inline
 const spinnerStyle = {
   display: "block",
   margin: "60px auto",
@@ -15,9 +16,6 @@ const spinnerStyle = {
 export default function HomeDashboard() {
   const [weather, setWeather] = useState(null);
   const [courses, setCourses] = useState(null);
-  const [grades, setGrades] = useState(null);
-  const [certifications, setCertifications] = useState(null);
-  const [alumniArena, setAlumniArena] = useState(null);
   const [announcements, setAnnouncements] = useState(null);
   const [mentor, setMentor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,10 +24,10 @@ export default function HomeDashboard() {
   useEffect(() => {
     async function fetchData(lat, lon) {
       const BACKEND_URL = "https://neuraliftx.onrender.com";
-      const tokenStudent = localStorage.getItem("token_student");
-      const token = tokenStudent ? tokenStudent : localStorage.getItem("token");
+      const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
+      // Fetch each dashboard component independently
       async function safeFetch(url) {
         try {
           const res = await fetch(url, { headers });
@@ -42,31 +40,13 @@ export default function HomeDashboard() {
 
       try {
         setLoading(true);
-
-        // Parallel fetching
-        const [
-          weatherData,
-          coursesData,
-          gradesData,
-          certificationsData,
-          alumniArenaData,
-          announcementsData,
-          mentorData,
-        ] = await Promise.all([
-          safeFetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lon}`),
-          safeFetch(`${BACKEND_URL}/api/courses`),
-          safeFetch(`${BACKEND_URL}/api/grades`),
-          safeFetch(`${BACKEND_URL}/api/certifications`),
-          safeFetch(`${BACKEND_URL}/api/alumni-arena`),
-          safeFetch(`${BACKEND_URL}/api/announcements`),
-          safeFetch(`${BACKEND_URL}/api/mentor`),
-        ]);
+        const weatherData = await safeFetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lon}`);
+        const coursesData = await safeFetch(`${BACKEND_URL}/api/courses`);
+        const announcementsData = await safeFetch(`${BACKEND_URL}/api/announcements`);
+        const mentorData = await safeFetch(`${BACKEND_URL}/api/mentor`);
 
         setWeather(weatherData);
         setCourses(coursesData);
-        setGrades(gradesData);
-        setCertifications(certificationsData);
-        setAlumniArena(alumniArenaData);
         setAnnouncements(announcementsData);
         setMentor(mentorData);
       } catch (err) {
@@ -82,6 +62,7 @@ export default function HomeDashboard() {
       setLoading(false);
       return;
     }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         fetchData(position.coords.latitude, position.coords.longitude);
@@ -93,17 +74,16 @@ export default function HomeDashboard() {
     );
   }, []);
 
-  if (loading)
-    return (
-      <div style={{ textAlign: "center", marginTop: "40px" }}>
-        <div style={spinnerStyle} />
-        <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-        <div>Loading dashboard...</div>
-      </div>
-    );
-
-  if (error && !weather && !courses && !grades && !certifications && !alumniArena && !announcements && !mentor)
-    return <div className="error">{error}</div>;
+  if (loading) return (
+    <div style={{ textAlign: "center", marginTop: "40px" }}>
+      <div style={spinnerStyle} />
+      <style>
+        {`@keyframes spin { 100% { transform: rotate(360deg); } }`}
+      </style>
+      <div>Loading dashboard...</div>
+    </div>
+  );
+  if (error && !weather && !courses && !announcements && !mentor) return <div className="error">{error}</div>;
 
   return (
     <div className="dashboard-container">
@@ -148,69 +128,6 @@ export default function HomeDashboard() {
         </div>
       ) : (
         <div className="dashboard-card my-course">No courses available.</div>
-      )}
-
-      {/* Grades Card */}
-      {grades && grades.list && grades.list.length > 0 ? (
-        <div className="dashboard-card grades">
-          <h3>Grades</h3>
-          <div className="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Subject</th>
-                  <th>Score</th>
-                  <th>Grade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grades.list.map((grade) => (
-                  <tr key={grade._id || grade.id}>
-                    <td>{grade.subject}</td>
-                    <td>{grade.score}</td>
-                    <td>{grade.letterGrade}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="dashboard-card grades">No grades available.</div>
-      )}
-
-      {/* Certifications Card */}
-      {certifications && certifications.list && certifications.list.length > 0 ? (
-        <div className="dashboard-card certifications">
-          <h3>Certifications</h3>
-          <ul>
-            {certifications.list.map((cert) => (
-              <li key={cert._id || cert.id}>
-                <a href={cert.certificateUrl} target="_blank" rel="noopener noreferrer">
-                  {cert.name} - {cert.provider}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <div className="dashboard-card certifications">No certifications available.</div>
-      )}
-
-      {/* Alumni Arena Card */}
-      {alumniArena && alumniArena.list && alumniArena.list.length > 0 ? (
-        <div className="dashboard-card alumni-arena">
-          <h3>Alumni Arena</h3>
-          <ul>
-            {alumniArena.list.map((alumni) => (
-              <li key={alumni._id || alumni.id}>
-                <b>{alumni.name}</b> - {alumni.currentRole} - {alumni.company}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <div className="dashboard-card alumni-arena">No alumni data available.</div>
       )}
 
       {/* Announcements Card */}
