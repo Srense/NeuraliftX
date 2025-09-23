@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./HomeDashboard.css";
 
-// Spinner style
 const spinnerStyle = {
   display: "block",
   margin: "60px auto",
@@ -13,244 +11,193 @@ const spinnerStyle = {
   animation: "spin 1s linear infinite",
 };
 
-function SummaryCard({ icon, title, number, description }) {
-  return (
-    <div className="dashboard-summary-card">
-      <div className="summary-icon-circle">{icon}</div>
-      <div className="summary-card-content">
-        <div className="summary-card-title">{title}</div>
-        <div className="summary-card-number">{number}</div>
-        <div className="summary-card-desc">{description}</div>
-      </div>
-    </div>
-  );
-}
+const DASHBOARD_SECTIONS = {
+  COURSES: "Courses",
+  GRADES: "Grades",
+  ATTENDANCE: "Attendance",
+  ALUMNI: "Alumni Arena",
+};
 
-export default function HomeDashboard() {
-  const [weather, setWeather] = useState(null);
-  const [courses, setCourses] = useState(null);
-  const [announcements, setAnnouncements] = useState(null);
-  const [mentor, setMentor] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+// Dummy content data, replace with API or state-driven data
+const dummyCourses = [
+  { subject: "Math", classCount: 20, attendancePercent: "95%" },
+  { subject: "Science", classCount: 22, attendancePercent: "90%" },
+];
 
-  useEffect(() => {
-    async function fetchData(lat, lon) {
-      const BACKEND_URL = "https://neuraliftx.onrender.com";
-      const token = localStorage.getItem("token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+const dummyGrades = [
+  { subject: "Math", grade: "A" },
+  { subject: "Science", grade: "B+" },
+];
 
-      async function safeFetch(url) {
-        try {
-          const res = await fetch(url, { headers });
-          if (!res.ok) return null;
-          return await res.json();
-        } catch {
-          return null;
-        }
-      }
+const dummyAttendance = {
+  overallPercent: "92%",
+  details: dummyCourses,
+};
 
-      try {
-        setLoading(true);
-        const [weatherData, coursesData, announcementsData, mentorData] =
-          await Promise.all([
-            safeFetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lon}`),
-            safeFetch(`${BACKEND_URL}/api/courses`),
-            safeFetch(`${BACKEND_URL}/api/announcements`),
-            safeFetch(`${BACKEND_URL}/api/mentor`),
-          ]);
+const dummyAlumni = [
+  { name: "Sarah Chen", title: "Engineer at Google" },
+  { name: "Michael Rodriguez", title: "PM at Microsoft" },
+];
 
-        setWeather(weatherData);
-        setCourses(coursesData);
-        setAnnouncements(announcementsData);
-        setMentor(mentorData);
-        setError(null);
-      } catch (err) {
-        setError("Error loading (partial) dashboard data");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
+export default function Dashboard() {
+  const [activeSection, setActiveSection] = useState(DASHBOARD_SECTIONS.COURSES);
+  const [loading, setLoading] = useState(false);
 
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser");
-      setLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        fetchData(position.coords.latitude, position.coords.longitude);
-      },
-      () => {
-        setError("Unable to retrieve your location");
-        setLoading(false);
-      }
-    );
-  }, []);
-
-  if (loading)
-    return (
-      <div style={{ textAlign: "center", marginTop: 40 }}>
-        <div style={spinnerStyle} />
-        <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-        <div>Loading dashboard...</div>
-      </div>
-    );
-
-  if (error && !weather && !courses && !announcements && !mentor) {
-    return <div className="error">{error}</div>;
-  }
-
-  // Dummy icons used as emoji, replace with SVG or icon component if needed
-  const dummySummaryData = [
-    {
-      icon: "📚",
-      title: "Total Courses",
-      number: courses?.list?.length || 0,
-      description: "+12% this month",
-    },
-    {
-      icon: "✅",
-      title: "Attendance Rate",
-      number:
-        courses && courses.list && courses.list.length > 0
-          ? (
-              courses.list.reduce(
-                (sum, c) => sum + (c.attendancePercent || 0),
-                0
-              ) / courses.list.length
-            ).toFixed(1) + "%"
-          : "N/A",
-      description: "Stable",
-    },
-    {
-      icon: "📝",
-      title: "Announcements",
-      number: announcements ? announcements.length : 0,
-      description: "Latest news",
-    },
-    {
-      icon: "👤",
-      title: "Mentors",
-      number: mentor ? 1 : 0,
-      description: mentor ? "Active" : "None assigned",
-    },
-    {
-      icon: "⏳",
-      title: "Pending Tasks",
-      number: 3, // Dummy value, replace as per real data
-      description: "Due soon",
-    },
+  const summaryCards = [
+    { label: DASHBOARD_SECTIONS.COURSES, icon: "📚" },
+    { label: DASHBOARD_SECTIONS.GRADES, icon: "📝" },
+    { label: DASHBOARD_SECTIONS.ATTENDANCE, icon: "✅" },
+    { label: DASHBOARD_SECTIONS.ALUMNI, icon: "🤝" },
   ];
 
-  return (
-    <div className="dashboard-main-container">
-      {/* Top row - Summary cards */}
-      <div className="dashboard-summary-row">
-        {dummySummaryData.map(({ icon, title, number, description }, i) => (
-          <SummaryCard
-            key={i}
-            icon={icon}
-            title={title}
-            number={number}
-            description={description}
-          />
+  // Render summary cards
+  const renderSummaryCards = () => (
+    <div style={{ display: "flex", gap: 20, marginBottom: 30 }}>
+      {summaryCards.map(({ label, icon }) => (
+        <div
+          key={label}
+          onClick={() => setActiveSection(label)}
+          style={{
+            cursor: "pointer",
+            flex: 1,
+            backgroundColor: activeSection === label ? "#6366f1" : "#fff",
+            color: activeSection === label ? "#fff" : "#2c3e50",
+            borderRadius: 12,
+            boxShadow: "0 4px 14px rgba(0,0,0,0.1)",
+            padding: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 15,
+            fontWeight: 600,
+            fontSize: 18,
+            userSelect: "none",
+            transition: "background-color 0.3s",
+          }}
+        >
+          <span style={{ fontSize: 28 }}>{icon}</span>
+          {label}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Section renderers
+  const renderCourses = () => (
+    <div style={cardStyle}>
+      <h2>Courses</h2>
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Class Count</th>
+            <th>Attendance %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {dummyCourses.map(({ subject, classCount, attendancePercent }) => (
+            <tr key={subject}>
+              <td>{subject}</td>
+              <td>{classCount}</td>
+              <td>{attendancePercent}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderGrades = () => (
+    <div style={cardStyle}>
+      <h2>Grades</h2>
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {dummyGrades.map(({ subject, grade }) => (
+            <tr key={subject}>
+              <td>{subject}</td>
+              <td>{grade}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderAttendance = () => (
+    <div style={cardStyle}>
+      <h2>Attendance</h2>
+      <p>
+        Overall Attendance: <strong>{dummyAttendance.overallPercent}</strong>
+      </p>
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Class Count</th>
+            <th>Attendance %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {dummyAttendance.details.map(({ subject, classCount, attendancePercent }) => (
+            <tr key={subject}>
+              <td>{subject}</td>
+              <td>{classCount}</td>
+              <td>{attendancePercent}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderAlumniArena = () => (
+    <div style={cardStyle}>
+      <h2>Alumni Arena</h2>
+      <ul style={{ listStyleType: "none", padding: 0 }}>
+        {dummyAlumni.map(({ name, title }) => (
+          <li key={name} style={{ marginBottom: 12 }}>
+            <strong>{name}</strong> - <em>{title}</em>
+          </li>
         ))}
-      </div>
+      </ul>
+    </div>
+  );
 
-      {/* Bottom section - two column layout */}
-      <div className="dashboard-bottom-section">
-        {/* Left column */}
-        <div className="dashboard-col-left">
-          {/* Weather Card */}
-          {weather ? (
-            <div className="dashboard-weather">
-              <div className="weather-title">XYZ SCHOOL WEATHER</div>
-              <div className="weather-main">
-                <span className="weather-temp">{weather.temperature}°C</span>
-                <span className="weather-desc">{weather.description}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="dashboard-weather">Weather info not available.</div>
-          )}
+  const cardStyle = {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+    marginBottom: 25,
+  };
 
-          {/* Course & Attendance Card */}
-          {courses && Array.isArray(courses.list) && courses.list.length > 0 ? (
-            <div className="dashboard-card my-course">
-              <h3>My Course & Attendance</h3>
-              <b>{courses.studentName}</b>
-              <div className="table-responsive">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Subject</th>
-                      <th>Class</th>
-                      <th>%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {courses.list.map((course) => (
-                      <tr key={course._id || course.id}>
-                        <td>{course.subject}</td>
-                        <td>{course.classCount}</td>
-                        <td>{course.attendancePercent}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="dashboard-card my-course">No courses available.</div>
-          )}
+  const tableStyle = {
+    width: "100%",
+    borderCollapse: "collapse",
+  };
 
-          {/* Announcements Card */}
-          {announcements && announcements.length > 0 ? (
-            <div className="dashboard-card announcements">
-              <h3>Announcements (ALL)</h3>
-              {announcements.map((ann) => (
-                <div key={ann._id || ann.id} className="announcement-item">
-                  <div>
-                    <span className="pin">📌</span>
-                    <b>{ann.title}</b>
-                  </div>
-                  <div>
-                    <span className="cal">📅 {ann.date}</span>{" "}
-                    <span>🕒 {ann.time}</span>
-                  </div>
-                  <div>
-                    <b>Ref. No:</b> {ann.refNumber}
-                    <br />
-                    <span>{ann.details}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="dashboard-card announcements">No announcements available.</div>
-          )}
+  return (
+    <div style={{ maxWidth: 1200, margin: "40px auto", padding: "0 20px" }}>
+      {renderSummaryCards()}
+
+      {loading ? (
+        <div style={{ textAlign: "center", marginTop: 60 }}>
+          <div style={spinnerStyle} />
+          <div>Loading...</div>
         </div>
-
-        {/* Right column */}
-        <div className="dashboard-col-right">
-          {/* Mentor Details */}
-          {mentor ? (
-            <div className="dashboard-card mentor">
-              <h3>👤 Mentor Details</h3>
-              <div>
-                <b>Mentor Name:</b> {mentor.name} ({mentor._id || mentor.id})
-                <br />
-                <b>Email Id:</b> {mentor.email}
-              </div>
-            </div>
-          ) : (
-            <div className="dashboard-card mentor">No mentor assigned.</div>
-          )}
-        </div>
-      </div>
+      ) : (
+        <>
+          {activeSection === DASHBOARD_SECTIONS.COURSES && renderCourses()}
+          {activeSection === DASHBOARD_SECTIONS.GRADES && renderGrades()}
+          {activeSection === DASHBOARD_SECTIONS.ATTENDANCE && renderAttendance()}
+          {activeSection === DASHBOARD_SECTIONS.ALUMNI && renderAlumniArena()}
+        </>
+      )}
     </div>
   );
 }
