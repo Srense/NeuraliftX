@@ -27,7 +27,7 @@ export default function HomeDashboard() {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Fetch each dashboard component independently
+      // Generic safe fetch that returns null on failure
       async function safeFetch(url) {
         try {
           const res = await fetch(url, { headers });
@@ -40,15 +40,18 @@ export default function HomeDashboard() {
 
       try {
         setLoading(true);
-        const weatherData = await safeFetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lon}`);
-        const coursesData = await safeFetch(`${BACKEND_URL}/api/courses`);
-        const announcementsData = await safeFetch(`${BACKEND_URL}/api/announcements`);
-        const mentorData = await safeFetch(`${BACKEND_URL}/api/mentor`);
+        const [weatherData, coursesData, announcementsData, mentorData] = await Promise.all([
+          safeFetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lon}`),
+          safeFetch(`${BACKEND_URL}/api/courses`),
+          safeFetch(`${BACKEND_URL}/api/announcements`),
+          safeFetch(`${BACKEND_URL}/api/mentor`)
+        ]);
 
         setWeather(weatherData);
         setCourses(coursesData);
         setAnnouncements(announcementsData);
         setMentor(mentorData);
+        setError(null);
       } catch (err) {
         setError("Error loading (partial) dashboard data");
         console.error(err);
@@ -77,13 +80,15 @@ export default function HomeDashboard() {
   if (loading) return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <div style={spinnerStyle} />
-      <style>
-        {`@keyframes spin { 100% { transform: rotate(360deg); } }`}
-      </style>
+      <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
       <div>Loading dashboard...</div>
     </div>
   );
-  if (error && !weather && !courses && !announcements && !mentor) return <div className="error">{error}</div>;
+
+  // Show error only if none of the data is available
+  if (error && !weather && !courses && !announcements && !mentor) {
+    return <div className="error">{error}</div>;
+  }
 
   return (
     <div className="dashboard-container">
@@ -101,7 +106,7 @@ export default function HomeDashboard() {
       )}
 
       {/* Course & Attendance Card */}
-      {courses && courses.list && courses.list.length > 0 ? (
+      {courses && Array.isArray(courses.list) && courses.list.length > 0 ? (
         <div className="dashboard-card my-course">
           <h3>My Course & Attendance</h3>
           <b>{courses.studentName}</b>
@@ -115,7 +120,7 @@ export default function HomeDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {courses.list.map((course) => (
+                {courses.list.map(course => (
                   <tr key={course._id || course.id}>
                     <td>{course.subject}</td>
                     <td>{course.classCount}</td>
@@ -134,7 +139,7 @@ export default function HomeDashboard() {
       {announcements && announcements.length > 0 ? (
         <div className="dashboard-card announcements">
           <h3>Announcements (ALL)</h3>
-          {announcements.map((ann) => (
+          {announcements.map(ann => (
             <div key={ann._id || ann.id} className="announcement-item">
               <div>
                 <span className="pin">📌</span>
