@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
-import "./HomeDashboard.css";
+import { BookOpen, GraduationCap, Award, Users } from "lucide-react";
+import "./EnhancedDashboard.css";
 
-// Simple Spinner Style - place in HomeDashboard.css or inline
+// Import components (you'll need to create these or import from existing files)
+// import AttendanceDashboard from "./AttendanceDashboard";
+// import Grades from "./Grades";
+// import CourseraCertifications from "./CourseraCertifications";
+
+// Simple Spinner Style
 const spinnerStyle = {
   display: "block",
   margin: "60px auto",
@@ -13,22 +19,101 @@ const spinnerStyle = {
   animation: "spin 1s linear infinite"
 };
 
-export default function HomeDashboard() {
+// Placeholder components (replace with actual imports)
+const AttendanceDashboard = ({ token }: { token: string }) => (
+  <div className="component-placeholder">
+    <h2>Attendance Dashboard</h2>
+    <p>Your attendance records and analytics will be displayed here.</p>
+  </div>
+);
+
+const Grades = ({ token }: { token: string }) => (
+  <div className="component-placeholder">
+    <h2>Grades</h2>
+    <p>Your academic grades and performance metrics will be displayed here.</p>
+  </div>
+);
+
+const CourseraCertifications = ({ token }: { token: string }) => (
+  <div className="component-placeholder">
+    <h2>Certifications</h2>
+    <p>Your certifications and achievements will be displayed here.</p>
+  </div>
+);
+
+const CoursesView = ({ token }: { token: string }) => (
+  <div className="component-placeholder">
+    <h2>Courses</h2>
+    <p>Detailed view of all your enrolled courses will be displayed here.</p>
+  </div>
+);
+
+interface MenuButtonProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const MenuButton: React.FC<MenuButtonProps> = ({ icon, title, description, isActive, onClick }) => (
+  <div 
+    className={`menu-button ${isActive ? 'active' : ''}`}
+    onClick={onClick}
+  >
+    <div className="menu-icon">{icon}</div>
+    <div className="menu-content">
+      <h3 className="menu-title">{title}</h3>
+      <p className="menu-description">{description}</p>
+    </div>
+  </div>
+);
+
+export default function EnhancedDashboard() {
   const [weather, setWeather] = useState(null);
   const [courses, setCourses] = useState(null);
   const [announcements, setAnnouncements] = useState(null);
   const [mentor, setMentor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeView, setActiveView] = useState('dashboard');
+
+  const token = localStorage.getItem("token") || localStorage.getItem("token_student");
+
+  const menuItems = [
+    {
+      id: 'courses',
+      icon: <BookOpen size={24} />,
+      title: 'Courses',
+      description: 'View all enrolled courses and materials'
+    },
+    {
+      id: 'grades',
+      icon: <GraduationCap size={24} />,
+      title: 'Grades',
+      description: 'Check your academic performance'
+    },
+    {
+      id: 'certifications',
+      icon: <Award size={24} />,
+      title: 'Certifications',
+      description: 'View your achievements and certificates'
+    },
+    {
+      id: 'attendance',
+      icon: <Users size={24} />,
+      title: 'Attendance',
+      description: 'Track your attendance records'
+    }
+  ];
 
   useEffect(() => {
-    async function fetchData(lat, lon) {
+    async function fetchData(lat: number, lon: number) {
       const BACKEND_URL = "https://neuraliftx.onrender.com";
-      const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       // Fetch each dashboard component independently
-      async function safeFetch(url) {
+      async function safeFetch(url: string) {
         try {
           const res = await fetch(url, { headers });
           if (!res.ok) return null;
@@ -72,7 +157,15 @@ export default function HomeDashboard() {
         setLoading(false);
       }
     );
-  }, []);
+  }, [token]);
+
+  const handleMenuClick = (viewId: string) => {
+    setActiveView(viewId);
+  };
+
+  const handleBackToDashboard = () => {
+    setActiveView('dashboard');
+  };
 
   if (loading) return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
@@ -83,10 +176,61 @@ export default function HomeDashboard() {
       <div>Loading dashboard...</div>
     </div>
   );
-  if (error && !weather && !courses && !announcements && !mentor) return <div className="error">{error}</div>;
+
+  if (error && !weather && !courses && !announcements && !mentor) return (
+    <div className="error">{error}</div>
+  );
+
+  // Render specific view based on activeView
+  if (activeView !== 'dashboard') {
+    let ComponentToRender;
+    
+    switch (activeView) {
+      case 'attendance':
+        ComponentToRender = AttendanceDashboard;
+        break;
+      case 'grades':
+        ComponentToRender = Grades;
+        break;
+      case 'certifications':
+        ComponentToRender = CourseraCertifications;
+        break;
+      case 'courses':
+        ComponentToRender = CoursesView;
+        break;
+      default:
+        ComponentToRender = () => <div>View not found</div>;
+    }
+
+    return (
+      <div className="dashboard-container">
+        <button className="back-button" onClick={handleBackToDashboard}>
+          ← Back to Dashboard
+        </button>
+        <ComponentToRender token={token || ''} />
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-container">
+      {/* Navigation Menu */}
+      <div className="navigation-menu">
+        <h2 className="menu-header">Quick Access</h2>
+        <div className="menu-grid">
+          {menuItems.map((item) => (
+            <MenuButton
+              key={item.id}
+              icon={item.icon}
+              title={item.title}
+              description={item.description}
+              isActive={activeView === item.id}
+              onClick={() => handleMenuClick(item.id)}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* Weather Card */}
       {weather ? (
         <div className="dashboard-weather">
@@ -115,7 +259,7 @@ export default function HomeDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {courses.list.map((course) => (
+                {courses.list.map((course: any) => (
                   <tr key={course._id || course.id}>
                     <td>{course.subject}</td>
                     <td>{course.classCount}</td>
@@ -134,7 +278,7 @@ export default function HomeDashboard() {
       {announcements && announcements.length > 0 ? (
         <div className="dashboard-card announcements">
           <h3>Announcements (ALL)</h3>
-          {announcements.map((ann) => (
+          {announcements.map((ann: any) => (
             <div key={ann._id || ann.id} className="announcement-item">
               <div>
                 <span className="pin">📌</span>
