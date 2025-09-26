@@ -3,9 +3,9 @@ import { BookOpen, GraduationCap, Award, Users } from "lucide-react";
 import "./HomeDashboard.css";
 
 // Import components (you'll need to create these or import from existing files)
-import AttendanceDashboard from "./AttendanceDashboard";
-import Grades from "./Grades";
-import CourseraCertifications from "./CourseraCertifications";
+// import AttendanceDashboard from "./AttendanceDashboard";
+// import Grades from "./Grades";
+// import CourseraCertifications from "./CourseraCertifications";
 
 // Simple Spinner Style
 const spinnerStyle = {
