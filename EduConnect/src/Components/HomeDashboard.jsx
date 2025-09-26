@@ -2,12 +2,11 @@ import React, { useState, useEffect } from "react";
 import { BookOpen, GraduationCap, Award, Users } from "lucide-react";
 import "./HomeDashboard.css";
 
-// Import components (you'll need to create these or import from existing files)
-// import AttendanceDashboard from "./AttendanceDashboard";
-// import Grades from "./Grades";
-// import CourseraCertifications from "./CourseraCertifications";
+// ✅ Import actual components instead of placeholders
+import AttendanceDashboard from "./AttendanceDashboard";
+import Grades from "./Grades";
+import CourseraCertifications from "./CourseraCertifications";
 
-// Simple Spinner Style
 const spinnerStyle = {
   display: "block",
   margin: "60px auto",
@@ -19,28 +18,7 @@ const spinnerStyle = {
   animation: "spin 1s linear infinite"
 };
 
-// Placeholder components (replace with actual imports)
-const AttendanceDashboard = ({ token }) => (
-  <div className="component-placeholder">
-    <h2>Attendance Dashboard</h2>
-    <p>Your attendance records and analytics will be displayed here.</p>
-  </div>
-);
-
-const Grades = ({ token }) => (
-  <div className="component-placeholder">
-    <h2>Grades</h2>
-    <p>Your academic grades and performance metrics will be displayed here.</p>
-  </div>
-);
-
-const CourseraCertifications = ({ token }) => (
-  <div className="component-placeholder">
-    <h2>Certifications</h2>
-    <p>Your certifications and achievements will be displayed here.</p>
-  </div>
-);
-
+// Dummy CoursesView (you can replace with your real one if needed)
 const CoursesView = ({ token }) => (
   <div className="component-placeholder">
     <h2>Courses</h2>
@@ -49,8 +27,8 @@ const CoursesView = ({ token }) => (
 );
 
 const MenuButton = ({ icon, title, description, isActive, onClick }) => (
-  <div 
-    className={`menu-button ${isActive ? 'active' : ''}`}
+  <div
+    className={`menu-button ${isActive ? "active" : ""}`}
     onClick={onClick}
   >
     <div className="menu-icon">{icon}</div>
@@ -68,34 +46,35 @@ export default function EnhancedDashboard() {
   const [mentor, setMentor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeView, setActiveView] = useState('dashboard');
+  const [activeView, setActiveView] = useState("dashboard");
 
-  const token = localStorage.getItem("token") || localStorage.getItem("token_student");
+  const token =
+    localStorage.getItem("token") || localStorage.getItem("token_student");
 
   const menuItems = [
     {
-      id: 'courses',
+      id: "courses",
       icon: <BookOpen size={24} />,
-      title: 'Courses',
-      description: 'View all enrolled courses and materials'
+      title: "Courses",
+      description: "View all enrolled courses and materials"
     },
     {
-      id: 'grades',
+      id: "grades",
       icon: <GraduationCap size={24} />,
-      title: 'Grades',
-      description: 'Check your academic performance'
+      title: "Grades",
+      description: "Check your academic performance"
     },
     {
-      id: 'certifications',
+      id: "certifications",
       icon: <Award size={24} />,
-      title: 'Certifications',
-      description: 'View your achievements and certificates'
+      title: "Certifications",
+      description: "View your achievements and certificates"
     },
     {
-      id: 'attendance',
+      id: "attendance",
       icon: <Users size={24} />,
-      title: 'Attendance',
-      description: 'Track your attendance records'
+      title: "Attendance",
+      description: "Track your attendance records"
     }
   ];
 
@@ -104,7 +83,6 @@ export default function EnhancedDashboard() {
       const BACKEND_URL = "https://neuraliftx.onrender.com";
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Fetch each dashboard component independently
       async function safeFetch(url) {
         try {
           const res = await fetch(url, { headers });
@@ -117,9 +95,13 @@ export default function EnhancedDashboard() {
 
       try {
         setLoading(true);
-        const weatherData = await safeFetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lon}`);
+        const weatherData = await safeFetch(
+          `${BACKEND_URL}/api/weather?lat=${lat}&lon=${lon}`
+        );
         const coursesData = await safeFetch(`${BACKEND_URL}/api/courses`);
-        const announcementsData = await safeFetch(`${BACKEND_URL}/api/announcements`);
+        const announcementsData = await safeFetch(
+          `${BACKEND_URL}/api/announcements`
+        );
         const mentorData = await safeFetch(`${BACKEND_URL}/api/mentor`);
 
         setWeather(weatherData);
@@ -156,38 +138,38 @@ export default function EnhancedDashboard() {
   };
 
   const handleBackToDashboard = () => {
-    setActiveView('dashboard');
+    setActiveView("dashboard");
   };
 
-  if (loading) return (
-    <div style={{ textAlign: "center", marginTop: "40px" }}>
-      <div style={spinnerStyle} />
-      <style>
-        {`@keyframes spin { 100% { transform: rotate(360deg); } }`}
-      </style>
-      <div>Loading dashboard...</div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div style={{ textAlign: "center", marginTop: "40px" }}>
+        <div style={spinnerStyle} />
+        <style>
+          {`@keyframes spin { 100% { transform: rotate(360deg); } }`}
+        </style>
+        <div>Loading dashboard...</div>
+      </div>
+    );
 
-  if (error && !weather && !courses && !announcements && !mentor) return (
-    <div className="error">{error}</div>
-  );
+  if (error && !weather && !courses && !announcements && !mentor)
+    return <div className="error">{error}</div>;
 
-  // Render specific view based on activeView
-  if (activeView !== 'dashboard') {
+  // ✅ Render specific section based on activeView
+  if (activeView !== "dashboard") {
     let ComponentToRender;
-    
+
     switch (activeView) {
-      case 'attendance':
+      case "attendance":
         ComponentToRender = AttendanceDashboard;
         break;
-      case 'grades':
+      case "grades":
         ComponentToRender = Grades;
         break;
-      case 'certifications':
+      case "certifications":
         ComponentToRender = CourseraCertifications;
         break;
-      case 'courses':
+      case "courses":
         ComponentToRender = CoursesView;
         break;
       default:
@@ -199,7 +181,7 @@ export default function EnhancedDashboard() {
         <button className="back-button" onClick={handleBackToDashboard}>
           ← Back to Dashboard
         </button>
-        <ComponentToRender token={token || ''} />
+        <ComponentToRender token={token || ""} />
       </div>
     );
   }
@@ -289,7 +271,9 @@ export default function EnhancedDashboard() {
           ))}
         </div>
       ) : (
-        <div className="dashboard-card announcements">No announcements available.</div>
+        <div className="dashboard-card announcements">
+          No announcements available.
+        </div>
       )}
 
       {/* Mentor Details */}
