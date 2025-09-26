@@ -2,10 +2,18 @@ import React, { useState, useEffect } from "react";
 import { BookOpen, GraduationCap, Award, Users } from "lucide-react";
 import "./HomeDashboard.css";
 
-// ✅ Import actual components instead of placeholders
+// ✅ Actual components
 import AttendanceDashboard from "./AttendanceDashboard";
 import Grades from "./Grades";
 import CourseraCertifications from "./CourseraCertifications";
+
+// Dummy CoursesView (replace with your real one later if needed)
+const CoursesView = ({ token }) => (
+  <div className="component-placeholder">
+    <h2>Courses</h2>
+    <p>Detailed view of all your enrolled courses will be displayed here.</p>
+  </div>
+);
 
 const spinnerStyle = {
   display: "block",
@@ -15,16 +23,8 @@ const spinnerStyle = {
   border: "6px solid #b3c0e1",
   borderTop: "6px solid #2563eb",
   borderRadius: "50%",
-  animation: "spin 1s linear infinite"
+  animation: "spin 1s linear infinite",
 };
-
-// Dummy CoursesView (you can replace with your real one if needed)
-const CoursesView = ({ token }) => (
-  <div className="component-placeholder">
-    <h2>Courses</h2>
-    <p>Detailed view of all your enrolled courses will be displayed here.</p>
-  </div>
-);
 
 const MenuButton = ({ icon, title, description, isActive, onClick }) => (
   <div
@@ -56,26 +56,26 @@ export default function EnhancedDashboard() {
       id: "courses",
       icon: <BookOpen size={24} />,
       title: "Courses",
-      description: "View all enrolled courses and materials"
+      description: "View all enrolled courses and materials",
     },
     {
       id: "grades",
       icon: <GraduationCap size={24} />,
       title: "Grades",
-      description: "Check your academic performance"
+      description: "Check your academic performance",
     },
     {
       id: "certifications",
       icon: <Award size={24} />,
       title: "Certifications",
-      description: "View your achievements and certificates"
+      description: "View your achievements and certificates",
     },
     {
       id: "attendance",
       icon: <Users size={24} />,
       title: "Attendance",
-      description: "Track your attendance records"
-    }
+      description: "Track your attendance records",
+    },
   ];
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function EnhancedDashboard() {
         setAnnouncements(announcementsData);
         setMentor(mentorData);
       } catch (err) {
-        setError("Error loading (partial) dashboard data");
+        setError("Error loading dashboard data");
         console.error(err);
       } finally {
         setLoading(false);
@@ -155,7 +155,7 @@ export default function EnhancedDashboard() {
   if (error && !weather && !courses && !announcements && !mentor)
     return <div className="error">{error}</div>;
 
-  // ✅ Render specific section based on activeView
+  // ✅ If user is inside a sub-view (Attendance/Grades/etc.)
   if (activeView !== "dashboard") {
     let ComponentToRender;
 
@@ -178,14 +178,32 @@ export default function EnhancedDashboard() {
 
     return (
       <div className="dashboard-container">
+        <div className="navigation-menu">
+          <h2 className="menu-header">Quick Access</h2>
+          <div className="menu-grid">
+            {menuItems.map((item) => (
+              <MenuButton
+                key={item.id}
+                icon={item.icon}
+                title={item.title}
+                description={item.description}
+                isActive={activeView === item.id}
+                onClick={() => handleMenuClick(item.id)}
+              />
+            ))}
+          </div>
+        </div>
+
         <button className="back-button" onClick={handleBackToDashboard}>
           ← Back to Dashboard
         </button>
+
         <ComponentToRender token={token || ""} />
       </div>
     );
   }
 
+  // ✅ Default Dashboard (Home)
   return (
     <div className="dashboard-container">
       {/* Navigation Menu */}
