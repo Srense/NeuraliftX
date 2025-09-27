@@ -1334,6 +1334,21 @@ app.get("/api/alumni", async (req, res) => {
   }
 });
 
+// ✅ Delete alumni profile
+app.delete("/api/alumni", authenticateJWT, async (req, res) => {
+  try {
+    const alumni = await Alumni.findOneAndDelete({ userId: req.user._id });
+
+    if (!alumni) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    res.json({ success: true, message: "Alumni profile deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting alumni:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 // Create course (faculty and admin only)
 app.post("/api/courses", authenticateJWT, authorizeRole(["faculty", "admin"]), async (req, res) => {
