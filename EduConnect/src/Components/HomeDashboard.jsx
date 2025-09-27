@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BookOpen, GraduationCap, Award, Users } from "lucide-react";
 import "./HomeDashboard.css";
+import "./AlumniArena.css";
 
 // ✅ Import actual components instead of placeholders
 import AttendanceDashboard from "./AttendanceDashboard";
@@ -18,7 +19,7 @@ const spinnerStyle = {
   animation: "spin 1s linear infinite"
 };
 
-// Dummy CoursesView (you can replace with your real one if needed)
+// Dummy CoursesView (replace with your real one if needed)
 const CoursesView = ({ token }) => (
   <div className="component-placeholder">
     <h2>Courses</h2>
@@ -44,12 +45,15 @@ export default function EnhancedDashboard() {
   const [courses, setCourses] = useState(null);
   const [announcements, setAnnouncements] = useState(null);
   const [mentor, setMentor] = useState(null);
+  const [alumni, setAlumni] = useState([]); // ✅ Alumni state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeView, setActiveView] = useState("dashboard");
 
   const token =
     localStorage.getItem("token") || localStorage.getItem("token_student");
+
+  const BACKEND_URL = "https://neuraliftx.onrender.com";
 
   const menuItems = [
     {
@@ -80,7 +84,6 @@ export default function EnhancedDashboard() {
 
   useEffect(() => {
     async function fetchData(lat, lon) {
-      const BACKEND_URL = "https://neuraliftx.onrender.com";
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       async function safeFetch(url) {
@@ -103,11 +106,13 @@ export default function EnhancedDashboard() {
           `${BACKEND_URL}/api/announcements`
         );
         const mentorData = await safeFetch(`${BACKEND_URL}/api/mentor`);
+        const alumniData = await safeFetch(`${BACKEND_URL}/api/alumni`);
 
         setWeather(weatherData);
         setCourses(coursesData);
         setAnnouncements(announcementsData);
         setMentor(mentorData);
+        if (alumniData?.success) setAlumni(alumniData.alumni);
       } catch (err) {
         setError("Error loading (partial) dashboard data");
         console.error(err);
@@ -152,7 +157,7 @@ export default function EnhancedDashboard() {
       </div>
     );
 
-  if (error && !weather && !courses && !announcements && !mentor)
+  if (error && !weather && !courses && !announcements && !mentor && alumni.length === 0)
     return <div className="error">{error}</div>;
 
   // ✅ Render specific section based on activeView
@@ -289,6 +294,24 @@ export default function EnhancedDashboard() {
       ) : (
         <div className="dashboard-card mentor">No mentor assigned.</div>
       )}
+
+      {/* ✅ Alumni Arena */}
+      <div className="dashboard-card alumni-card">
+        <h3>🌟 Featured Alumni</h3>
+        {alumni && alumni.length > 0 ? (
+          <div className="alumni-scroll">
+            {alumni.slice(0, 10).map((a) => (
+              <div className="alumni-mini-card" key={a._id}>
+                <h4>{a.name}</h4>
+                <p className="alumni-role">{a.designation}</p>
+                <p className="alumni-company">{a.company}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>No alumni profiles yet.</p>
+        )}
+      </div>
     </div>
   );
 }
