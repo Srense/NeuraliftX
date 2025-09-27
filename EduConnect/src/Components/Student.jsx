@@ -363,104 +363,85 @@ function StudentTasks({ token }) {
   };
 
   return (
-    <div>
-      <h2>Tasks Assigned</h2>
-      {loadingTasks && <p>Loading tasks...</p>}
-      {!loadingTasks && tasks.length === 0 && <p>No tasks available.</p>}
-      {!loadingTasks && tasks.length > 0 && (
-        <ul>
-          {tasks.map((task) => (
-            <li
-              key={task._id}
-              style={{ marginBottom: 12, cursor: "pointer" }}
-            >
-              <button
-                onClick={() => setSelectedTask(task)}
-                style={{
-                  background:
-                    selectedTask?._id === task._id ? "#ccc" : "transparent",
-                }}
-              >
-                {task.originalName}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+  <div className="tasks-container">
+    {loadingTasks && <p>Loading tasks...</p>}
+    {!loadingTasks && tasks.length === 0 && <p>No tasks available.</p>}
 
-      {selectedTask && (
-        <>
-          <h3>Task Details</h3>
-          <p>
-            <a
-              href={`https://neuraliftx.onrender.com${selectedTask.fileUrl}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View Task PDF
-            </a>
-          </p>
-          <hr />
-          <div>
-            <h4>Your Answer</h4>
-            {studentAnswer ? (
-              <p>
-                <a
-                  href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View uploaded answer
-                </a>
-              </p>
-            ) : (
-              <p>No answer uploaded yet.</p>
-            )}
+    {!loadingTasks &&
+      tasks.map((task) => (
+        <div
+          key={task._id}
+          className="task-card"
+          onClick={() => setSelectedTask(task)}
+        >
+          <h3 className="task-title">{task.originalName}</h3>
+          <a
+            href={`https://neuraliftx.onrender.com${task.fileUrl}`}
+            target="_blank"
+            rel="noreferrer"
+            className="task-link"
+          >
+            View Task PDF
+          </a>
 
-            {studentAnswer && (
-              <>
-                <button
-                  onClick={handleCheck}
-                  disabled={verifying}
-                  style={{ marginTop: 10 }}
-                >
-                  {verifying ? "Checking..." : "Check"}
-                </button>
-
-                {verificationResult && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      padding: 10,
-                      border: "1px solid #ccc",
-                    }}
+          {selectedTask?._id === task._id && (
+            <div className="answer-section">
+              <h4>Your Answer</h4>
+              {studentAnswer ? (
+                <p>
+                  <a
+                    href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`}
+                    target="_blank"
+                    rel="noreferrer"
                   >
-                    <strong>Score: </strong>
-                    {verificationResult.score ?? "N/A"} <br />
-                    <strong>Feedback: </strong>
-                    {verificationResult.feedback ?? "No feedback"}
-                  </div>
-                )}
-              </>
-            )}
+                    View uploaded answer
+                  </a>
+                </p>
+              ) : (
+                <p>No answer uploaded yet.</p>
+              )}
 
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={handleAnswerChange}
-              disabled={uploadingAnswer}
-            />
-            <button
-              onClick={handleSubmitAnswer}
-              disabled={!answerFile || uploadingAnswer}
-            >
-              {uploadingAnswer ? "Uploading..." : "Upload Answer"}
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
+              {studentAnswer && (
+                <>
+                  <button
+                    onClick={handleCheck}
+                    disabled={verifying}
+                    className="task-btn check"
+                  >
+                    {verifying ? "Checking..." : "Check"}
+                  </button>
+
+                  {verificationResult && (
+                    <div className="verification-box">
+                      <strong>Score: </strong>
+                      {verificationResult.score ?? "N/A"} <br />
+                      <strong>Feedback: </strong>
+                      {verificationResult.feedback ?? "No feedback"}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={handleAnswerChange}
+                disabled={uploadingAnswer}
+              />
+              <button
+                onClick={handleSubmitAnswer}
+                disabled={!answerFile || uploadingAnswer}
+                className="task-btn upload"
+              >
+                {uploadingAnswer ? "Uploading..." : "Upload Answer"}
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+  </div>
+);
+
 }
 
 export default function Student() {
