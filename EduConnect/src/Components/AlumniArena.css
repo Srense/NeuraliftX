@@ -1,0 +1,104 @@
+.alumni-arena {
+  padding: 2rem;
+  text-align: center;
+}
+
+.alumni-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.alumni-loading,
+.alumni-empty {
+  height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+  font-size: 1.2rem;
+}
+
+.alumni-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.alumni-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.alumni-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.12);
+}
+
+.alumni-header h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.alumni-header .designation {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.alumni-header .company {
+  font-size: 1rem;
+  color: #2563eb;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.description {
+  font-size: 0.95rem;
+  color: #444;
+  margin: 0.8rem 0;
+  line-height: 1.5;
+}
+
+.alumni-links {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.alumni-links a {
+  font-size: 0.85rem;
+  color: #2563eb;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.alumni-links a:hover {
+  color: #1e40af;
+}
+
+.connect-btn {
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.connect-btn:hover {
+  background: #1e40af;
+}
