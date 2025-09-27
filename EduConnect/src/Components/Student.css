@@ -712,3 +712,17 @@ body {
   }
 }
 
+.pdf-viewer-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: auto;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+.unit-sub-links {
+  margin-left: 1rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(255,255,255,0.1);
+}

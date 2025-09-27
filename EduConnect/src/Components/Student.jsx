@@ -472,6 +472,8 @@ export default function Student() {
 
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
   const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
+  const [selectedPdf, setSelectedPdf] = useState(null);
+
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -672,7 +674,15 @@ export default function Student() {
     }
   };
 
-  const handleSubClick = (key) => setActiveSub(key);
+  const handleSubClick = (key) => {
+  setActiveSub(key);
+
+  // If file exists for this unit, set it for inline viewing
+  if (unitUploadedFiles[key]) {
+    setSelectedPdf(`https://neuraliftx.onrender.com${unitUploadedFiles[key]}`);
+  }
+};
+
 
   const handleLogout = () => {
     localStorage.removeItem("token_student");
@@ -758,7 +768,28 @@ else if (activeMain === "Certifications") {
   contentArea = <StudentTasks token={token} />;
 }else if (activeMain === "Alumni Arena") {
   contentArea = <AlumniArena token={token} />;
-} else {
+} 
+else if (activeMain === "Syllabus" && selectedPdf) {
+  contentArea = (
+    <div className="pdf-viewer-container">
+      <iframe
+        src={selectedPdf}
+        title="Syllabus PDF"
+        width="100%"
+        height="600px"
+        style={{
+          border: "none",
+          borderRadius: "12px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+          background: "rgba(255,255,255,0.08)",
+          backdropFilter: "blur(12px)",
+        }}
+      />
+    </div>
+  );
+}
+
+else {
   contentArea = <div>Select a menu item to view its content.</div>;
 }
 
