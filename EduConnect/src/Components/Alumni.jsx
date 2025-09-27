@@ -15,6 +15,7 @@ const Alumni = () => {
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch alumni profile
   useEffect(() => {
@@ -26,7 +27,7 @@ const Alumni = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          setProfile(data.alumni); // ✅ Ensure correct field
+          setProfile(data.alumni);
         }
       } catch (err) {
         console.error("Error fetching alumni profile:", err);
@@ -61,12 +62,37 @@ const Alumni = () => {
         setStatus({ type: "danger", text: data.error || "Error saving details" });
       } else {
         setStatus({ type: "success", text: "Profile saved successfully!" });
-        setProfile(data.alumni); // ✅ Update after save
+        setProfile(data.alumni);
       }
     } catch (err) {
       setStatus({ type: "danger", text: "Server error. Try again later." });
     }
     setIsSubmitting(false);
+  };
+
+  // ✅ Delete Profile
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete your profile?")) return;
+
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem("token_alumni");
+      const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        setProfile(null);
+        setStatus({ type: "success", text: "Profile deleted successfully." });
+      } else {
+        const data = await res.json();
+        setStatus({ type: "danger", text: data.error || "Error deleting profile" });
+      }
+    } catch (err) {
+      setStatus({ type: "danger", text: "Server error. Try again later." });
+    }
+    setIsDeleting(false);
   };
 
   return (
@@ -193,6 +219,16 @@ const Alumni = () => {
                       </a>
                     )}
                   </div>
+
+                  {/* ✅ Delete Button */}
+                  <Button
+                    variant="danger"
+                    className="w-100 mt-4"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete Profile"}
+                  </Button>
                 </div>
               )}
             </Card>
