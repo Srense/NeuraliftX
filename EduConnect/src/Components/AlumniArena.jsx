@@ -10,7 +10,7 @@ const AlumniArena = ({ token }) => {
   useEffect(() => {
     const fetchAlumni = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/alumni", {
+        const res = await axios.get("https://neuraliftx.onrender.com/api/alumni", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
