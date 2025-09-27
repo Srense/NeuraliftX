@@ -598,3 +598,117 @@ body {
   background-color: #e8f0ff;
 }
 
+/* --- StudentTasks Section --- */
+.tasks-container {
+  padding: 2rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* Individual Task Card */
+.task-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Task Title */
+.task-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2d2d2d;
+  margin-bottom: 0.5rem;
+}
+
+/* Task PDF Link */
+.task-link {
+  display: inline-block;
+  margin: 0.5rem 0 1rem;
+  padding: 0.4rem 0.8rem;
+  background: #f0f6ff;
+  color: #007bff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: background 0.2s ease;
+}
+.task-link:hover {
+  background: #e0ebff;
+}
+
+/* Answer Section */
+.answer-section {
+  background: #fafafa;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-top: 1rem;
+  border: 1px solid #eee;
+}
+
+.answer-section h4 {
+  margin-bottom: 0.8rem;
+  color: #444;
+}
+
+/* Buttons */
+.task-btn {
+  display: inline-block;
+  margin-top: 0.6rem;
+  margin-right: 0.6rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.task-btn.upload {
+  background: #4cafef;
+  color: white;
+}
+.task-btn.upload:hover {
+  background: #2196f3;
+}
+
+.task-btn.check {
+  background: #28c76f;
+  color: white;
+}
+.task-btn.check:hover {
+  background: #22a95e;
+}
+
+.task-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Verification Result Box */
+.verification-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #dcdcdc;
+  border-radius: 10px;
+  background: #f9fff9;
+}
+
+.verification-box strong {
+  color: #2a7d46;
+}
+
+/* Responsive Grid */
+@media (min-width: 768px) {
+  .tasks-container {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+}
+
