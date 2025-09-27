@@ -9,6 +9,8 @@ import QuizPerformanceChart from "./Studentquizperformancechart";
 import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 import Grades from "./Grades.jsx";
+import AlumniArena from "./AlumniArena";
+
 
 
 function CoinBadge({ coins }) {
@@ -773,6 +775,8 @@ else if (activeMain === "Certifications") {
   contentArea = <IndividualLeaderboard />;
 } else if (activeMain === "Tasks") {
   contentArea = <StudentTasks token={token} />;
+}else if (activeMain === "Alumni Arena") {
+  contentArea = <AlumniArena token={token} />;
 } else {
   contentArea = <div>Select a menu item to view its content.</div>;
 }

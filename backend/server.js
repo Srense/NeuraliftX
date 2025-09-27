@@ -265,6 +265,17 @@ const syllabusUnitSchema = new mongoose.Schema({
 const SyllabusUnit = mongoose.model("SyllabusUnit", syllabusUnitSchema);
 
 
+const alumniSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+  name: { type: String, required: true },
+  company: { type: String, required: true },
+  designation: { type: String, required: true },
+  description: { type: String },
+  linkedin: { type: String },
+  github: { type: String },
+}, { timestamps: true });
+
+const Alumni = mongoose.model("Alumni", alumniSchema);
 
 
 
@@ -1258,6 +1269,68 @@ app.get("/api/student/quiz-performance", authenticateJWT, async (req, res) => {
   } catch (err) {
     console.error("Quiz performance fetch error:", err);
     res.status(500).json({ error: "Failed to fetch quiz performance" });
+  }
+});
+
+
+// Create or update alumni profile
+app.post("/api/alumni", authenticateJWT, async (req, res) => {
+  try {
+    const { name, company, designation, description, linkedin, github } = req.body;
+
+    if (!name || !company || !designation) {
+      return res.status(400).json({ error: "Name, company, and designation are required" });
+    }
+
+    let alumni = await Alumni.findOne({ userId: req.user._id });
+
+    if (alumni) {
+      // Update profile
+      alumni.name = name;
+      alumni.company = company;
+      alumni.designation = designation;
+      alumni.description = description;
+      alumni.linkedin = linkedin;
+      alumni.github = github;
+      await alumni.save();
+    } else {
+      // Create new profile
+      alumni = await Alumni.create({
+        userId: req.user._id,
+        name,
+        company,
+        designation,
+        description,
+        linkedin,
+        github,
+      });
+    }
+
+    res.json({ success: true, alumni });
+  } catch (err) {
+    console.error("Error saving alumni:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get logged-in alumni profile
+app.get("/api/alumni/me", authenticateJWT, async (req, res) => {
+  try {
+    const alumni = await Alumni.findOne({ userId: req.user._id });
+    if (!alumni) return res.status(404).json({ error: "Profile not found" });
+    res.json({ success: true, alumni });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get all alumni (for students to view)
+app.get("/api/alumni", async (req, res) => {
+  try {
+    const alumniList = await Alumni.find().populate("userId", "firstName lastName email");
+    res.json({ success: true, alumni: alumniList });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
   }
 });
 
