@@ -1,64 +1,75 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import axios from "axios";
 
-const AlumniArena = () => {
-  const [alumniList, setAlumniList] = useState([]);
+
+const AlumniArena = ({ token }) => {
+  const [alumniList, setAlumniList] = useState([]); // ✅ always start as array
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchAlumni = async () => {
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/alumni");
-        const data = await res.json();
-        setAlumniList(data);
+        const res = await axios.get("http://localhost:4000/api/alumni", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // ✅ Ensure array handling
+        if (Array.isArray(res.data)) {
+          setAlumniList(res.data);
+        } else if (Array.isArray(res.data.alumni)) {
+          setAlumniList(res.data.alumni);
+        } else {
+          setAlumniList([]);
+        }
+
+        setLoading(false);
       } catch (err) {
-        console.error("Error fetching alumni:", err);
+        setError("Failed to fetch alumni");
+        setLoading(false);
       }
     };
+
     fetchAlumni();
-  }, []);
+  }, [token]);
+
+  const handleConnect = (alumniId) => {
+    alert(`Connect request sent to alumni with ID: ${alumniId}`);
+    // Later → make API POST: /api/connect/:alumniId
+  };
+
+  if (loading) return <p className="alumni-loading">Loading alumni...</p>;
+  if (error) return <p className="alumni-error">{error}</p>;
 
   return (
-    <Container className="py-4">
-      <h2 className="text-center mb-4">Alumni Arena</h2>
-      <Row className="g-4">
-        {alumniList.map((alumni) => (
-          <Col key={alumni._id} xs={12} sm={6} md={4} lg={3}>
-            <Card className="shadow-sm h-100">
-              <Card.Body className="d-flex flex-column">
-                <Card.Title>{alumni.name}</Card.Title>
-                <Card.Subtitle className="mb-2 text-muted">
-                  {alumni.designation} at {alumni.company}
-                </Card.Subtitle>
-                <Card.Text className="flex-grow-1">
-                  {alumni.description || "No bio provided."}
-                </Card.Text>
-                <div className="mt-auto">
-                  {alumni.linkedin && (
-                    <Button
-                      variant="primary"
-                      className="me-2"
-                      href={alumni.linkedin}
-                      target="_blank"
-                    >
-                      Connect
-                    </Button>
-                  )}
-                  {alumni.github && (
-                    <Button
-                      variant="dark"
-                      href={alumni.github}
-                      target="_blank"
-                    >
-                      GitHub
-                    </Button>
-                  )}
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-    </Container>
+    <div className="alumni-arena-container">
+      <h2 className="alumni-title">Alumni Arena</h2>
+      {alumniList.length === 0 ? (
+        <p className="alumni-empty">No alumni have registered yet.</p>
+      ) : (
+        <div className="alumni-grid">
+          {alumniList.map((alum) => (
+            <div key={alum._id} className="alumni-card">
+              <h3>{alum.name}</h3>
+              <p>
+                <strong>Company:</strong> {alum.company || "N/A"}
+              </p>
+              {alum.description && (
+                <p>
+                  <strong>About:</strong> {alum.description}
+                </p>
+              )}
+              <button
+                className="connect-btn"
+                onClick={() => handleConnect(alum._id)}
+              >
+                Connect
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
