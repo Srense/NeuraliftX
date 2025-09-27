@@ -10,7 +10,7 @@ import QuizPage from "./Components/QuizPage";
 import VerifyEmail from "./Components/VerifyEmail";
 import PdfViewerPage from "./Components/PDFViewer";
 import Admin from "./Components/Admin";
-
+import Alumni from "./Components/Alumni";
 
 // Role-based protected route for multi-session support
 const RoleBasedRoute = ({ allowedRoles }) => {
@@ -86,6 +86,10 @@ const App = () => {
         <Route element={<RoleBasedRoute allowedRoles={['admin']} />}>
           <Route path="/admin/*" element={<Admin />} />
         </Route>
+        <Route element={<RoleBasedRoute allowedRoles={['alumni']} />}>
+          <Route path="/alumni/*" element={<Alumni />} />
+        </Route>
+
         
 
         {/* Fallback to homepage */}
