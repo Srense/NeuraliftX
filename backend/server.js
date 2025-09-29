@@ -1650,7 +1650,7 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
   try {
     const existing = await Connection.findOne({
       studentId: req.user._id,
-      alumniId: req.params.alumniId
+      alumniId: req.params.alumniId   // ✅ will be alum._id
     });
 
     if (existing) {
@@ -1659,7 +1659,7 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
 
     const conn = new Connection({
       studentId: req.user._id,
-      alumniId: req.params.alumniId
+      alumniId: req.params.alumniId   // ✅ will be alum._id
     });
 
     await conn.save();
@@ -1673,9 +1673,9 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
 // Alumni fetches requests
 app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
-    const requests = await Connection.find({ 
-      alumniId: req.user._id, 
-      status: "pending" 
+    const requests = await Connection.find({
+      alumniId: req.user._id,   // ✅ matches alum._id stored in connection
+      status: "pending"
     }).populate("studentId", "firstName lastName email roleIdValue coins");
 
     res.json({ success: true, requests });
