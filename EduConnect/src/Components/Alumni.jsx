@@ -28,7 +28,7 @@ const Alumni = () => {
   const [profile, setProfile] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Student data
+  // Students
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -37,82 +37,110 @@ const Alumni = () => {
 
   // Connection requests
   const [requests, setRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   const token = localStorage.getItem("token_alumni");
 
   // ✅ Fetch connection requests
-useEffect(() => {
-  const fetchRequests = async () => {
-    try {
-      const res = await fetch("https://neuraliftx.onrender.com/api/alumni/requests", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!token) return;
+      setLoadingRequests(true);
+      try {
+        const res = await fetch(
+          "https://neuraliftx.onrender.com/api/alumni/requests",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const data = await res.json();
+        console.log("📡 Connection requests response:", data);
 
-      console.log("📡 Requests API raw response:", data); // DEBUG
+        if (res.ok && data.success) {
+          setRequests(data.requests || []);
+        } else {
+          setRequests([]);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching requests:", err);
+      } finally {
+        setLoadingRequests(false);
+      }
+    };
 
-      setRequests(data.requests || []);
-    } catch (err) {
-      console.error("❌ Error fetching requests:", err);
-    }
-  };
-  if (token) fetchRequests();
-}, [token]);
+    fetchRequests();
+  }, [token]);
 
   // ✅ Handle Accept / Reject
   const handleAction = async (id, action) => {
     try {
-      await fetch(`https://neuraliftx.onrender.com/api/alumni/requests/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: action }),
-      });
-      setRequests(requests.filter((r) => r._id !== id));
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/alumni/requests/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: action }),
+        }
+      );
+      const data = await res.json();
+      console.log(`✅ ${action} response:`, data);
+
+      if (res.ok && data.success) {
+        setRequests((prev) => prev.filter((r) => r._id !== id));
+      }
     } catch (err) {
-      console.error("Error updating request:", err);
+      console.error("❌ Error updating request:", err);
     }
   };
 
   // ✅ Fetch alumni profile
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!token) return;
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          "https://neuraliftx.onrender.com/api/alumni/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const data = await res.json();
         if (res.ok) {
-          const data = await res.json();
           setProfile(data.alumni);
         }
       } catch (err) {
-        console.error("Error fetching alumni profile:", err);
+        console.error("❌ Error fetching alumni profile:", err);
       }
     };
-    if (token) fetchProfile();
+    fetchProfile();
   }, [token]);
 
   // ✅ Fetch all students
   useEffect(() => {
     const fetchStudents = async () => {
+      if (!token) return;
       setLoadingStudents(true);
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/students", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          "https://neuraliftx.onrender.com/api/alumni/students",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const data = await res.json();
         if (res.ok) {
-          const data = await res.json();
           setStudents(data.students || []);
         }
       } catch (err) {
-        console.error("Error fetching students:", err);
+        console.error("❌ Error fetching students:", err);
       } finally {
         setLoadingStudents(false);
       }
     };
-    if (token) fetchStudents();
+    fetchStudents();
   }, [token]);
 
   // ✅ Handle form changes
@@ -139,7 +167,10 @@ useEffect(() => {
       const data = await res.json();
 
       if (!res.ok) {
-        setStatus({ type: "danger", text: data.error || "Error saving details" });
+        setStatus({
+          type: "danger",
+          text: data.error || "Error saving details",
+        });
       } else {
         setStatus({ type: "success", text: "Profile saved successfully!" });
         setProfile(data.alumni);
@@ -152,7 +183,8 @@ useEffect(() => {
 
   // ✅ Delete Alumni Profile
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete your profile?")) return;
+    if (!window.confirm("Are you sure you want to delete your profile?"))
+      return;
 
     setIsDeleting(true);
     try {
@@ -163,10 +195,16 @@ useEffect(() => {
 
       if (res.ok) {
         setProfile(null);
-        setStatus({ type: "success", text: "Profile deleted successfully." });
+        setStatus({
+          type: "success",
+          text: "Profile deleted successfully.",
+        });
       } else {
         const data = await res.json();
-        setStatus({ type: "danger", text: data.error || "Error deleting profile" });
+        setStatus({
+          type: "danger",
+          text: data.error || "Error deleting profile",
+        });
       }
     } catch (err) {
       setStatus({ type: "danger", text: "Server error. Try again later." });
@@ -185,15 +223,15 @@ useEffect(() => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setStudentPerformance(data.quizAttempts || []);
         setSelectedStudent({ ...student, ...data.student });
       } else {
         setStudentPerformance([]);
       }
     } catch (err) {
-      console.error("Error fetching student performance:", err);
+      console.error("❌ Error fetching student performance:", err);
       setStudentPerformance([]);
     } finally {
       setLoadingPerformance(false);
@@ -206,7 +244,9 @@ useEffect(() => {
         <Row className="justify-content-center">
           <Col md={8} lg={6}>
             <Card className="alumni-card glass-card shadow-lg border-0 p-4 rounded-4">
-              <h2 className="text-center mb-4 alumni-heading">🎓 Alumni Profile</h2>
+              <h2 className="text-center mb-4 alumni-heading">
+                🎓 Alumni Profile
+              </h2>
 
               {status && <Alert variant={status.type}>{status.text}</Alert>}
 
@@ -215,29 +255,67 @@ useEffect(() => {
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control type="text" name="name" value={form.name} onChange={handleChange} required />
+                    <Form.Control
+                      type="text"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      required
+                    />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Company</Form.Label>
-                    <Form.Control type="text" name="company" value={form.company} onChange={handleChange} required />
+                    <Form.Control
+                      type="text"
+                      name="company"
+                      value={form.company}
+                      onChange={handleChange}
+                      required
+                    />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Designation</Form.Label>
-                    <Form.Control type="text" name="designation" value={form.designation} onChange={handleChange} required />
+                    <Form.Control
+                      type="text"
+                      name="designation"
+                      value={form.designation}
+                      onChange={handleChange}
+                      required
+                    />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Description</Form.Label>
-                    <Form.Control as="textarea" rows={3} name="description" value={form.description} onChange={handleChange} />
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                    />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>LinkedIn</Form.Label>
-                    <Form.Control type="url" name="linkedin" value={form.linkedin} onChange={handleChange} />
+                    <Form.Control
+                      type="url"
+                      name="linkedin"
+                      value={form.linkedin}
+                      onChange={handleChange}
+                    />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>GitHub</Form.Label>
-                    <Form.Control type="url" name="github" value={form.github} onChange={handleChange} />
+                    <Form.Control
+                      type="url"
+                      name="github"
+                      value={form.github}
+                      onChange={handleChange}
+                    />
                   </Form.Group>
-                  <Button type="submit" className="w-100 py-2 mt-3 alumni-btn" disabled={isSubmitting}>
+                  <Button
+                    type="submit"
+                    className="w-100 py-2 mt-3 alumni-btn"
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? "Saving..." : "Submit"}
                   </Button>
                 </Form>
@@ -245,24 +323,45 @@ useEffect(() => {
                 // Profile details
                 <div className="text-center alumni-profile">
                   <div className="alumni-avatar mx-auto mb-3">
-                    <img src="https://via.placeholder.com/120" alt="Profile" className="rounded-circle" />
+                    <img
+                      src="https://via.placeholder.com/120"
+                      alt="Profile"
+                      className="rounded-circle"
+                    />
                   </div>
                   <h4>{profile.name}</h4>
-                  <p className="mb-1">{profile.designation} at {profile.company}</p>
+                  <p className="mb-1">
+                    {profile.designation} at {profile.company}
+                  </p>
                   <p className="text-muted">{profile.description}</p>
                   <div className="d-flex justify-content-center gap-3 mt-3">
                     {profile.linkedin && (
-                      <a href={profile.linkedin} target="_blank" rel="noreferrer" className="btn btn-outline-primary">
+                      <a
+                        href={profile.linkedin}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-outline-primary"
+                      >
                         LinkedIn
                       </a>
                     )}
                     {profile.github && (
-                      <a href={profile.github} target="_blank" rel="noreferrer" className="btn btn-outline-dark">
+                      <a
+                        href={profile.github}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-outline-dark"
+                      >
                         GitHub
                       </a>
                     )}
                   </div>
-                  <Button variant="danger" className="w-100 mt-4" onClick={handleDelete} disabled={isDeleting}>
+                  <Button
+                    variant="danger"
+                    className="w-100 mt-4"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                  >
                     {isDeleting ? "Deleting..." : "Delete Profile"}
                   </Button>
                 </div>
@@ -275,17 +374,30 @@ useEffect(() => {
         <Row className="mt-5">
           <Col>
             <h3 className="mb-3">📩 Connection Requests</h3>
-            {requests.length === 0 ? (
+            {loadingRequests ? (
+              <Spinner animation="border" />
+            ) : requests.length === 0 ? (
               <p>No pending requests</p>
             ) : (
               <ListGroup>
                 {requests.map((req) => (
                   <ListGroup.Item key={req._id}>
-                    <strong>{req.studentId.firstName} {req.studentId.lastName}</strong> ({req.studentId.email})
-                    <Button onClick={() => handleAction(req._id, "accepted")} variant="success" className="ms-2">
+                    <strong>
+                      {req.studentId.firstName} {req.studentId.lastName}
+                    </strong>{" "}
+                    ({req.studentId.email})
+                    <Button
+                      onClick={() => handleAction(req._id, "accepted")}
+                      variant="success"
+                      className="ms-2"
+                    >
                       Accept
                     </Button>
-                    <Button onClick={() => handleAction(req._id, "rejected")} variant="danger" className="ms-2">
+                    <Button
+                      onClick={() => handleAction(req._id, "rejected")}
+                      variant="danger"
+                      className="ms-2"
+                    >
                       Reject
                     </Button>
                   </ListGroup.Item>
@@ -304,8 +416,13 @@ useEffect(() => {
             ) : (
               <ListGroup>
                 {students.map((student) => (
-                  <ListGroup.Item key={student._id} action onClick={() => handleStudentClick(student)}>
-                    {student.firstName} {student.lastName} - {student.roleIdValue} ({student.coins} coins)
+                  <ListGroup.Item
+                    key={student._id}
+                    action
+                    onClick={() => handleStudentClick(student)}
+                  >
+                    {student.firstName} {student.lastName} -{" "}
+                    {student.roleIdValue} ({student.coins} coins)
                   </ListGroup.Item>
                 ))}
               </ListGroup>
@@ -315,10 +432,15 @@ useEffect(() => {
       </Container>
 
       {/* ✅ Student Detail Modal */}
-      <Modal show={!!selectedStudent} onHide={() => setSelectedStudent(null)} size="lg">
+      <Modal
+        show={!!selectedStudent}
+        onHide={() => setSelectedStudent(null)}
+        size="lg"
+      >
         <Modal.Header closeButton>
           <Modal.Title>
-            Student Details - {selectedStudent?.firstName} {selectedStudent?.lastName}
+            Student Details - {selectedStudent?.firstName}{" "}
+            {selectedStudent?.lastName}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -326,16 +448,22 @@ useEffect(() => {
             <Spinner animation="border" />
           ) : (
             <>
-              <p><b>Email:</b> {selectedStudent?.email}</p>
-              <p><b>UID:</b> {selectedStudent?.roleIdValue}</p>
-              <p><b>Coins:</b> {selectedStudent?.coins}</p>
+              <p>
+                <b>Email:</b> {selectedStudent?.email}
+              </p>
+              <p>
+                <b>UID:</b> {selectedStudent?.roleIdValue}
+              </p>
+              <p>
+                <b>Coins:</b> {selectedStudent?.coins}
+              </p>
               <h5>📊 Recent Quiz Performance</h5>
               {studentPerformance && studentPerformance.length > 0 ? (
                 <ul>
                   {studentPerformance.map((p, idx) => (
                     <li key={idx}>
-                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total} (
-                      {new Date(p.createdAt).toLocaleDateString()})
+                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/
+                      {p.total} ({new Date(p.createdAt).toLocaleDateString()})
                     </li>
                   ))}
                 </ul>
