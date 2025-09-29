@@ -61,7 +61,7 @@ const Alumni = () => {
     const fetchStudents = async () => {
       setLoadingStudents(true);
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/students", {
+        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
