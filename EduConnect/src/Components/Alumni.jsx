@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Form, Button, Alert } from "react-bootstrap";
+import { Container, Row, Col, Card, Form, Button, Alert, Modal, Spinner } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./Alumni.css";
 
@@ -16,6 +16,13 @@ const Alumni = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profile, setProfile] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 🔵 New state for students
+  const [students, setStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentDetails, setStudentDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Fetch alumni profile
   useEffect(() => {
@@ -36,11 +43,55 @@ const Alumni = () => {
     fetchProfile();
   }, []);
 
+  // Fetch all students
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setLoadingStudents(true);
+      try {
+        const token = localStorage.getItem("token_alumni");
+        const res = await fetch("https://neuraliftx.onrender.com/api/students", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStudents(data.students || []);
+        }
+      } catch (err) {
+        console.error("Error fetching students:", err);
+      } finally {
+        setLoadingStudents(false);
+      }
+    };
+    fetchStudents();
+  }, []);
+
+  // Fetch details of one student
+  const handleViewDetails = async (id) => {
+    setLoadingDetails(true);
+    setSelectedStudent(id);
+    try {
+      const token = localStorage.getItem("token_alumni");
+      const res = await fetch(`https://neuraliftx.onrender.com/api/students/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStudentDetails(data);
+      }
+    } catch (err) {
+      console.error("Error fetching student details:", err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  // Alumni profile form change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
+  // Alumni profile submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null);
@@ -50,7 +101,7 @@ const Alumni = () => {
       const token = localStorage.getItem("token_alumni");
       const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
@@ -70,7 +121,7 @@ const Alumni = () => {
     setIsSubmitting(false);
   };
 
-  // ✅ Delete Profile
+  // Alumni profile delete
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete your profile?")) return;
 
@@ -195,7 +246,9 @@ const Alumni = () => {
                     />
                   </div>
                   <h4>{profile.name}</h4>
-                  <p className="mb-1">{profile.designation} at {profile.company}</p>
+                  <p className="mb-1">
+                    {profile.designation} at {profile.company}
+                  </p>
                   <p className="text-muted">{profile.description}</p>
                   <div className="d-flex justify-content-center gap-3 mt-3">
                     {profile.linkedin && (
@@ -220,7 +273,6 @@ const Alumni = () => {
                     )}
                   </div>
 
-                  {/* ✅ Delete Button */}
                   <Button
                     variant="danger"
                     className="w-100 mt-4"
@@ -234,6 +286,79 @@ const Alumni = () => {
             </Card>
           </Col>
         </Row>
+
+        {/* 🔵 Students Section */}
+        <Row className="mt-5">
+          <h2 className="text-center mb-4 alumni-heading">👩‍🎓 Student Directory</h2>
+          {loadingStudents ? (
+            <p className="text-center"><Spinner animation="border" /> Loading students...</p>
+          ) : (
+            students.map((stu) => (
+              <Col md={6} lg={4} key={stu._id} className="mb-4">
+                <Card className="student-card glass-card p-3 shadow">
+                  <Card.Body className="text-center">
+                    <img
+                      src={stu.profilePicUrl ? `https://neuraliftx.onrender.com${stu.profilePicUrl}` : "https://via.placeholder.com/80"}
+                      alt="Student"
+                      className="rounded-circle mb-3"
+                      style={{ width: "80px", height: "80px", objectFit: "cover" }}
+                    />
+                    <Card.Title>{stu.firstName} {stu.lastName}</Card.Title>
+                    <Card.Text><b>Email:</b> {stu.email}</Card.Text>
+                    <Button variant="primary" onClick={() => handleViewDetails(stu._id)}>
+                      View Details
+                    </Button>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))
+          )}
+        </Row>
+
+        {/* Student details modal */}
+        <Modal show={!!selectedStudent} onHide={() => { setSelectedStudent(null); setStudentDetails(null); }} size="lg" centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Student Details</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {loadingDetails ? (
+              <p><Spinner animation="border" /> Loading...</p>
+            ) : studentDetails ? (
+              <div>
+                <h4>{studentDetails.user?.firstName} {studentDetails.user?.lastName}</h4>
+                <p><b>Email:</b> {studentDetails.user?.email}</p>
+                <p><b>Coins:</b> {studentDetails.user?.coins}</p>
+                <hr />
+                <h5>📊 Quiz Performance</h5>
+                <p>{studentDetails.quizStats?.completed} quizzes completed</p>
+                <p>Average Score: {studentDetails.quizStats?.averageScore || "N/A"}</p>
+
+                <h5>📑 Assignments</h5>
+                <ul>
+                  {studentDetails.assignments?.map((a) => (
+                    <li key={a._id}>{a.title} - {a.status}</li>
+                  ))}
+                </ul>
+
+                <h5>✅ Tasks</h5>
+                <ul>
+                  {studentDetails.tasks?.map((t) => (
+                    <li key={t._id}>{t.originalName} - {t.status}</li>
+                  ))}
+                </ul>
+
+                <h5>🎓 Grades</h5>
+                <ul>
+                  {studentDetails.grades?.map((g, idx) => (
+                    <li key={idx}>{g.subject}: {g.grade}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p>No details available.</p>
+            )}
+          </Modal.Body>
+        </Modal>
       </Container>
     </div>
   );
