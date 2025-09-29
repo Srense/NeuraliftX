@@ -77,7 +77,7 @@ const AlumniArena = ({ token }) => {
       ) : (
         <div className="alumni-grid">
           {alumniList.map((alum) => (
-            <div key={alum._id} className="alumni-card">
+            <div key={alum.userId._id} className="alumni-card">
               <h3>{alum.name}</h3>
               <p>
                 <strong>Company:</strong> {alum.company || "N/A"}
