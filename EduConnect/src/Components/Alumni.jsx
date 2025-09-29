@@ -34,49 +34,52 @@ const Alumni = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentPerformance, setStudentPerformance] = useState([]);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
+
+  // Connection requests
   const [requests, setRequests] = useState([]);
 
   const token = localStorage.getItem("token_alumni");
 
+  // ✅ Fetch connection requests
   useEffect(() => {
-  const fetchRequests = async () => {
-    const res = await fetch("https://neuraliftx.onrender.com/api/alumni/requests", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await res.json();
-    setRequests(data.requests || []);
+    const fetchRequests = async () => {
+      try {
+        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/requests", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setRequests(data.requests || []);
+      } catch (err) {
+        console.error("Error fetching requests:", err);
+      }
+    };
+    if (token) fetchRequests();
+  }, [token]);
+
+  // ✅ Handle Accept / Reject
+  const handleAction = async (id, action) => {
+    try {
+      await fetch(`https://neuraliftx.onrender.com/api/alumni/requests/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: action }),
+      });
+      setRequests(requests.filter((r) => r._id !== id));
+    } catch (err) {
+      console.error("Error updating request:", err);
+    }
   };
-  fetchRequests();
-}, [token]);
 
-const handleAction = async (id, action) => {
-  await fetch(`https://neuraliftx.onrender.com/api/alumni/requests/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ status: action })
-  });
-  setRequests(requests.filter(r => r._id !== id));
-};
-
-// JSX
-<ListGroup>
-  {requests.map(req => (
-    <ListGroup.Item key={req._id}>
-      {req.studentId.firstName} {req.studentId.lastName} ({req.studentId.email})
-      <Button onClick={() => handleAction(req._id, "accepted")} variant="success" className="ms-2">Accept</Button>
-      <Button onClick={() => handleAction(req._id, "rejected")} variant="danger" className="ms-2">Reject</Button>
-    </ListGroup.Item>
-  ))}
-</ListGroup>
-
-  // Fetch alumni profile
+  // ✅ Fetch alumni profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch(
-          "https://neuraliftx.onrender.com/api/alumni/me",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) {
           const data = await res.json();
           setProfile(data.alumni);
@@ -88,17 +91,14 @@ const handleAction = async (id, action) => {
     if (token) fetchProfile();
   }, [token]);
 
-  // Fetch all students
+  // ✅ Fetch all students
   useEffect(() => {
     const fetchStudents = async () => {
       setLoadingStudents(true);
       try {
-        const res = await fetch(
-          "https://neuraliftx.onrender.com/api/alumni/students",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/students", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) {
           const data = await res.json();
           setStudents(data.students || []);
@@ -112,11 +112,13 @@ const handleAction = async (id, action) => {
     if (token) fetchStudents();
   }, [token]);
 
+  // ✅ Handle form changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
+  // ✅ Save profile
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null);
@@ -134,10 +136,7 @@ const handleAction = async (id, action) => {
       const data = await res.json();
 
       if (!res.ok) {
-        setStatus({
-          type: "danger",
-          text: data.error || "Error saving details",
-        });
+        setStatus({ type: "danger", text: data.error || "Error saving details" });
       } else {
         setStatus({ type: "success", text: "Profile saved successfully!" });
         setProfile(data.alumni);
@@ -161,16 +160,10 @@ const handleAction = async (id, action) => {
 
       if (res.ok) {
         setProfile(null);
-        setStatus({
-          type: "success",
-          text: "Profile deleted successfully.",
-        });
+        setStatus({ type: "success", text: "Profile deleted successfully." });
       } else {
         const data = await res.json();
-        setStatus({
-          type: "danger",
-          text: data.error || "Error deleting profile",
-        });
+        setStatus({ type: "danger", text: data.error || "Error deleting profile" });
       }
     } catch (err) {
       setStatus({ type: "danger", text: "Server error. Try again later." });
@@ -178,7 +171,7 @@ const handleAction = async (id, action) => {
     setIsDeleting(false);
   };
 
-  // ✅ Select student & fetch full details with performance
+  // ✅ Select student & fetch full details
   const handleStudentClick = async (student) => {
     setSelectedStudent(student);
     setLoadingPerformance(true);
@@ -215,115 +208,58 @@ const handleAction = async (id, action) => {
               {status && <Alert variant={status.type}>{status.text}</Alert>}
 
               {!profile ? (
+                // Profile form
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                    />
+                    <Form.Control type="text" name="name" value={form.name} onChange={handleChange} required />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Company</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="company"
-                      value={form.company}
-                      onChange={handleChange}
-                      required
-                    />
+                    <Form.Control type="text" name="company" value={form.company} onChange={handleChange} required />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Designation</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="designation"
-                      value={form.designation}
-                      onChange={handleChange}
-                      required
-                    />
+                    <Form.Control type="text" name="designation" value={form.designation} onChange={handleChange} required />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Description</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      name="description"
-                      value={form.description}
-                      onChange={handleChange}
-                    />
+                    <Form.Control as="textarea" rows={3} name="description" value={form.description} onChange={handleChange} />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>LinkedIn</Form.Label>
-                    <Form.Control
-                      type="url"
-                      name="linkedin"
-                      value={form.linkedin}
-                      onChange={handleChange}
-                    />
+                    <Form.Control type="url" name="linkedin" value={form.linkedin} onChange={handleChange} />
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>GitHub</Form.Label>
-                    <Form.Control
-                      type="url"
-                      name="github"
-                      value={form.github}
-                      onChange={handleChange}
-                    />
+                    <Form.Control type="url" name="github" value={form.github} onChange={handleChange} />
                   </Form.Group>
-                  <Button
-                    type="submit"
-                    className="w-100 py-2 mt-3 alumni-btn"
-                    disabled={isSubmitting}
-                  >
+                  <Button type="submit" className="w-100 py-2 mt-3 alumni-btn" disabled={isSubmitting}>
                     {isSubmitting ? "Saving..." : "Submit"}
                   </Button>
                 </Form>
               ) : (
+                // Profile details
                 <div className="text-center alumni-profile">
                   <div className="alumni-avatar mx-auto mb-3">
-                    <img
-                      src="https://via.placeholder.com/120"
-                      alt="Profile"
-                      className="rounded-circle"
-                    />
+                    <img src="https://via.placeholder.com/120" alt="Profile" className="rounded-circle" />
                   </div>
                   <h4>{profile.name}</h4>
-                  <p className="mb-1">
-                    {profile.designation} at {profile.company}
-                  </p>
+                  <p className="mb-1">{profile.designation} at {profile.company}</p>
                   <p className="text-muted">{profile.description}</p>
                   <div className="d-flex justify-content-center gap-3 mt-3">
                     {profile.linkedin && (
-                      <a
-                        href={profile.linkedin}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-outline-primary"
-                      >
+                      <a href={profile.linkedin} target="_blank" rel="noreferrer" className="btn btn-outline-primary">
                         LinkedIn
                       </a>
                     )}
                     {profile.github && (
-                      <a
-                        href={profile.github}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-outline-dark"
-                      >
+                      <a href={profile.github} target="_blank" rel="noreferrer" className="btn btn-outline-dark">
                         GitHub
                       </a>
                     )}
                   </div>
-                  <Button
-                    variant="danger"
-                    className="w-100 mt-4"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                  >
+                  <Button variant="danger" className="w-100 mt-4" onClick={handleDelete} disabled={isDeleting}>
                     {isDeleting ? "Deleting..." : "Delete Profile"}
                   </Button>
                 </div>
@@ -332,7 +268,31 @@ const handleAction = async (id, action) => {
           </Col>
         </Row>
 
-        {/* Student List */}
+        {/* ✅ Connection Requests Section */}
+        <Row className="mt-5">
+          <Col>
+            <h3 className="mb-3">📩 Connection Requests</h3>
+            {requests.length === 0 ? (
+              <p>No pending requests</p>
+            ) : (
+              <ListGroup>
+                {requests.map((req) => (
+                  <ListGroup.Item key={req._id}>
+                    <strong>{req.studentId.firstName} {req.studentId.lastName}</strong> ({req.studentId.email})
+                    <Button onClick={() => handleAction(req._id, "accepted")} variant="success" className="ms-2">
+                      Accept
+                    </Button>
+                    <Button onClick={() => handleAction(req._id, "rejected")} variant="danger" className="ms-2">
+                      Reject
+                    </Button>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            )}
+          </Col>
+        </Row>
+
+        {/* ✅ Student List */}
         <Row className="mt-5">
           <Col>
             <h3 className="mb-3">👩‍🎓 Student Directory</h3>
@@ -341,11 +301,7 @@ const handleAction = async (id, action) => {
             ) : (
               <ListGroup>
                 {students.map((student) => (
-                  <ListGroup.Item
-                    key={student._id}
-                    action
-                    onClick={() => handleStudentClick(student)}
-                  >
+                  <ListGroup.Item key={student._id} action onClick={() => handleStudentClick(student)}>
                     {student.firstName} {student.lastName} - {student.roleIdValue} ({student.coins} coins)
                   </ListGroup.Item>
                 ))}
@@ -355,16 +311,11 @@ const handleAction = async (id, action) => {
         </Row>
       </Container>
 
-      {/* Student Detail Modal */}
-      <Modal
-        show={!!selectedStudent}
-        onHide={() => setSelectedStudent(null)}
-        size="lg"
-      >
+      {/* ✅ Student Detail Modal */}
+      <Modal show={!!selectedStudent} onHide={() => setSelectedStudent(null)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
-            Student Details - {selectedStudent?.firstName}{" "}
-            {selectedStudent?.lastName}
+            Student Details - {selectedStudent?.firstName} {selectedStudent?.lastName}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -372,24 +323,17 @@ const handleAction = async (id, action) => {
             <Spinner animation="border" />
           ) : (
             <>
-              <p>
-                <b>Email:</b> {selectedStudent?.email}
-              </p>
-              <p>
-                <b>UID:</b> {selectedStudent?.roleIdValue}
-              </p>
-              <p>
-                <b>Coins:</b> {selectedStudent?.coins}
-              </p>
+              <p><b>Email:</b> {selectedStudent?.email}</p>
+              <p><b>UID:</b> {selectedStudent?.roleIdValue}</p>
+              <p><b>Coins:</b> {selectedStudent?.coins}</p>
               <h5>📊 Recent Quiz Performance</h5>
               {studentPerformance && studentPerformance.length > 0 ? (
                 <ul>
                   {studentPerformance.map((p, idx) => (
                     <li key={idx}>
-  {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total} (
-  {new Date(p.createdAt).toLocaleDateString()})
-</li>
-
+                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total} (
+                      {new Date(p.createdAt).toLocaleDateString()})
+                    </li>
                   ))}
                 </ul>
               ) : (
