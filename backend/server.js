@@ -1673,14 +1673,18 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
 // Alumni fetches requests
 app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
-    const requests = await Connection.find({ alumniId: req.user._id, status: "pending" })
-      .populate("studentId", "firstName lastName email roleIdValue coins");
+    const requests = await Connection.find({ 
+      alumniId: req.user._id, 
+      status: "pending" 
+    }).populate("studentId", "firstName lastName email roleIdValue coins");
+
     res.json({ success: true, requests });
   } catch (err) {
     console.error("Fetch requests error:", err);
     res.status(500).json({ error: "Failed to fetch requests" });
   }
 });
+
 
 // Alumni accepts/rejects request
 app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
