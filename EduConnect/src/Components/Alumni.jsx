@@ -32,7 +32,7 @@ const Alumni = () => {
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentPerformance, setStudentPerformance] = useState(null);
+  const [studentPerformance, setStudentPerformance] = useState([]);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
 
   const token = localStorage.getItem("token_alumni");
@@ -56,14 +56,17 @@ const Alumni = () => {
     if (token) fetchProfile();
   }, [token]);
 
-  // Fetch students
+  // Fetch all students
   useEffect(() => {
     const fetchStudents = async () => {
       setLoadingStudents(true);
       try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          "https://neuraliftx.onrender.com/api/alumni/students",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (res.ok) {
           const data = await res.json();
           setStudents(data.students || []);
@@ -113,7 +116,7 @@ const Alumni = () => {
     setIsSubmitting(false);
   };
 
-  // ✅ Delete Profile
+  // ✅ Delete Alumni Profile
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete your profile?")) return;
 
@@ -143,20 +146,21 @@ const Alumni = () => {
     setIsDeleting(false);
   };
 
-  // ✅ Select student and fetch performance
+  // ✅ Select student & fetch full details with performance
   const handleStudentClick = async (student) => {
     setSelectedStudent(student);
     setLoadingPerformance(true);
     try {
       const res = await fetch(
-        `https://neuraliftx.onrender.com/api/students/${student._id}/performance`,
+        `https://neuraliftx.onrender.com/api/alumni/student/${student._id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (res.ok) {
         const data = await res.json();
-        setStudentPerformance(data.performance || []);
+        setStudentPerformance(data.quizAttempts || []);
+        setSelectedStudent({ ...student, ...data.student });
       } else {
         setStudentPerformance([]);
       }

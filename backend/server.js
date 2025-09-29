@@ -1350,6 +1350,49 @@ app.delete("/api/alumni", authenticateJWT, async (req, res) => {
   }
 });
 
+// ✅ Get all students (Alumni-only access)
+app.get("/api/alumni/students", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
+  try {
+    const students = await User.find({ role: "student" })
+      .select("firstName lastName email roleIdValue coins profilePicUrl");
+    res.json({ success: true, students });
+  } catch (err) {
+    console.error("Error fetching students:", err);
+    res.status(500).json({ error: "Failed to fetch students" });
+  }
+});
+
+// ✅ Get details of a single student (Alumni-only)
+app.get("/api/alumni/student/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
+  try {
+    const studentId = req.params.id;
+
+    // Basic student info
+    const student = await User.findById(studentId).select("firstName lastName email roleIdValue coins profilePicUrl");
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    // Quiz performance
+    const quizAttempts = await QuizAttempt.find({ userId: studentId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("assignmentId", "originalName");
+
+    // Assignments / tasks
+    const tasks = await StudentAnswer.find({ studentId })
+      .populate("taskId", "originalName fileUrl uploadedAt");
+
+    res.json({
+      success: true,
+      student,
+      quizAttempts,
+      tasks
+    });
+  } catch (err) {
+    console.error("Error fetching student details:", err);
+    res.status(500).json({ error: "Failed to fetch student details" });
+  }
+});
+
 // Create course (faculty and admin only)
 app.post("/api/courses", authenticateJWT, authorizeRole(["faculty", "admin"]), async (req, res) => {
   try {
