@@ -1704,19 +1704,6 @@ app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), 
   }
 });
 
-// Student checks connection status
-app.get("/api/connect/status/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
-  try {
-    const request = await Connection.findOne({
-      studentId: req.user._id,
-      alumniId: req.params.alumniId
-    });
-    res.json({ success: true, status: request ? request.status : "not_sent" });
-  } catch (err) {
-    console.error("Check status error:", err);
-    res.status(500).json({ error: "Failed to fetch status" });
-  }
-});
 
 // Start server
 app.listen(PORT, () => {
