@@ -1643,7 +1643,7 @@ app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
   }
 });
 
-
+const Connection = mongoose.model("Connection", connectionSchema);
 
 // Student sends connection request
 app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
