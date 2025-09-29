@@ -354,9 +354,10 @@ const Alumni = () => {
                 <ul>
                   {studentPerformance.map((p, idx) => (
                     <li key={idx}>
-                      {p.assignmentTitle}: {p.score}/{p.total} (
-                      {new Date(p.date).toLocaleDateString()})
-                    </li>
+  {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total} (
+  {new Date(p.createdAt).toLocaleDateString()})
+</li>
+
                   ))}
                 </ul>
               ) : (
