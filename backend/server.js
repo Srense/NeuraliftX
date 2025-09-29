@@ -286,6 +286,7 @@ const connectionSchema = new mongoose.Schema({
 module.exports = mongoose.model("Connection", connectionSchema);
 
 
+
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -1642,60 +1643,73 @@ app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
   }
 });
 
-// ✅ Student sends connection request
+const Connection = mongoose.model("Connection", connectionSchema);
+
+// Student sends connection request
 app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
   try {
     const existing = await Connection.findOne({
-      studentId: req.user.id,
+      studentId: req.user._id,
       alumniId: req.params.alumniId
     });
 
-    if (existing) return res.status(400).json({ error: "Request already sent." });
+    if (existing) {
+      return res.status(400).json({ error: "Request already sent" });
+    }
 
     const conn = new Connection({
-      studentId: req.user.id,
+      studentId: req.user._id,
       alumniId: req.params.alumniId
     });
 
     await conn.save();
-    res.json({ success: true, message: "Connection request sent." });
+    res.json({ success: true, message: "Connection request sent" });
   } catch (err) {
+    console.error("Send request error:", err);
     res.status(500).json({ error: "Failed to send request" });
   }
 });
 
-// ✅ Alumni fetches requests
+// Alumni fetches requests
 app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
-    const requests = await Connection.find({ alumniId: req.user.id, status: "pending" })
+    const requests = await Connection.find({ alumniId: req.user._id, status: "pending" })
       .populate("studentId", "firstName lastName email roleIdValue coins");
     res.json({ success: true, requests });
   } catch (err) {
+    console.error("Fetch requests error:", err);
     res.status(500).json({ error: "Failed to fetch requests" });
   }
 });
 
-// ✅ Alumni accepts/rejects request
+// Alumni accepts/rejects request
 app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
     const { status } = req.body; // accepted / rejected
+    if (!["accepted", "rejected"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
     const request = await Connection.findByIdAndUpdate(req.params.id, { status }, { new: true });
     if (!request) return res.status(404).json({ error: "Request not found" });
+
     res.json({ success: true, request });
   } catch (err) {
+    console.error("Update request error:", err);
     res.status(500).json({ error: "Failed to update request" });
   }
 });
 
-// ✅ Student checks connection status
+// Student checks connection status
 app.get("/api/connect/status/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
   try {
     const request = await Connection.findOne({
-      studentId: req.user.id,
+      studentId: req.user._id,
       alumniId: req.params.alumniId
     });
     res.json({ success: true, status: request ? request.status : "not_sent" });
   } catch (err) {
+    console.error("Check status error:", err);
     res.status(500).json({ error: "Failed to fetch status" });
   }
 });
