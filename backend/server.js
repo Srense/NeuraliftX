@@ -1645,7 +1645,7 @@ app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
 
 
 
-/app.post("/api/connect/:alumniUserId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+app.post("/api/connect/:alumniUserId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
   try {
     const alumniUserId = req.params.alumniUserId;
 
