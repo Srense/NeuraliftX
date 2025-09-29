@@ -1643,23 +1643,23 @@ app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
   }
 });
 
-const Connection = mongoose.model("Connection", connectionSchema);
 
-// Student sends connection request
-app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+
+/app.post("/api/connect/:alumniUserId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
   try {
+    const alumniUserId = req.params.alumniUserId;
+
     const existing = await Connection.findOne({
       studentId: req.user._id,
-      alumniId: req.params.alumniId
+      alumniId: alumniUserId,
     });
-
     if (existing) {
       return res.status(400).json({ error: "Request already sent" });
     }
 
     const conn = new Connection({
       studentId: req.user._id,
-      alumniId: req.params.alumniId
+      alumniId: alumniUserId,
     });
 
     await conn.save();
@@ -1670,15 +1670,19 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
   }
 });
 
+
 // Alumni fetches requests
-app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
+app.get("/api/connect/status/:alumniUserId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
   try {
-    const requests = await Connection.find({ alumniId: req.user._id, status: "pending" })
-      .populate("studentId", "firstName lastName email roleIdValue coins");
-    res.json({ success: true, requests });
+    const alumniUserId = req.params.alumniUserId;
+    const request = await Connection.findOne({
+      studentId: req.user._id,
+      alumniId: alumniUserId,
+    });
+    res.json({ success: true, status: request ? request.status : "not_sent" });
   } catch (err) {
-    console.error("Fetch requests error:", err);
-    res.status(500).json({ error: "Failed to fetch requests" });
+    console.error("Check status error:", err);
+    res.status(500).json({ error: "Failed to fetch status" });
   }
 });
 
