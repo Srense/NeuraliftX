@@ -24,7 +24,7 @@ const AlumniArena = ({ token }) => {
           list.map(async (alum) => {
             try {
               const statusRes = await axios.get(
-                `https://neuraliftx.onrender.com/api/connect/status/${alum.userId}`,
+                `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
               return { ...alum, connectionStatus: statusRes.data.status || "not_sent" };
@@ -56,7 +56,7 @@ const AlumniArena = ({ token }) => {
       if (res.data.success) {
         setAlumniList((prev) =>
           prev.map((alum) =>
-            alum.userId === alumniId ? { ...alum, connectionStatus: "pending" } : alum
+            alum._id === alumniId ? { ...alum, connectionStatus: "pending" } : alum
           )
         );
       }
@@ -76,7 +76,7 @@ const AlumniArena = ({ token }) => {
       ) : (
         <div className="alumni-grid">
           {alumniList.map((alum) => (
-            <div key={alum.userId} className="alumni-card">
+            <div key={alum._id} className="alumni-card">
               <h3>{alum.name}</h3>
               <p>
                 <strong>Company:</strong> {alum.company || "N/A"}
@@ -90,7 +90,7 @@ const AlumniArena = ({ token }) => {
               {/* ✅ Connect Button with status */}
               <button
                 className={`connect-btn status-${alum.connectionStatus}`}
-                onClick={() => handleConnect(alum.userId)}
+                onClick={() => handleConnect(alum._id)}
                 disabled={alum.connectionStatus === "pending" || alum.connectionStatus === "accepted"}
               >
                 {alum.connectionStatus === "not_sent" && "Connect"}
