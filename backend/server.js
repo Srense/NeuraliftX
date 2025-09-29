@@ -1645,12 +1645,13 @@ app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
 
 const Connection = mongoose.model("Connection", connectionSchema);
 
-// Student sends connection request
 app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
   try {
+    const alumniObjectId = new mongoose.Types.ObjectId(req.params.alumniId);
+
     const existing = await Connection.findOne({
       studentId: req.user._id,
-      alumniId: req.params.alumniId   // ✅ will be alum._id
+      alumniId: alumniObjectId
     });
 
     if (existing) {
@@ -1659,7 +1660,7 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
 
     const conn = new Connection({
       studentId: req.user._id,
-      alumniId: req.params.alumniId   // ✅ will be alum._id
+      alumniId: alumniObjectId
     });
 
     await conn.save();
@@ -1670,10 +1671,13 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
   }
 });
 
+// Alumni fetches requests
 app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
+    const alumniObjectId = new mongoose.Types.ObjectId(req.user._id);
+
     const requests = await Connection.find({
-      alumniId: new mongoose.Types.ObjectId(req.user._id),  // ✅ ensure ObjectId type
+      alumniId: alumniObjectId,
       status: "pending"
     }).populate("studentId", "firstName lastName email roleIdValue coins");
 
@@ -1692,7 +1696,12 @@ app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), 
       return res.status(400).json({ error: "Invalid status" });
     }
 
-    const request = await Connection.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const request = await Connection.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
     if (!request) return res.status(404).json({ error: "Request not found" });
 
     res.json({ success: true, request });
@@ -1705,10 +1714,13 @@ app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), 
 // Student checks connection status
 app.get("/api/connect/status/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
   try {
+    const alumniObjectId = new mongoose.Types.ObjectId(req.params.alumniId);
+
     const request = await Connection.findOne({
       studentId: req.user._id,
-      alumniId: req.params.alumniId
+      alumniId: alumniObjectId
     });
+
     res.json({ success: true, status: request ? request.status : "not_sent" });
   } catch (err) {
     console.error("Check status error:", err);
