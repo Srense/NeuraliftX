@@ -1674,19 +1674,25 @@ app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), 
 // Alumni fetches requests
 app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
+    console.log("🔑 Alumni from token:", req.user);  // JWT payload pura print hoga
+
     const alumniObjectId = new mongoose.Types.ObjectId(req.user._id);
+    console.log("🔍 Looking for requests with alumniId:", alumniObjectId);
 
     const requests = await Connection.find({
       alumniId: alumniObjectId,
       status: "pending"
     }).populate("studentId", "firstName lastName email roleIdValue coins");
 
+    console.log("📩 Found requests:", requests);
+
     res.json({ success: true, requests });
   } catch (err) {
-    console.error("Fetch requests error:", err);
+    console.error("❌ Fetch requests error:", err);
     res.status(500).json({ error: "Failed to fetch requests" });
   }
 });
+
 // Alumni accepts/rejects request
 app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {

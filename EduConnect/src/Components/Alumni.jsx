@@ -41,20 +41,23 @@ const Alumni = () => {
   const token = localStorage.getItem("token_alumni");
 
   // ✅ Fetch connection requests
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/requests", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setRequests(data.requests || []);
-      } catch (err) {
-        console.error("Error fetching requests:", err);
-      }
-    };
-    if (token) fetchRequests();
-  }, [token]);
+useEffect(() => {
+  const fetchRequests = async () => {
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/alumni/requests", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      console.log("📡 Requests API raw response:", data); // DEBUG
+
+      setRequests(data.requests || []);
+    } catch (err) {
+      console.error("❌ Error fetching requests:", err);
+    }
+  };
+  if (token) fetchRequests();
+}, [token]);
 
   // ✅ Handle Accept / Reject
   const handleAction = async (id, action) => {
