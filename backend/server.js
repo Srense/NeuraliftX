@@ -277,6 +277,13 @@ const alumniSchema = new mongoose.Schema({
 
 const Alumni = mongoose.model("Alumni", alumniSchema);
 
+const connectionSchema = new mongoose.Schema({
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  alumniId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  status: { type: String, enum: ["pending", "accepted", "rejected"], default: "pending" }
+}, { timestamps: true });
+
+module.exports = mongoose.model("Connection", connectionSchema);
 
 
 // Disposable email checks (using AbstractAPI and deep-email-validator)
@@ -1634,6 +1641,65 @@ app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Delete failed: " + err.message });
   }
 });
+
+// ✅ Student sends connection request
+app.post("/api/connect/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+  try {
+    const existing = await Connection.findOne({
+      studentId: req.user.id,
+      alumniId: req.params.alumniId
+    });
+
+    if (existing) return res.status(400).json({ error: "Request already sent." });
+
+    const conn = new Connection({
+      studentId: req.user.id,
+      alumniId: req.params.alumniId
+    });
+
+    await conn.save();
+    res.json({ success: true, message: "Connection request sent." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to send request" });
+  }
+});
+
+// ✅ Alumni fetches requests
+app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
+  try {
+    const requests = await Connection.find({ alumniId: req.user.id, status: "pending" })
+      .populate("studentId", "firstName lastName email roleIdValue coins");
+    res.json({ success: true, requests });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch requests" });
+  }
+});
+
+// ✅ Alumni accepts/rejects request
+app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
+  try {
+    const { status } = req.body; // accepted / rejected
+    const request = await Connection.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    res.json({ success: true, request });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update request" });
+  }
+});
+
+// ✅ Student checks connection status
+app.get("/api/connect/status/:alumniId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+  try {
+    const request = await Connection.findOne({
+      studentId: req.user.id,
+      alumniId: req.params.alumniId
+    });
+    res.json({ success: true, status: request ? request.status : "not_sent" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch status" });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

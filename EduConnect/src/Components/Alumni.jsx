@@ -34,8 +34,40 @@ const Alumni = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentPerformance, setStudentPerformance] = useState([]);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
+  const [requests, setRequests] = useState([]);
 
   const token = localStorage.getItem("token_alumni");
+
+  useEffect(() => {
+  const fetchRequests = async () => {
+    const res = await fetch("https://neuraliftx.onrender.com/api/alumni/requests", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    setRequests(data.requests || []);
+  };
+  fetchRequests();
+}, [token]);
+
+const handleAction = async (id, action) => {
+  await fetch(`https://neuraliftx.onrender.com/api/alumni/requests/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status: action })
+  });
+  setRequests(requests.filter(r => r._id !== id));
+};
+
+// JSX
+<ListGroup>
+  {requests.map(req => (
+    <ListGroup.Item key={req._id}>
+      {req.studentId.firstName} {req.studentId.lastName} ({req.studentId.email})
+      <Button onClick={() => handleAction(req._id, "accepted")} variant="success" className="ms-2">Accept</Button>
+      <Button onClick={() => handleAction(req._id, "rejected")} variant="danger" className="ms-2">Reject</Button>
+    </ListGroup.Item>
+  ))}
+</ListGroup>
 
   // Fetch alumni profile
   useEffect(() => {

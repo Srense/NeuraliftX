@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./AlumniArena.css";
 
-
 const AlumniArena = ({ token }) => {
-  const [alumniList, setAlumniList] = useState([]); // ✅ always start as array
+  const [alumniList, setAlumniList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -15,15 +14,27 @@ const AlumniArena = ({ token }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // ✅ Ensure array handling
-        if (Array.isArray(res.data)) {
-          setAlumniList(res.data);
-        } else if (Array.isArray(res.data.alumni)) {
-          setAlumniList(res.data.alumni);
-        } else {
-          setAlumniList([]);
-        }
+        // ensure array handling
+        let list = [];
+        if (Array.isArray(res.data)) list = res.data;
+        else if (Array.isArray(res.data.alumni)) list = res.data.alumni;
 
+        // ✅ Fetch connection status for each alumni
+        const updatedList = await Promise.all(
+          list.map(async (alum) => {
+            try {
+              const statusRes = await axios.get(
+                `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              return { ...alum, connectionStatus: statusRes.data.status || "not_sent" };
+            } catch {
+              return { ...alum, connectionStatus: "not_sent" };
+            }
+          })
+        );
+
+        setAlumniList(updatedList);
         setLoading(false);
       } catch (err) {
         setError("Failed to fetch alumni");
@@ -34,9 +45,24 @@ const AlumniArena = ({ token }) => {
     fetchAlumni();
   }, [token]);
 
-  const handleConnect = (alumniId) => {
-    alert(`Connect request sent to alumni with ID: ${alumniId}`);
-    // Later → make API POST: /api/connect/:alumniId
+  const handleConnect = async (alumniId) => {
+    try {
+      const res = await axios.post(
+        `https://neuraliftx.onrender.com/api/connect/${alumniId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data.success) {
+        setAlumniList((prev) =>
+          prev.map((alum) =>
+            alum._id === alumniId ? { ...alum, connectionStatus: "pending" } : alum
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Error sending connection request:", err);
+    }
   };
 
   if (loading) return <p className="alumni-loading">Loading alumni...</p>;
@@ -60,11 +86,17 @@ const AlumniArena = ({ token }) => {
                   <strong>About:</strong> {alum.description}
                 </p>
               )}
+
+              {/* ✅ Connect Button with status */}
               <button
-                className="connect-btn"
+                className={`connect-btn status-${alum.connectionStatus}`}
                 onClick={() => handleConnect(alum._id)}
+                disabled={alum.connectionStatus === "pending" || alum.connectionStatus === "accepted"}
               >
-                Connect
+                {alum.connectionStatus === "not_sent" && "Connect"}
+                {alum.connectionStatus === "pending" && "Pending..."}
+                {alum.connectionStatus === "accepted" && "Connected ✅"}
+                {alum.connectionStatus === "rejected" && "Rejected ❌"}
               </button>
             </div>
           ))}
