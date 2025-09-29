@@ -1687,7 +1687,6 @@ app.get("/api/alumni/requests", authenticateJWT, authorizeRole(["alumni"]), asyn
     res.status(500).json({ error: "Failed to fetch requests" });
   }
 });
-
 // Alumni accepts/rejects request
 app.put("/api/alumni/requests/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
