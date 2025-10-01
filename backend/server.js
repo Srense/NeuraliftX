@@ -1438,8 +1438,10 @@ app.get("/api/alumni/student/:id", authenticateJWT, authorizeRole(["alumni"]), a
   try {
     const studentId = req.params.id;
 
-    // Basic student info
-    const student = await User.findById(studentId).select("firstName lastName email roleIdValue coins profilePicUrl");
+    // Extended student info
+    const student = await User.findById(studentId).select(
+      "firstName lastName email roleIdValue coins profilePicUrl bio percentage className internshipsDone coursesCompleted areaOfInterest"
+    );
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     // Quiz performance

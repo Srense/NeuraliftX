@@ -40,7 +40,7 @@ const Alumni = () => {
 
   const token = localStorage.getItem("token_alumni");
 
-  // ✅ Fetch connection requests
+  // Fetch connection requests
   useEffect(() => {
     const fetchRequests = async () => {
       if (!token) return;
@@ -53,7 +53,6 @@ const Alumni = () => {
           }
         );
         const data = await res.json();
-        console.log("📡 Connection requests response:", data);
 
         if (res.ok && data.success) {
           setRequests(data.requests || []);
@@ -61,7 +60,7 @@ const Alumni = () => {
           setRequests([]);
         }
       } catch (err) {
-        console.error("❌ Error fetching requests:", err);
+        console.error("Error fetching requests:", err);
       } finally {
         setLoadingRequests(false);
       }
@@ -70,7 +69,7 @@ const Alumni = () => {
     fetchRequests();
   }, [token]);
 
-  // ✅ Handle Accept / Reject
+  // Handle Accept / Reject
   const handleAction = async (id, action) => {
     try {
       const res = await fetch(
@@ -85,17 +84,16 @@ const Alumni = () => {
         }
       );
       const data = await res.json();
-      console.log(`✅ ${action} response:`, data);
 
       if (res.ok && data.success) {
         setRequests((prev) => prev.filter((r) => r._id !== id));
       }
     } catch (err) {
-      console.error("❌ Error updating request:", err);
+      console.error("Error updating request:", err);
     }
   };
 
-  // ✅ Fetch alumni profile
+  // Fetch alumni profile
   useEffect(() => {
     const fetchProfile = async () => {
       if (!token) return;
@@ -111,13 +109,13 @@ const Alumni = () => {
           setProfile(data.alumni);
         }
       } catch (err) {
-        console.error("❌ Error fetching alumni profile:", err);
+        console.error("Error fetching alumni profile:", err);
       }
     };
     fetchProfile();
   }, [token]);
 
-  // ✅ Fetch all students
+  // Fetch all students
   useEffect(() => {
     const fetchStudents = async () => {
       if (!token) return;
@@ -134,7 +132,7 @@ const Alumni = () => {
           setStudents(data.students || []);
         }
       } catch (err) {
-        console.error("❌ Error fetching students:", err);
+        console.error("Error fetching students:", err);
       } finally {
         setLoadingStudents(false);
       }
@@ -142,13 +140,13 @@ const Alumni = () => {
     fetchStudents();
   }, [token]);
 
-  // ✅ Handle form changes
+  // Handle form changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  // ✅ Save profile
+  // Save profile
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null);
@@ -180,7 +178,7 @@ const Alumni = () => {
     setIsSubmitting(false);
   };
 
-  // ✅ Delete Alumni Profile
+  // Delete Alumni Profile
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete your profile?"))
       return;
@@ -211,7 +209,7 @@ const Alumni = () => {
     setIsDeleting(false);
   };
 
-  // ✅ Select student & fetch full details
+  // Select student & fetch full details
   const handleStudentClick = async (student) => {
     setSelectedStudent(student);
     setLoadingPerformance(true);
@@ -225,12 +223,13 @@ const Alumni = () => {
       const data = await res.json();
       if (res.ok) {
         setStudentPerformance(data.quizAttempts || []);
+        // Extend selected student with full data received from backend
         setSelectedStudent({ ...student, ...data.student });
       } else {
         setStudentPerformance([]);
       }
     } catch (err) {
-      console.error("❌ Error fetching student performance:", err);
+      console.error("Error fetching student performance:", err);
       setStudentPerformance([]);
     } finally {
       setLoadingPerformance(false);
@@ -361,7 +360,7 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* ✅ Connection Requests Section */}
+        {/* Connection Requests Section */}
         <Row className="mt-5">
           <Col>
             <h3 className="mb-3">📩 Connection Requests</h3>
@@ -398,7 +397,7 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* ✅ Student List */}
+        {/* Student List */}
         <Row className="mt-5">
           <Col>
             <h3 className="mb-3">👩‍🎓 Student Directory</h3>
@@ -422,7 +421,7 @@ const Alumni = () => {
         </Row>
       </Container>
 
-      {/* ✅ Student Detail Modal */}
+      {/* Student Detail Modal */}
       <Modal
         show={!!selectedStudent}
         onHide={() => setSelectedStudent(null)}
@@ -448,6 +447,15 @@ const Alumni = () => {
               <p>
                 <b>Coins:</b> {selectedStudent?.coins}
               </p>
+
+              {/* Extended Profile Fields */}
+              <p><b>Bio:</b> {selectedStudent?.bio || "N/A"}</p>
+              <p><b>Percentage:</b> {selectedStudent?.percentage ?? "N/A"}</p>
+              <p><b>Class:</b> {selectedStudent?.className || "N/A"}</p>
+              <p><b>Internships Done:</b> {(selectedStudent?.internshipsDone?.join(", ")) || "N/A"}</p>
+              <p><b>Courses Completed:</b> {(selectedStudent?.coursesCompleted?.join(", ")) || "N/A"}</p>
+              <p><b>Area of Interest:</b> {(selectedStudent?.areaOfInterest?.join(", ")) || "N/A"}</p>
+
               <h5>📊 Recent Quiz Performance</h5>
               {studentPerformance && studentPerformance.length > 0 ? (
                 <ul>
