@@ -87,43 +87,17 @@ const App = () => {
   return (
     <Router>
       <div
-        id="google_translate_element"
-        style={{
-          position: 'fixed',
-          top: 10,
-          right: 10,
-          zIndex: 9999,
-          background: '#fff',
-          padding: 5,
-          borderRadius: 8,
-          cursor: 'pointer',
-          width: 32,
-          height: 32,
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      ></div>
-<style>{`
-        #google_translate_element .goog-te-gadget {
-          font-size: 0 !important;
-          width: 32px !important;
-          height: 32px !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-        }
-        #google_translate_element .goog-te-gadget img {
-          height: 24px !important;
-          width: 24px !important;
-          margin: 0 auto !important;
-          display: block !important;
-        }
-        #google_translate_element .goog-te-combo {
-          display: none !important;
-        }
-      `}</style>
+    id="google_translate_element"
+    style={{
+      position: "fixed",
+      top: 10,
+      right: 10,
+      zIndex: 9999,
+      background: "#fff",
+      padding: 5,
+      borderRadius: 8,
+    }}
+  ></div>
       <Routes>
         
         <Route path="/" element={<Homepage />} />
