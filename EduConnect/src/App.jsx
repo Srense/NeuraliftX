@@ -96,6 +96,7 @@ const App = () => {
       background: "#fff",
       padding: 5,
       borderRadius: 8,
+      draggable: true,
     }}
   ></div>
       <Routes>
