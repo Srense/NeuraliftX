@@ -53,29 +53,40 @@ const AlumniArena = ({ token }) => {
   }, [token]);
 
   const handleConnect = async (alumniId) => {
-    try {
-      const res = await axios.post(
-        `https://neuraliftx.onrender.com/api/connect/${alumniId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  try {
+    const res = await axios.post(
+      `https://neuraliftx.onrender.com/api/connect/${alumniId}`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      if (res.data.success) {
-        // ✅ Update status locally without re-fetch
+    if (res.data.success) {
+      // ✅ New request sent → pending
+      setAlumniList((prev) =>
+        prev.map((alum) =>
+          alum._id === alumniId
+            ? { ...alum, connectionStatus: "pending" }
+            : alum
+        )
+      );
+    } else {
+      // ✅ Duplicate case → use existing status
+      if (res.data.status) {
         setAlumniList((prev) =>
           prev.map((alum) =>
             alum._id === alumniId
-              ? { ...alum, connectionStatus: "pending" }
+              ? { ...alum, connectionStatus: res.data.status }
               : alum
           )
         );
-      } else {
-        alert(res.data.error || "Failed to send request");
       }
-    } catch (err) {
-      console.error("❌ Error sending connection request:", err);
+      alert(res.data.message || "Failed to send request");
     }
-  };
+  } catch (err) {
+    console.error("❌ Error sending connection request:", err);
+  }
+};
+
 
   if (loading) return <p className="alumni-loading">Loading alumni...</p>;
   if (error) return <p className="alumni-error">{error}</p>;

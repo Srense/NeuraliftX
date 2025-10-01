@@ -1666,10 +1666,15 @@ app.post(
     try {
       const { alumniId } = req.params;
 
+      // validate
+      if (!mongoose.Types.ObjectId.isValid(alumniId)) {
+        return res.status(400).json({ success: false, error: "Invalid alumniId" });
+      }
+
       // check duplicate
       const existing = await Connection.findOne({
         studentId: req.user._id,
-        alumniId,
+        alumniId: new mongoose.Types.ObjectId(alumniId),
       });
 
       if (existing) {
@@ -1681,8 +1686,8 @@ app.post(
       }
 
       const newConn = await Connection.create({
-        studentId: req.user._id,
-        alumniId,
+        studentId: new mongoose.Types.ObjectId(req.user._id),
+        alumniId: new mongoose.Types.ObjectId(alumniId),
       });
 
       return res.json({
@@ -1697,7 +1702,7 @@ app.post(
   }
 );
 
-// 🔍 Student checks request status
+// Student checks request status
 app.get(
   "/api/connect/status/:alumniId",
   authenticateJWT,
@@ -1706,9 +1711,13 @@ app.get(
     try {
       const { alumniId } = req.params;
 
+      if (!mongoose.Types.ObjectId.isValid(alumniId)) {
+        return res.status(400).json({ success: false, error: "Invalid alumniId" });
+      }
+
       const conn = await Connection.findOne({
-        studentId: req.user._id,
-        alumniId,
+        studentId: new mongoose.Types.ObjectId(req.user._id),
+        alumniId: new mongoose.Types.ObjectId(alumniId),
       });
 
       return res.json({
@@ -1721,7 +1730,7 @@ app.get(
   }
 );
 
-// 📥 Alumni fetches pending requests
+// Alumni fetches pending requests
 app.get(
   "/api/alumni/requests",
   authenticateJWT,
@@ -1729,7 +1738,7 @@ app.get(
   async (req, res) => {
     try {
       const requests = await Connection.find({
-        alumniId: req.user._id,
+        alumniId: new mongoose.Types.ObjectId(req.user._id),
         status: "pending",
       }).populate("studentId", "firstName lastName email roleIdValue coins");
 
@@ -1740,7 +1749,7 @@ app.get(
   }
 );
 
-// ✅ Alumni accepts/rejects request
+// Alumni accepts/rejects request
 app.put(
   "/api/alumni/requests/:id",
   authenticateJWT,
@@ -1754,8 +1763,12 @@ app.put(
         return res.status(400).json({ success: false, error: "Invalid status" });
       }
 
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ success: false, error: "Invalid request id" });
+      }
+
       const request = await Connection.findOneAndUpdate(
-        { _id: id, alumniId: req.user._id },
+        { _id: new mongoose.Types.ObjectId(id), alumniId: new mongoose.Types.ObjectId(req.user._id) },
         { status },
         { new: true }
       );
