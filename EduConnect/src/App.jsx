@@ -1,7 +1,6 @@
-import {React,useEffect,useRef } from "react";
+import {React,useEffect} from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import Draggable from 'react-draggable';
 
 import Homepage from "./Components/Homepage";
 import LoginSignup from "./Components/LoginSignup";
@@ -84,31 +83,22 @@ const App = () => {
     };
     addGoogleTranslateScript();
   }, []);
-   const nodeRef = useRef(null);
+
   return (
     <Router>
-      <Draggable>
-        
       <div
-      ref={nodeRef}
-        id="google_translate_element"
-        style={{
-          position: "fixed",
-          top: 10,
-          right: 10,
-          zIndex: 9999,
-          background: "#fff",
-          padding: 5,
-          borderRadius: 8,
-          cursor: "move",
-          width: 32,
-          height: 32,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      ></div>
-    </Draggable>
+    id="google_translate_element"
+    style={{
+      position: "fixed",
+      top: 10,
+      right: 10,
+      zIndex: 9999,
+      background: "#fff",
+      padding: 5,
+      borderRadius: 8,
+     
+    }}
+  ></div>
       <Routes>
         
         <Route path="/" element={<Homepage />} />
