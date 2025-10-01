@@ -87,16 +87,17 @@ const App = () => {
   return (
     <Router>
       <div
-    id="google_translate_element"
-    style={{
-      position: "fixed",
-      top: 10,
-      right: 10,
-      zIndex: 9999,
+        id="google_translate_element"
+        draggable="true"
+        style={{
+          position: "fixed",
+          top: 10,
+          right: 10,
+          zIndex: 9999,
       background: "#fff",
       padding: 5,
       borderRadius: 8,
-      draggable: true,
+     
     }}
   ></div>
       <Routes>
