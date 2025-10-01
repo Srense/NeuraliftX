@@ -1,4 +1,4 @@
-import {React,useEffect} from "react";
+import {React,useEffect,useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import Draggable from 'react-draggable';
@@ -84,11 +84,13 @@ const App = () => {
     };
     addGoogleTranslateScript();
   }, []);
-
+   const nodeRef = useRef(null);
   return (
     <Router>
       <Draggable>
+        
       <div
+      ref={nodeRef}
         id="google_translate_element"
         style={{
           position: "fixed",
