@@ -715,9 +715,42 @@ app.get("/api/profile", authenticateJWT, (req, res) => {
       roleIdValue: req.user.roleIdValue,
       coins: req.user.coins || 0,
       profilePicUrl: req.user.profilePicUrl || "",
+      bio: req.user.bio || "",
+      percentage: req.user.percentage || null,
+      className: req.user.className || "",
+      internshipsDone: req.user.internshipsDone || [],
+      coursesCompleted: req.user.coursesCompleted || [],
+      areaOfInterest: req.user.areaOfInterest || [],
     },
   });
 });
+//for update profile data
+app.put("/api/profile", authenticateJWT, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, error: "User not found" });
+
+    const {
+      bio, percentage, className,
+      internshipsDone, coursesCompleted, areaOfInterest
+    } = req.body;
+
+    if (bio !== undefined) user.bio = bio;
+    if (percentage !== undefined) user.percentage = percentage;
+    if (className !== undefined) user.className = className;
+    if (internshipsDone !== undefined) user.internshipsDone = internshipsDone;
+    if (coursesCompleted !== undefined) user.coursesCompleted = coursesCompleted;
+    if (areaOfInterest !== undefined) user.areaOfInterest = areaOfInterest;
+
+    await user.save();
+
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error("Profile update error", err);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+});
+
 
 // Profile picture upload
 app.post("/api/profile/picture", authenticateJWT, upload.single('profilePic'), async (req, res) => {
