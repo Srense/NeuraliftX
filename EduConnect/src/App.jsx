@@ -89,8 +89,8 @@ const App = () => {
       <div
     id="google_translate_element"
     style={{
-      position: "fixed",
-      top: 10,
+      position:"fixed",
+      top: 50,
       right: 10,
       zIndex: 9999,
       background: "#fff",
