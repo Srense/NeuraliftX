@@ -136,7 +136,7 @@ body {
   background: #fff;
   object-fit: cover;
 }
-.profile-modal-backdrop {
+/* .profile-modal-backdrop {
   position: fixed;
   top: 0; left: 0; bottom: 0; right: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -160,7 +160,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
+} */
 
 /* Modal header bar */
 .profile-modal-header {
@@ -175,6 +175,49 @@ body {
   margin: -36px -30px 32px -30px;
   position: relative;
 }
+
+.profile-modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(6px);
+  overflow-y: auto; /* Important for mobile */
+}
+
+.profile-modal {
+  background: #fff;
+  padding: 36px 30px 28px;
+  border-radius: 18px;
+  max-width: 370px;
+  width: 95vw;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.15);
+  font-family: 'Inter', sans-serif;
+  color: #222e3a;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 95vh;          /* NEW */
+  overflow-y: auto;          /* NEW - allow internal scroll instead of cutoff */
+  overscroll-behavior: contain; /* Prevent background bounce on mobile */
+}
+
+@media (max-width: 480px) {
+  .profile-modal {
+    padding: 14px 3vw 14px;
+    max-width: 97vw;
+  }
+}
+
+.profile-modal label, .profile-modal input, .profile-modal textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .close-btn {
   position: absolute;
   top: 18px;
