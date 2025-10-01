@@ -148,6 +148,16 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onPr
         <p>
           <b>Email:</b> {user.email}
         </p>
+         <div
+        id="google_translate_element"
+        style={{
+          marginTop: 10,
+          width: "fit-content",
+          background: "#fff",
+          padding: "5px",
+          borderRadius: "8px",
+        }}
+      ></div>
 
         <label>
           Bio:

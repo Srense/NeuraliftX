@@ -86,19 +86,9 @@ const App = () => {
 
   return (
     <Router>
-      <div
-    id="google_translate_element"
-    style={{
-      position: "fixed",
-      top: 10,
-      right: 10,
-      zIndex: 9999,
-      background: "#fff",
-      padding: 5,
-      borderRadius: 8,
-    }}
-  ></div>
+      
       <Routes>
+        
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<LoginSignup />} />
         <Route path="/student-login" element={<LoginSignup />} />

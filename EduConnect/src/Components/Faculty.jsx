@@ -305,6 +305,17 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdate }) {
         <p>
           <b>Email:</b> {user.email}
         </p>
+         <div
+          id="google_translate_element"
+          style={{
+            marginTop: 20,
+            marginBottom: 10,
+            width: "fit-content",
+            background: "#fff",
+            padding: "5px",
+            borderRadius: "8px",
+          }}
+        ></div>
         <input type="file" accept="image/*" onChange={handleChange} />
         <button
           onClick={handleUpload}
@@ -928,6 +939,8 @@ export default function Faculty() {
             }
             alt="Profile"
             className="profile-pic"
+
+            
           />
         </div>
       </header>
