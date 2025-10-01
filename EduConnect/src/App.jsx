@@ -86,8 +86,7 @@ const App = () => {
 
   return (
     <Router>
-      <Routes>
-        <div
+      <div
     id="google_translate_element"
     style={{
       position: "fixed",
@@ -99,6 +98,7 @@ const App = () => {
       borderRadius: 8,
     }}
   ></div>
+      <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<LoginSignup />} />
         <Route path="/student-login" element={<LoginSignup />} />
