@@ -96,28 +96,45 @@ mongoose.connect(MONGO_URI)
     process.exit(1);
   });
 
-// User schema and model
-const userSchema = new mongoose.Schema({
-  firstName: String,
-  lastName: String,
-  email: { type: String, unique: true, lowercase: true, required: true },
-  passwordHash: { type: String, required: true },
-  role: { type: String, enum: ["student", "faculty", "alumni", "admin"], default: "student" },
-  roleIdValue: { type: String, required: true },
-  emailVerified: { type: Boolean, default: false },
-  verificationToken: String,
-  verificationTokenExpires: Date,
-  resetPasswordToken: String,
-  resetPasswordExpires: Date,
-  profilePicUrl: { type: String, default: "" },
-    // Added field for profile pic
-    // In userSchema
-  coins: { type: Number, default: 0 },
+//user Schema & Model
+  const userSchema = new mongoose.Schema(
+  {
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    email: { type: String, unique: true, lowercase: true, required: true },
+    passwordHash: { type: String, required: true },
+    role: {
+      type: String,
+      enum: ["student", "faculty", "alumni", "admin"],
+      default: "student",
+    },
+    roleIdValue: { type: String, required: true },
+    emailVerified: { type: Boolean, default: false },
+    verificationToken: String,
+    verificationTokenExpires: Date,
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+    profilePicUrl: { type: String, default: "" },
+    coins: { type: Number, default: 0 },
 
-}, { timestamps: true });
+    // New fields for extended student info
+    bio: { type: String, default: "" },
+    percentage: { type: Number, default: null }, // Academic percentage or CGPA
+    className: { type: String, default: "" }, // E.g., "12th Science-A"
+    internshipsDone: [{ type: String }], // Array of internship titles or IDs
+    coursesCompleted: [{ type: String }], // Array of course names/IDs
+    areaOfInterest: [{ type: String }], // Array of interest topics
+  },
+  { timestamps: true }
+);
 
+// JWT generation method for authentication
 userSchema.methods.generateJWT = function () {
-  return jwt.sign({ id: this._id, email: this.email, role: this.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(
+    { id: this._id, email: this.email, role: this.role },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
 };
 
 const User = mongoose.model("User", userSchema);

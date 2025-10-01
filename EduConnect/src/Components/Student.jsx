@@ -11,8 +11,6 @@ import IndividualLeaderboard from "./IndividualLeaderboard";
 import Grades from "./Grades.jsx";
 import AlumniArena from "./AlumniArena";
 
-
-
 function CoinBadge({ coins }) {
   return (
     <div className="coin-badge">
@@ -37,16 +35,37 @@ function CoinIcon() {
   );
 }
 
-
-
-
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
 
-function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
+function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onProfileUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(getProfileImageUrl(user.profilePicUrl));
+
+  // Extended fields local state for editing bio and other details
+  const [profileData, setProfileData] = useState({
+    bio: user.bio || "",
+    percentage: user.percentage || "",
+    className: user.className || "",
+    internshipsDone: (user.internshipsDone || []).join(", "),
+    coursesCompleted: (user.coursesCompleted || []).join(", "),
+    areaOfInterest: (user.areaOfInterest || []).join(", "),
+  });
+
+  useEffect(() => {
+    // Update local state whenever user prop changes
+    setProfileData({
+      bio: user.bio || "",
+      percentage: user.percentage || "",
+      className: user.className || "",
+      internshipsDone: (user.internshipsDone || []).join(", "),
+      coursesCompleted: (user.coursesCompleted || []).join(", "),
+      areaOfInterest: (user.areaOfInterest || []).join(", "),
+    });
+    setPreviewUrl(getProfileImageUrl(user.profilePicUrl));
+    setSelectedFile(null);
+  }, [user]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -79,7 +98,39 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
     }
   };
 
-  
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    // Prepare array fields from comma-separated strings
+    const body = {
+      bio: profileData.bio,
+      percentage: Number(profileData.percentage),
+      className: profileData.className,
+      internshipsDone: profileData.internshipsDone.split(",").map((s) => s.trim()).filter(Boolean),
+      coursesCompleted: profileData.coursesCompleted.split(",").map((s) => s.trim()).filter(Boolean),
+      areaOfInterest: profileData.areaOfInterest.split(",").map((s) => s.trim()).filter(Boolean),
+    };
+    try {
+      const res = await fetch("https://neuraliftx.onrender.com/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Update failed");
+      const data = await res.json();
+      onProfileUpdate(data.user);
+      alert("Profile updated successfully");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="profile-modal-backdrop" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
@@ -97,12 +148,86 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic }) {
         <p>
           <b>Email:</b> {user.email}
         </p>
-        
+
+        <label>
+          Bio:
+          <textarea
+            name="bio"
+            value={profileData.bio}
+            onChange={handleChange}
+            rows={3}
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          Percentage:
+          <input
+            type="number"
+            name="percentage"
+            value={profileData.percentage}
+            onChange={handleChange}
+            min={0}
+            max={100}
+            step={0.01}
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          Class:
+          <input
+            type="text"
+            name="className"
+            value={profileData.className}
+            onChange={handleChange}
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          Internships Done (comma separated):
+          <input
+            type="text"
+            name="internshipsDone"
+            value={profileData.internshipsDone}
+            onChange={handleChange}
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          Courses Completed (comma separated):
+          <input
+            type="text"
+            name="coursesCompleted"
+            value={profileData.coursesCompleted}
+            onChange={handleChange}
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          Area of Interest (comma separated):
+          <input
+            type="text"
+            name="areaOfInterest"
+            value={profileData.areaOfInterest}
+            onChange={handleChange}
+            style={{ width: "100%" }}
+          />
+        </label>
+
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button onClick={handleUpload} disabled={!selectedFile || uploading}>
           {uploading ? "Uploading..." : "Upload Picture"}
         </button>
-        <button onClick={onLogout} className="logout-button">
+
+        <button onClick={handleSave} className="action-btn" style={{ marginTop: 10 }}>
+          Save Profile
+        </button>
+
+        <button onClick={onLogout} className="logout-button" style={{ marginTop: 10 }}>
           Logout
         </button>
       </div>
@@ -363,92 +488,91 @@ function StudentTasks({ token }) {
   };
 
   return (
-  <div className="tasks-container">
-    {loadingTasks && <p>Loading tasks...</p>}
-    {!loadingTasks && tasks.length === 0 && <p>No tasks available.</p>}
+    <div className="tasks-container">
+      {loadingTasks && <p>Loading tasks...</p>}
+      {!loadingTasks && tasks.length === 0 && <p>No tasks available.</p>}
 
-    {!loadingTasks &&
-      tasks.map((task) => (
-        <div
-          key={task._id}
-          className="task-card"
-          onClick={() => setSelectedTask(task)}
-        >
-          <h3 className="task-title">{task.originalName}</h3>
-          <a
-            href={`https://neuraliftx.onrender.com${task.fileUrl}`}
-            target="_blank"
-            rel="noreferrer"
-            className="task-link"
+      {!loadingTasks &&
+        tasks.map((task) => (
+          <div
+            key={task._id}
+            className="task-card"
+            onClick={() => setSelectedTask(task)}
           >
-            View Task PDF
-          </a>
+            <h3 className="task-title">{task.originalName}</h3>
+            <a
+              href={`https://neuraliftx.onrender.com${task.fileUrl}`}
+              target="_blank"
+              rel="noreferrer"
+              className="task-link"
+            >
+              View Task PDF
+            </a>
 
-          {selectedTask?._id === task._id && (
-            <div className="answer-section">
-              <h4>Your Answer</h4>
-              {studentAnswer ? (
-                <p>
-                  <a
-                    href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View uploaded answer
-                  </a>
-                </p>
-              ) : (
-                <p>No answer uploaded yet.</p>
-              )}
+            {selectedTask?._id === task._id && (
+              <div className="answer-section">
+                <h4>Your Answer</h4>
+                {studentAnswer ? (
+                  <p>
+                    <a
+                      href={`https://neuraliftx.onrender.com${studentAnswer.fileUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View uploaded answer
+                    </a>
+                  </p>
+                ) : (
+                  <p>No answer uploaded yet.</p>
+                )}
 
-              {studentAnswer && (
-                <>
-                  <button
-                    onClick={handleCheck}
-                    disabled={verifying}
-                    className="task-btn check"
-                  >
-                    {verifying ? "Checking..." : "Check"}
-                  </button>
+                {studentAnswer && (
+                  <>
+                    <button
+                      onClick={handleCheck}
+                      disabled={verifying}
+                      className="task-btn check"
+                    >
+                      {verifying ? "Checking..." : "Check"}
+                    </button>
 
-                  {verificationResult && (
-                    <div className="verification-box">
-                      <strong>Score: </strong>
-                      {verificationResult.score ?? "N/A"} <br />
-                      <strong>Feedback: </strong>
-                      {verificationResult.feedback ?? "No feedback"}
-                    </div>
-                  )}
-                </>
-              )}
+                    {verificationResult && (
+                      <div className="verification-box">
+                        <strong>Score: </strong>
+                        {verificationResult.score ?? "N/A"} <br />
+                        <strong>Feedback: </strong>
+                        {verificationResult.feedback ?? "No feedback"}
+                      </div>
+                    )}
+                  </>
+                )}
 
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={handleAnswerChange}
-                disabled={uploadingAnswer}
-              />
-              <button
-                onClick={handleSubmitAnswer}
-                disabled={!answerFile || uploadingAnswer}
-                className="task-btn upload"
-              >
-                {uploadingAnswer ? "Uploading..." : "Upload Answer"}
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
-  </div>
-);
-
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleAnswerChange}
+                  disabled={uploadingAnswer}
+                />
+                <button
+                  onClick={handleSubmitAnswer}
+                  disabled={!answerFile || uploadingAnswer}
+                  className="task-btn upload"
+                >
+                  {uploadingAnswer ? "Uploading..." : "Upload Answer"}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+    </div>
+  );
 }
 
 export default function Student() {
   useGlobalTheme();
 
   const navigate = useNavigate();
-  
+
   const token = localStorage.getItem("token_student");
 
   const [user, setUser] = useState(null);
@@ -473,7 +597,6 @@ export default function Student() {
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
   const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
   const [selectedPdf, setSelectedPdf] = useState(null);
-
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -675,14 +798,13 @@ export default function Student() {
   };
 
   const handleSubClick = (key) => {
-  setActiveSub(key);
+    setActiveSub(key);
 
-  // If file exists for this unit, set it for inline viewing
-  if (unitUploadedFiles[key]) {
-    setSelectedPdf(`https://neuraliftx.onrender.com${unitUploadedFiles[key]}`);
-  }
-};
-
+    // If file exists for this unit, set it for inline viewing
+    if (unitUploadedFiles[key]) {
+      setSelectedPdf(`https://neuraliftx.onrender.com${unitUploadedFiles[key]}`);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token_student");
@@ -692,6 +814,10 @@ export default function Student() {
   const handleUpdateProfilePic = (profilePicUrl) => {
     setUser((prev) => ({ ...prev, profilePicUrl }));
     setShowProfileModal(false);
+  };
+
+  const handleProfileUpdate = (updatedUser) => {
+    setUser(updatedUser);
   };
 
   const closeAnnouncementPopup = () => {
@@ -708,8 +834,9 @@ export default function Student() {
   };
 
   const handleGenerateQuiz = (assignmentId) => {
-  navigate(`/quiz/${assignmentId}`);
-};
+    navigate(`/quiz/${assignmentId}`);
+  };
+
   let contentArea = null;
   if (activeMain === "Home") {
     contentArea = <HomeDashboard token={token} />;
@@ -718,80 +845,76 @@ export default function Student() {
     activeSub === "academics-attendance"
   ) {
     contentArea = <AttendanceDashboard token={token} />;
-  }else if (activeMain === "Quiz/Assignments") {
-  contentArea = (
-    <div className="assignments-container">
-      {/* Show a message if there are no assignments */}
-      {assignments.length === 0 ? (
-        <p>No assignments available.</p>
-      ) : (
-        <div className="assignment-cards">
-          {assignments.map(({ _id, originalName, fileUrl }) => (
-            <div key={_id} className="assignment-card">
-              <a
-                href={`https://neuraliftx.onrender.com${fileUrl}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="assignment-link"
-              >
-                {originalName}
-              </a>
-              <button
-                className="generate-quiz-btn"
-                onClick={() => handleGenerateQuiz(_id)}
-              >
-                Generate Quiz
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-} else if (activeMain === "Academics" && activeSub === "academics-grades") {
-  contentArea = <Grades token={token} />;
-} else if (activeMain === "Personalisation Tracker") {
-  contentArea = (
-    <div style={{ padding: "2rem 1rem" }}>
-      <QuizPerformanceChart />
-    </div>
-  );
-} 
-else if (activeMain === "Certifications") {
-  contentArea = <CourseraCertifications token={token} />;
-} else if (
-  activeMain === "Top Rankers" &&
-  activeSub === "toprankers-individual"
-) {
-  contentArea = <IndividualLeaderboard />;
-} else if (activeMain === "Tasks") {
-  contentArea = <StudentTasks token={token} />;
-}else if (activeMain === "Alumni Arena") {
-  contentArea = <AlumniArena token={token} />;
-} 
-else if (activeMain === "Syllabus" && selectedPdf) {
-  contentArea = (
-    <div className="pdf-viewer-container">
-      <iframe
-        src={selectedPdf}
-        title="Syllabus PDF"
-        width="100%"
-        height="600px"
-        style={{
-          border: "none",
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-          background: "rgba(255,255,255,0.08)",
-          backdropFilter: "blur(12px)",
-        }}
-      />
-    </div>
-  );
-}
-
-else {
-  contentArea = <div>Select a menu item to view its content.</div>;
-}
+  } else if (activeMain === "Quiz/Assignments") {
+    contentArea = (
+      <div className="assignments-container">
+        {/* Show a message if there are no assignments */}
+        {assignments.length === 0 ? (
+          <p>No assignments available.</p>
+        ) : (
+          <div className="assignment-cards">
+            {assignments.map(({ _id, originalName, fileUrl }) => (
+              <div key={_id} className="assignment-card">
+                <a
+                  href={`https://neuraliftx.onrender.com${fileUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="assignment-link"
+                >
+                  {originalName}
+                </a>
+                <button
+                  className="generate-quiz-btn"
+                  onClick={() => handleGenerateQuiz(_id)}
+                >
+                  Generate Quiz
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  } else if (activeMain === "Academics" && activeSub === "academics-grades") {
+    contentArea = <Grades token={token} />;
+  } else if (activeMain === "Personalisation Tracker") {
+    contentArea = (
+      <div style={{ padding: "2rem 1rem" }}>
+        <QuizPerformanceChart />
+      </div>
+    );
+  } else if (activeMain === "Certifications") {
+    contentArea = <CourseraCertifications token={token} />;
+  } else if (
+    activeMain === "Top Rankers" &&
+    activeSub === "toprankers-individual"
+  ) {
+    contentArea = <IndividualLeaderboard />;
+  } else if (activeMain === "Tasks") {
+    contentArea = <StudentTasks token={token} />;
+  } else if (activeMain === "Alumni Arena") {
+    contentArea = <AlumniArena token={token} />;
+  } else if (activeMain === "Syllabus" && selectedPdf) {
+    contentArea = (
+      <div className="pdf-viewer-container">
+        <iframe
+          src={selectedPdf}
+          title="Syllabus PDF"
+          width="100%"
+          height="600px"
+          style={{
+            border: "none",
+            borderRadius: "12px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(12px)",
+          }}
+        />
+      </div>
+    );
+  } else {
+    contentArea = <div>Select a menu item to view its content.</div>;
+  }
 
   return (
     <div className="student-root">
@@ -926,6 +1049,7 @@ else {
           onClose={() => setShowProfileModal(false)}
           onLogout={handleLogout}
           onUpdateProfilePic={handleUpdateProfilePic}
+          onProfileUpdate={handleProfileUpdate}
         />
       )}
 
