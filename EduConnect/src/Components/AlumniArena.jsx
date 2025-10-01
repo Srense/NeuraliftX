@@ -10,11 +10,14 @@ const AlumniArena = ({ token }) => {
   useEffect(() => {
     const fetchAlumni = async () => {
       try {
-        const res = await axios.get("https://neuraliftx.onrender.com/api/alumni", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          "https://neuraliftx.onrender.com/api/alumni",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
-        // ensure array handling
+        // ✅ Ensure we always get an array
         let list = [];
         if (Array.isArray(res.data)) list = res.data;
         else if (Array.isArray(res.data.alumni)) list = res.data.alumni;
@@ -24,10 +27,13 @@ const AlumniArena = ({ token }) => {
           list.map(async (alum) => {
             try {
               const statusRes = await axios.get(
-                `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`,
+                `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`, // 👈 must be MongoDB _id
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              return { ...alum, connectionStatus: statusRes.data.status || "not_sent" };
+              return {
+                ...alum,
+                connectionStatus: statusRes.data.status || "not_sent",
+              };
             } catch {
               return { ...alum, connectionStatus: "not_sent" };
             }
@@ -35,9 +41,10 @@ const AlumniArena = ({ token }) => {
         );
 
         setAlumniList(updatedList);
-        setLoading(false);
       } catch (err) {
+        console.error("❌ Error fetching alumni:", err);
         setError("Failed to fetch alumni");
+      } finally {
         setLoading(false);
       }
     };
@@ -54,14 +61,19 @@ const AlumniArena = ({ token }) => {
       );
 
       if (res.data.success) {
+        // ✅ Update status locally without re-fetch
         setAlumniList((prev) =>
           prev.map((alum) =>
-            alum._id === alumniId ? { ...alum, connectionStatus: "pending" } : alum
+            alum._id === alumniId
+              ? { ...alum, connectionStatus: "pending" }
+              : alum
           )
         );
+      } else {
+        alert(res.data.error || "Failed to send request");
       }
     } catch (err) {
-      console.error("Error sending connection request:", err);
+      console.error("❌ Error sending connection request:", err);
     }
   };
 
@@ -71,13 +83,16 @@ const AlumniArena = ({ token }) => {
   return (
     <div className="alumni-arena-container">
       <h2 className="alumni-title">Alumni Arena</h2>
+
       {alumniList.length === 0 ? (
         <p className="alumni-empty">No alumni have registered yet.</p>
       ) : (
         <div className="alumni-grid">
           {alumniList.map((alum) => (
             <div key={alum._id} className="alumni-card">
-              <h3>{alum.name}</h3>
+              <h3>
+                {alum.firstName} {alum.lastName}
+              </h3>
               <p>
                 <strong>Company:</strong> {alum.company || "N/A"}
               </p>
@@ -91,7 +106,10 @@ const AlumniArena = ({ token }) => {
               <button
                 className={`connect-btn status-${alum.connectionStatus}`}
                 onClick={() => handleConnect(alum._id)}
-                disabled={alum.connectionStatus === "pending" || alum.connectionStatus === "accepted"}
+                disabled={
+                  alum.connectionStatus === "pending" ||
+                  alum.connectionStatus === "accepted"
+                }
               >
                 {alum.connectionStatus === "not_sent" && "Connect"}
                 {alum.connectionStatus === "pending" && "Pending..."}

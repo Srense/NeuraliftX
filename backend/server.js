@@ -300,7 +300,6 @@ const connectionSchema = new mongoose.Schema(
 
 
 
-
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -1665,112 +1664,111 @@ app.post(
   authorizeRole(["student"]),
   async (req, res) => {
     try {
-      const alumniId = req.params.alumniId;
-      const alumniObjectId = new mongoose.Types.ObjectId(alumniId);
+      const { alumniId } = req.params;
 
-      console.log("📩 Student", req.user._id, "→ Alumni", alumniObjectId);
-
+      // check duplicate
       const existing = await Connection.findOne({
         studentId: req.user._id,
-        alumniId: alumniObjectId,
+        alumniId,
       });
 
       if (existing) {
-        return res.status(400).json({ success: false, error: "Request already sent" });
+        return res.status(400).json({
+          success: false,
+          message: "Request already sent",
+          status: existing.status,
+        });
       }
 
-      const conn = new Connection({
+      const newConn = await Connection.create({
         studentId: req.user._id,
-        alumniId: alumniObjectId,
-        status: "pending",
+        alumniId,
       });
 
-      await conn.save();
-      res.json({ success: true, message: "Connection request sent" });
+      return res.json({
+        success: true,
+        message: "Connection request sent",
+        connection: newConn,
+      });
     } catch (err) {
-      console.error("Send request error:", err);
-      res.status(500).json({ success: false, error: "Failed to send request" });
+      console.error("❌ Error sending connection:", err);
+      res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
-// -------------------- Student checks status --------------------
+// 🔍 Student checks request status
 app.get(
   "/api/connect/status/:alumniId",
   authenticateJWT,
   authorizeRole(["student"]),
   async (req, res) => {
     try {
-      const alumniObjectId = new mongoose.Types.ObjectId(req.params.alumniId);
+      const { alumniId } = req.params;
 
-      const request = await Connection.findOne({
+      const conn = await Connection.findOne({
         studentId: req.user._id,
-        alumniId: alumniObjectId,
+        alumniId,
       });
 
-      res.json({
+      return res.json({
         success: true,
-        status: request ? request.status : "not_sent",
+        status: conn ? conn.status : "not_sent",
       });
     } catch (err) {
-      console.error("Check status error:", err);
-      res.status(500).json({ success: false, error: "Failed to fetch status" });
+      res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
-// -------------------- Alumni fetches pending requests --------------------
+// 📥 Alumni fetches pending requests
 app.get(
   "/api/alumni/requests",
   authenticateJWT,
   authorizeRole(["alumni"]),
   async (req, res) => {
     try {
-      const alumniObjectId = new mongoose.Types.ObjectId(req.user._id);
-      console.log("🔑 Alumni from token:", req.user);
-      console.log("🔍 Looking for requests with alumniId:", alumniObjectId);
-
       const requests = await Connection.find({
-        alumniId: alumniObjectId,
+        alumniId: req.user._id,
         status: "pending",
       }).populate("studentId", "firstName lastName email roleIdValue coins");
 
-      console.log("📩 Found requests:", requests.length);
-
-      res.json({ success: true, requests });
+      return res.json({ success: true, requests });
     } catch (err) {
-      console.error("Fetch requests error:", err);
-      res.status(500).json({ success: false, error: "Failed to fetch requests" });
+      res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
-// -------------------- Alumni accepts/rejects request --------------------
+// ✅ Alumni accepts/rejects request
 app.put(
   "/api/alumni/requests/:id",
   authenticateJWT,
   authorizeRole(["alumni"]),
   async (req, res) => {
     try {
+      const { id } = req.params;
       const { status } = req.body;
+
       if (!["accepted", "rejected"].includes(status)) {
         return res.status(400).json({ success: false, error: "Invalid status" });
       }
 
-      const request = await Connection.findByIdAndUpdate(
-        req.params.id,
+      const request = await Connection.findOneAndUpdate(
+        { _id: id, alumniId: req.user._id },
         { status },
         { new: true }
       );
 
       if (!request) {
-        return res.status(404).json({ success: false, error: "Request not found" });
+        return res
+          .status(404)
+          .json({ success: false, error: "Request not found" });
       }
 
-      res.json({ success: true, request });
+      return res.json({ success: true, request });
     } catch (err) {
-      console.error("Update request error:", err);
-      res.status(500).json({ success: false, error: "Failed to update request" });
+      res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );

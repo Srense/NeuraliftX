@@ -16,7 +16,6 @@ import "./Alumni.css";
 
 const Alumni = () => {
   const [form, setForm] = useState({
-    name: "",
     company: "",
     designation: "",
     description: "",
@@ -254,16 +253,6 @@ const Alumni = () => {
                 // Profile form
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
                     <Form.Label>Company</Form.Label>
                     <Form.Control
                       type="text"
@@ -329,7 +318,9 @@ const Alumni = () => {
                       className="rounded-circle"
                     />
                   </div>
-                  <h4>{profile.name}</h4>
+                  <h4>
+                    {profile.firstName} {profile.lastName}
+                  </h4>
                   <p className="mb-1">
                     {profile.designation} at {profile.company}
                   </p>
