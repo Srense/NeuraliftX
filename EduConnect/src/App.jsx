@@ -1,4 +1,4 @@
-import React from "react";
+import {React,useEffect} from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
@@ -63,9 +63,42 @@ const RoleBasedRoute = ({ allowedRoles }) => {
 };
 
 const App = () => {
+
+
+  useEffect(() => {
+    const addGoogleTranslateScript = () => {
+      const script = document.createElement('script');
+      script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      script.async = true;
+      document.body.appendChild(script);
+
+      window.googleTranslateElementInit = () => {
+        new window.google.translate.TranslateElement(
+          {
+            pageLanguage: 'en', // change as required
+          },
+          'google_translate_element'
+        );
+      };
+    };
+    addGoogleTranslateScript();
+  }, []);
+
   return (
     <Router>
       <Routes>
+        <div
+    id="google_translate_element"
+    style={{
+      position: "fixed",
+      top: 10,
+      right: 10,
+      zIndex: 9999,
+      background: "#fff",
+      padding: 5,
+      borderRadius: 8,
+    }}
+  ></div>
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<LoginSignup />} />
         <Route path="/student-login" element={<LoginSignup />} />
@@ -96,6 +129,7 @@ const App = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
+    
   );
 };
 
