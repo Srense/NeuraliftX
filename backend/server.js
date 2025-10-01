@@ -1434,23 +1434,24 @@ app.get("/api/alumni/students", authenticateJWT, authorizeRole(["alumni"]), asyn
 });
 
 // ✅ Get details of a single student (Alumni-only)
+// GET details of a single student (Alumni-only access)
 app.get("/api/alumni/student/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
   try {
     const studentId = req.params.id;
 
-    // Extended student info
+    // Fetch full student profile including extended fields and profilePicUrl
     const student = await User.findById(studentId).select(
       "firstName lastName email roleIdValue coins profilePicUrl bio percentage className internshipsDone coursesCompleted areaOfInterest"
     );
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    // Quiz performance
+    // Fetch recent quiz attempts with assignment name
     const quizAttempts = await QuizAttempt.find({ userId: studentId })
       .sort({ createdAt: -1 })
       .limit(5)
       .populate("assignmentId", "originalName");
 
-    // Assignments / tasks
+    // Fetch answer submissions / tasks for the student
     const tasks = await StudentAnswer.find({ studentId })
       .populate("taskId", "originalName fileUrl uploadedAt");
 

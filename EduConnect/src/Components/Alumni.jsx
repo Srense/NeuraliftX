@@ -438,6 +438,14 @@ const Alumni = () => {
             <Spinner animation="border" />
           ) : (
             <>
+            <img
+             src={selectedStudent?.profilePicUrl ? `https://neuraliftx.onrender.com${selectedStudent.profilePicUrl}` : "https://via.placeholder.com/120"}
+             alt={`${selectedStudent?.firstName} Profile`}
+             className="rounded-circle mb-3"
+             width={120}
+             height={120}
+            />
+
               <p>
                 <b>Email:</b> {selectedStudent?.email}
               </p>
