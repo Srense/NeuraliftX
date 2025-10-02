@@ -16,6 +16,7 @@ import "./Alumni.css";
 
 const Alumni = () => {
   const [form, setForm] = useState({
+    name: "", // <-- Added 'name' field
     company: "",
     designation: "",
     description: "",
@@ -48,12 +49,9 @@ const Alumni = () => {
       try {
         const res = await fetch(
           "https://neuraliftx.onrender.com/api/alumni/requests",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
-
         if (res.ok && data.success) {
           setRequests(data.requests || []);
         } else {
@@ -65,7 +63,6 @@ const Alumni = () => {
         setLoadingRequests(false);
       }
     };
-
     fetchRequests();
   }, [token]);
 
@@ -84,7 +81,6 @@ const Alumni = () => {
         }
       );
       const data = await res.json();
-
       if (res.ok && data.success) {
         setRequests((prev) => prev.filter((r) => r._id !== id));
       }
@@ -98,12 +94,9 @@ const Alumni = () => {
     const fetchProfile = async () => {
       if (!token) return;
       try {
-        const res = await fetch(
-          "https://neuraliftx.onrender.com/api/alumni/me",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         if (res.ok) {
           setProfile(data.alumni);
@@ -123,9 +116,7 @@ const Alumni = () => {
       try {
         const res = await fetch(
           "https://neuraliftx.onrender.com/api/alumni/students",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
         if (res.ok) {
@@ -151,7 +142,6 @@ const Alumni = () => {
     e.preventDefault();
     setStatus(null);
     setIsSubmitting(true);
-
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
         method: "POST",
@@ -162,7 +152,6 @@ const Alumni = () => {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-
       if (!res.ok) {
         setStatus({
           type: "danger",
@@ -180,16 +169,13 @@ const Alumni = () => {
 
   // Delete Alumni Profile
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete your profile?"))
-      return;
-
+    if (!window.confirm("Are you sure you want to delete your profile?")) return;
     setIsDeleting(true);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (res.ok) {
         setProfile(null);
         setStatus({
@@ -216,14 +202,11 @@ const Alumni = () => {
     try {
       const res = await fetch(
         `https://neuraliftx.onrender.com/api/alumni/student/${student._id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
       if (res.ok) {
         setStudentPerformance(data.quizAttempts || []);
-        // Extend selected student with full data received from backend
         setSelectedStudent({ ...student, ...data.student });
       } else {
         setStudentPerformance([]);
@@ -245,12 +228,19 @@ const Alumni = () => {
               <h2 className="text-center mb-4 alumni-heading">
                 🎓 Alumni Profile
               </h2>
-
               {status && <Alert variant={status.type}>{status.text}</Alert>}
-
               {!profile ? (
-                // Profile form
                 <Form onSubmit={handleSubmit}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Name</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Company</Form.Label>
                     <Form.Control
@@ -308,7 +298,6 @@ const Alumni = () => {
                   </Button>
                 </Form>
               ) : (
-                // Profile details
                 <div className="text-center alumni-profile">
                   <div className="alumni-avatar mx-auto mb-3">
                     <img
@@ -318,7 +307,7 @@ const Alumni = () => {
                     />
                   </div>
                   <h4>
-                    {profile.firstName} {profile.lastName}
+                    {profile.name}
                   </h4>
                   <p className="mb-1">
                     {profile.designation} at {profile.company}
@@ -438,7 +427,6 @@ const Alumni = () => {
             <Spinner animation="border" />
           ) : (
             <>
-
               <p>
                 <b>Email:</b> {selectedStudent?.email}
               </p>
@@ -448,15 +436,12 @@ const Alumni = () => {
               <p>
                 <b>Coins:</b> {selectedStudent?.coins}
               </p>
-
-              {/* Extended Profile Fields */}
               <p><b>Bio:</b> {selectedStudent?.bio || "N/A"}</p>
               <p><b>Percentage:</b> {selectedStudent?.percentage ?? "N/A"}</p>
               <p><b>Class:</b> {selectedStudent?.className || "N/A"}</p>
               <p><b>Internships Done:</b> {(selectedStudent?.internshipsDone?.join(", ")) || "N/A"}</p>
               <p><b>Courses Completed:</b> {(selectedStudent?.coursesCompleted?.join(", ")) || "N/A"}</p>
               <p><b>Area of Interest:</b> {(selectedStudent?.areaOfInterest?.join(", ")) || "N/A"}</p>
-
               <h5>📊 Recent Quiz Performance</h5>
               {studentPerformance && studentPerformance.length > 0 ? (
                 <ul>
