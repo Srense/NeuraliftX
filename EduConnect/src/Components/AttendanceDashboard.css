@@ -1,16 +1,61 @@
+/* ------------------------
+   Dashboard Container
+------------------------- */
 .attendance-dashboard {
   padding: 18px 6vw;
   width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
-  background: #fafaff;
+  background: #f8faff; /* softer background */
+  font-family: "Segoe UI", sans-serif;
+  color: #333;
 }
 
+.attendance-dashboard h2 {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 20px;
+  color: #2b3e73;
+  font-weight: 700;
+}
+
+/* ------------------------
+   Chart Section
+------------------------- */
+.attendance-chart-wrapper {
+  max-width: 600px;  /* keeps graph narrower */
+  margin: 0 auto 32px auto;
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px 15px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+}
+
+.chart-legend {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #3556ad;
+  font-weight: 600;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: #3556ad;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+/* ------------------------
+   Attendance Table
+------------------------- */
 .attendance-table-responsive {
   overflow-x: auto;
-  margin-bottom: 16px;
-  border-radius: 6px;
-  box-shadow: 0 0 2px #aaa;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   background: #fff;
 }
 
@@ -25,7 +70,7 @@
 .attendance-table th,
 .attendance-table td {
   border: 1px solid #e8e8e8;
-  padding: 8px 8px;
+  padding: 10px 8px;
   text-align: center;
 }
 
@@ -35,57 +80,91 @@
   font-weight: 600;
 }
 
+/* View button */
 .view-btn {
-  background: #f44336;
+  background: #3556ad;
   color: #fff;
-  padding: 5px 20px;
+  padding: 6px 20px;
   border: none;
   border-radius: 6px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .view-btn:hover {
-  background: #a32028;
+  background: #253a76;
 }
 
+/* ------------------------
+   Leave Types
+------------------------- */
 .attendance-leave-types {
-  margin-top: 16px;
+  margin-top: 20px;
   font-size: 16px;
   line-height: 1.7;
-  color: #333;
+  color: #444;
+  background: #fff;
+  padding: 15px 18px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
-/* Download button style */
+.attendance-leave-types span {
+  display: block;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* ------------------------
+   Download Button
+------------------------- */
 .download-pdf-btn {
   background: #f44336;
   color: #fff;
-  padding: 10px 28px;
+  padding: 12px 32px;
   border: none;
-  border-radius: 7px;
+  border-radius: 8px;
   font-size: 18px;
   font-weight: bold;
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 }
 .download-pdf-btn:hover {
   background: #b81f2e;
+  transform: translateY(-2px);
 }
 
+/* ------------------------
+   Responsiveness
+------------------------- */
 @media (max-width: 900px) {
   .attendance-table {
     font-size: 13px;
     min-width: 600px;
   }
 }
+
 @media (max-width: 600px) {
   .attendance-dashboard {
     padding: 4vw 2vw;
   }
+
+  .attendance-dashboard h2 {
+    font-size: 22px;
+  }
+
   .attendance-table {
-    font-size: 11px;
+    font-size: 12px;
     min-width: 500px;
   }
+
+  .attendance-chart-wrapper {
+    padding: 15px 10px;
+  }
+
   .download-pdf-btn {
     font-size: 16px;
-    padding: 8px 16px;
+    padding: 10px 20px;
   }
 }

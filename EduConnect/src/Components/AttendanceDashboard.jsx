@@ -32,20 +32,20 @@ export default function AttendanceDashboard() {
 
       
       {/* Chart */}
-      <div style={{ width: "100%", height: 320, marginTop: 32 }}>
-        <ResponsiveContainer>
-          <BarChart data={chartData}>
-            <XAxis dataKey="code" />
-            <YAxis domain={[0, 125]} />
-            <Tooltip />
-            <Bar dataKey="eligiblePercentage" fill="#008000" />
-          </BarChart>
-        </ResponsiveContainer>
-        <div style={{ textAlign: "center", marginTop: 8 }}>
-          <span style={{ display: "inline-block", width: 10, height: 10, background: "#008000", borderRadius: "50%", marginRight: 5 }}></span>
-          {/* <span style={{ color: "#3556ad" }}>Total Percentage</span> */}
-        </div>
-      </div>
+<div className="attendance-chart-wrapper">
+  <ResponsiveContainer width="100%" height={280}>
+    <BarChart data={chartData} barSize={35}>
+      <XAxis dataKey="code" />
+      <YAxis domain={[0, 125]} />
+      <Tooltip />
+      <Bar dataKey="eligiblePercentage" fill="#3556ad" radius={[8, 8, 0, 0]} />
+    </BarChart>
+  </ResponsiveContainer>
+  <div className="chart-legend">
+    <span className="legend-dot"></span>
+    <span>Total Percentage</span>
+  </div>
+</div>
 
       {/* Table */}
       <div className="attendance-table-responsive">
