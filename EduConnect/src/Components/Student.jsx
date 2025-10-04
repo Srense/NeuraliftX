@@ -1014,7 +1014,7 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
       </div>
     </div>
   );
-}else if (activeMain === "School Ranking" && activeSub === "toprankers-school") {
+}else if (activeMain === " Top Rankers" && activeSub === "toprankers-school") {
   contentArea = (
     <div className="opportunities-container">
       <h3 className="section-title">Top Ranked Schools</h3>
