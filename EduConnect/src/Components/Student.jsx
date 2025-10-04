@@ -973,7 +973,48 @@ else if (activeMain === "Live Projects") {
       </div>
     </div>
   );
-} else {
+} 
+else if (activeMain === "Academics" && activeSub === "academics-courses") {
+  contentArea = (
+    <div className="opportunities-container">
+      <h3 className="section-title">Available Courses</h3>
+      <div className="card-list">
+        <div className="opportunity-card">
+          <h4>Data Structures & Algorithms</h4>
+          <p>
+            Learn efficient problem-solving techniques using arrays, trees,
+            graphs, and dynamic programming.
+          </p>
+          <p><strong>Instructor:</strong> Prof. A. Sharma</p>
+          <p><strong>Duration:</strong> 10 Weeks</p>
+          <button className="enroll-btn">Enroll Now</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>Web Development with MERN Stack</h4>
+          <p>
+            Build modern full-stack web apps using MongoDB, Express, React, and
+            Node.js.
+          </p>
+          <p><strong>Instructor:</strong> Mr. R. Mehta</p>
+          <p><strong>Duration:</strong> 8 Weeks</p>
+          <button className="enroll-btn">Enroll Now</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>Machine Learning Fundamentals</h4>
+          <p>
+            Introduction to supervised and unsupervised learning with Python and
+            real-world datasets.
+          </p>
+          <p><strong>Instructor:</strong> Dr. N. Gupta</p>
+          <p><strong>Duration:</strong> 12 Weeks</p>
+          <button className="enroll-btn">Enroll Now</button>
+        </div>
+      </div>
+    </div>
+  );
+}else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
 

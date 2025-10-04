@@ -839,3 +839,19 @@ body {
 .contribute-btn:hover {
   background: linear-gradient(90deg, #0056b3, #0099cc);
 }
+.enroll-btn {
+  margin-top: 10px;
+  background: linear-gradient(90deg, #00b09b, #96c93d);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.enroll-btn:hover {
+  background: linear-gradient(90deg, #009875, #7bb13c);
+  transform: scale(1.05);
+}
