@@ -1,0 +1,105 @@
+.grades-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #f9f9f9;
+  font-family: "Poppins", sans-serif;
+}
+
+.grades-title {
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.subjects-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.subject-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 14px 30px;
+  font-size: 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 250px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.subject-btn:hover {
+  background-color: #0056b3;
+}
+
+.subject-btn.active {
+  background-color: #0056b3;
+}
+
+.arrow {
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+}
+
+.arrow.rotate {
+  transform: rotate(180deg);
+}
+
+/* Collapsible animation wrapper */
+.dropdown-wrapper {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: all 0.5s ease;
+  width: 320px;
+}
+
+.dropdown-wrapper.open {
+  max-height: 700px;
+  opacity: 1;
+}
+
+.dropdown {
+  background: #fff;
+  margin-top: 10px;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.section h4 {
+  color: #444;
+  margin-bottom: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  font-size: 0.95rem;
+}
+
+th {
+  background: #f0f0f0;
+  color: #333;
+}
