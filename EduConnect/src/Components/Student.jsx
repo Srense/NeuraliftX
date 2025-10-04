@@ -1014,6 +1014,43 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
       </div>
     </div>
   );
+}else if (activeMain === "Academics" && activeSub === "toprankers-school") {
+  contentArea = (
+    <div className="opportunities-container">
+      <h3 className="section-title">Top Ranked Schools</h3>
+      <div className="card-list">
+        <div className="opportunity-card">
+          <h4>Delhi Public School, Ranchi</h4>
+          <p><strong>Rank:</strong> #1</p>
+          <p><strong>Rating:</strong> ⭐⭐⭐⭐⭐ (4.9/5)</p>
+          <p>
+            Known for excellent academic performance, discipline, and advanced learning infrastructure.
+          </p>
+          <button className="view-btn">View Details</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>D.A.V. Public School, Khalari</h4>
+          <p><strong>Rank:</strong> #2</p>
+          <p><strong>Rating:</strong> ⭐⭐⭐⭐☆ (4.7/5)</p>
+          <p>
+            Focused on holistic education with emphasis on sports, science, and moral development.
+          </p>
+          <button className="view-btn">View Details</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>D.A.V. Public School, Kurali</h4>
+          <p><strong>Rank:</strong> #3</p>
+          <p><strong>Rating:</strong> ⭐⭐⭐⭐☆ (4.6/5)</p>
+          <p>
+            Recognized for co-curricular excellence, student leadership, and modern teaching methods.
+          </p>
+          <button className="view-btn">View Details</button>
+        </div>
+      </div>
+    </div>
+  );
 }else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }

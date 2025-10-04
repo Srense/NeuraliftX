@@ -855,3 +855,21 @@ body {
   background: linear-gradient(90deg, #009875, #7bb13c);
   transform: scale(1.05);
 }
+
+.view-btn {
+  margin-top: 10px;
+  background: linear-gradient(90deg, #0072ff, #00c6ff);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.view-btn:hover {
+  background: linear-gradient(90deg, #0052cc, #00aaff);
+  transform: scale(1.05);
+}
+
