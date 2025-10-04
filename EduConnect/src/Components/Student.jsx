@@ -912,7 +912,68 @@ export default function Student() {
         />
       </div>
     );
-  } else {
+  } else if (activeMain === "Internships") {
+  contentArea = (
+    <div className="opportunities-container">
+      <h3 className="section-title">Internship Opportunities</h3>
+      <div className="card-list">
+        <div className="opportunity-card">
+          <h4>Frontend Developer Intern</h4>
+          <p>Work with React and TailwindCSS to build dynamic dashboards.</p>
+          <p><strong>Duration:</strong> 3 Months</p>
+          <p><strong>Location:</strong> Remote</p>
+          <button className="apply-btn">Apply Now</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>Backend Developer Intern</h4>
+          <p>Assist in building REST APIs using Node.js and MongoDB.</p>
+          <p><strong>Duration:</strong> 2 Months</p>
+          <p><strong>Location:</strong> Hybrid (Delhi)</p>
+          <button className="apply-btn">Apply Now</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>AI Research Intern</h4>
+          <p>Work on AI/ML projects like chatbots and image recognition models.</p>
+          <p><strong>Duration:</strong> 6 Months</p>
+          <p><strong>Location:</strong> Remote</p>
+          <button className="apply-btn">Apply Now</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+else if (activeMain === "Live Projects") {
+  contentArea = (
+    <div className="opportunities-container">
+      <h3 className="section-title">Ongoing Live Projects</h3>
+      <div className="card-list">
+        <div className="opportunity-card">
+          <h4>NeuraLiftX Student Portal</h4>
+          <p>Collaborate on enhancing the student–alumni system using MERN stack.</p>
+          <p><strong>Tech Stack:</strong> React, Node.js, MongoDB</p>
+          <button className="contribute-btn">Contribute</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>AI Notes Summarizer</h4>
+          <p>Help build a tool that summarizes lecture notes using NLP.</p>
+          <p><strong>Tech Stack:</strong> Python, Flask, OpenAI API</p>
+          <button className="contribute-btn">Contribute</button>
+        </div>
+
+        <div className="opportunity-card">
+          <h4>Attendance Dashboard</h4>
+          <p>Improve student attendance visualization using Recharts.</p>
+          <p><strong>Tech Stack:</strong> React, Express</p>
+          <button className="contribute-btn">Contribute</button>
+        </div>
+      </div>
+    </div>
+  );
+} else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
 

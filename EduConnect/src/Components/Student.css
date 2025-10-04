@@ -769,3 +769,73 @@ body {
   padding-left: 0.5rem;
   border-left: 2px solid rgba(255,255,255,0.1);
 }
+
+
+.opportunities-container {
+  padding: 40px;
+  color: #fff;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.3);
+  margin: 30px;
+}
+
+.section-title {
+  font-size: 1.8rem;
+  margin-bottom: 30px;
+  color: #00bfff;
+  letter-spacing: 0.5px;
+}
+
+.card-list {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  flex-wrap: wrap;
+}
+
+.opportunity-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 25px;
+  width: 300px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.opportunity-card:hover {
+  transform: translateY(-8px);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.opportunity-card h4 {
+  color: #00d4ff;
+  margin-bottom: 12px;
+}
+
+.opportunity-card p {
+  font-size: 0.95rem;
+  color: #e0e0e0;
+  line-height: 1.5;
+  margin: 6px 0;
+}
+
+.apply-btn,
+.contribute-btn {
+  margin-top: 10px;
+  background: linear-gradient(90deg, #007bff, #00d4ff);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.apply-btn:hover,
+.contribute-btn:hover {
+  background: linear-gradient(90deg, #0056b3, #0099cc);
+}
