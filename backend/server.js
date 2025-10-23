@@ -1915,7 +1915,7 @@ app.put(
 );
 
 
-/ ✅ Start or get a chat (only if connected)
+// ✅ Start or get a chat (only if connected)
 app.post("/api/chat/start/:alumniId", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user._id;
