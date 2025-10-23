@@ -1711,23 +1711,39 @@ app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
 
 const Connection = mongoose.model("Connection", connectionSchema);
 
+// ✅ Connection Routes (Fixed Version)
 app.post(
   "/api/connect/:alumniId",
   authenticateJWT,
   authorizeRole(["student"]),
   async (req, res) => {
     try {
-      const { alumniId } = req.params;
+      let { alumniId } = req.params;
 
-      // validate
+      // Validate ObjectId
       if (!mongoose.Types.ObjectId.isValid(alumniId)) {
         return res.status(400).json({ success: false, error: "Invalid alumniId" });
       }
 
-      // check duplicate
+      // 🔍 Allow both User._id or Alumni._id
+      let targetAlumniUserId;
+      const alumniProfile = await Alumni.findById(alumniId);
+
+      if (alumniProfile) {
+        targetAlumniUserId = alumniProfile.userId; // alumniId refers to Alumni._id
+      } else {
+        // fallback: check if this is already a User._id
+        const userExists = await User.findById(alumniId);
+        if (!userExists || userExists.role !== "alumni") {
+          return res.status(404).json({ success: false, error: "Alumni not found" });
+        }
+        targetAlumniUserId = alumniId;
+      }
+
+      // Check for existing connection
       const existing = await Connection.findOne({
         studentId: req.user._id,
-        alumniId: new mongoose.Types.ObjectId(alumniId),
+        alumniId: targetAlumniUserId,
       });
 
       if (existing) {
@@ -1738,9 +1754,11 @@ app.post(
         });
       }
 
+      // Create new connection
       const newConn = await Connection.create({
-        studentId: new mongoose.Types.ObjectId(req.user._id),
-        alumniId: new mongoose.Types.ObjectId(alumniId),
+        studentId: req.user._id,
+        alumniId: targetAlumniUserId,
+        status: "pending",
       });
 
       return res.json({
@@ -1755,22 +1773,37 @@ app.post(
   }
 );
 
-// Student checks request status
+
+// ✅ Check connection status (Student)
 app.get(
   "/api/connect/status/:alumniId",
   authenticateJWT,
   authorizeRole(["student"]),
   async (req, res) => {
     try {
-      const { alumniId } = req.params;
+      let { alumniId } = req.params;
 
       if (!mongoose.Types.ObjectId.isValid(alumniId)) {
         return res.status(400).json({ success: false, error: "Invalid alumniId" });
       }
 
+      // Support both Alumni._id or User._id
+      let targetAlumniUserId;
+      const alumniProfile = await Alumni.findById(alumniId);
+
+      if (alumniProfile) {
+        targetAlumniUserId = alumniProfile.userId;
+      } else {
+        const userExists = await User.findById(alumniId);
+        if (!userExists || userExists.role !== "alumni") {
+          return res.status(404).json({ success: false, error: "Alumni not found" });
+        }
+        targetAlumniUserId = alumniId;
+      }
+
       const conn = await Connection.findOne({
-        studentId: new mongoose.Types.ObjectId(req.user._id),
-        alumniId: new mongoose.Types.ObjectId(alumniId),
+        studentId: req.user._id,
+        alumniId: targetAlumniUserId,
       });
 
       return res.json({
@@ -1778,12 +1811,14 @@ app.get(
         status: conn ? conn.status : "not_sent",
       });
     } catch (err) {
+      console.error("❌ Connection status error:", err);
       res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
-// Alumni fetches pending requests
+
+// ✅ Alumni fetches pending requests
 app.get(
   "/api/alumni/requests",
   authenticateJWT,
@@ -1791,18 +1826,21 @@ app.get(
   async (req, res) => {
     try {
       const requests = await Connection.find({
-        alumniId: new mongoose.Types.ObjectId(req.user._id),
+        alumniId: req.user._id,
         status: "pending",
-      }).populate("studentId", "firstName lastName email roleIdValue coins");
+      })
+        .populate("studentId", "firstName lastName email roleIdValue coins");
 
       return res.json({ success: true, requests });
     } catch (err) {
+      console.error("❌ Error fetching pending requests:", err);
       res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
-// Alumni accepts/rejects request
+
+// ✅ Alumni accepts or rejects connection
 app.put(
   "/api/alumni/requests/:id",
   authenticateJWT,
@@ -1821,23 +1859,23 @@ app.put(
       }
 
       const request = await Connection.findOneAndUpdate(
-        { _id: new mongoose.Types.ObjectId(id), alumniId: new mongoose.Types.ObjectId(req.user._id) },
+        { _id: id, alumniId: req.user._id },
         { status },
         { new: true }
       );
 
       if (!request) {
-        return res
-          .status(404)
-          .json({ success: false, error: "Request not found" });
+        return res.status(404).json({ success: false, error: "Request not found" });
       }
 
-      return res.json({ success: true, request });
+      res.json({ success: true, message: `Request ${status}`, request });
     } catch (err) {
+      console.error("❌ Error updating connection request:", err);
       res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
