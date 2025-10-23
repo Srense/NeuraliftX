@@ -27,19 +27,20 @@ const Alumni = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profile, setProfile] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
-  const [requests, setRequests] = useState([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentPerformance, setStudentPerformance] = useState([]);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
 
-  // ✅ Chat states
+  const [requests, setRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+
+  // Chat states
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
-  const [loadingChat, setLoadingChat] = useState(false);
 
   const token = localStorage.getItem("token_alumni");
 
@@ -49,12 +50,12 @@ const Alumni = () => {
       if (!token) return;
       setLoadingRequests(true);
       try {
-        const res = await fetch(
-          "https://neuraliftx.onrender.com/api/alumni/requests",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/requests", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         if (res.ok && data.success) setRequests(data.requests || []);
+        else setRequests([]);
       } catch (err) {
         console.error("Error fetching requests:", err);
       } finally {
@@ -64,7 +65,7 @@ const Alumni = () => {
     fetchRequests();
   }, [token]);
 
-  // ✅ Accept/Reject connection
+  // ✅ Accept / Reject request
   const handleAction = async (id, action) => {
     try {
       const res = await fetch(
@@ -81,8 +82,6 @@ const Alumni = () => {
       const data = await res.json();
       if (res.ok && data.success) {
         setRequests((prev) => prev.filter((r) => r._id !== id));
-        // Refresh connected students after acceptance
-        fetchConnectedStudents();
       }
     } catch (err) {
       console.error("Error updating request:", err);
@@ -106,37 +105,36 @@ const Alumni = () => {
     fetchProfile();
   }, [token]);
 
-  // ✅ Fetch connected students
-  const fetchConnectedStudents = async () => {
-    if (!token) return;
-    setLoadingStudents(true);
-    try {
-      const res = await fetch(
-        "https://neuraliftx.onrender.com/api/alumni/connections",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      if (res.ok && data.success) setStudents(data.connections || []);
-    } catch (err) {
-      console.error("Error fetching connected students:", err);
-    } finally {
-      setLoadingStudents(false);
-    }
-  };
-
+  // ✅ Fetch students
   useEffect(() => {
-    fetchConnectedStudents();
+    const fetchStudents = async () => {
+      if (!token) return;
+      setLoadingStudents(true);
+      try {
+        const res = await fetch("https://neuraliftx.onrender.com/api/alumni/students", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) setStudents(data.students || []);
+      } catch (err) {
+        console.error("Error fetching students:", err);
+      } finally {
+        setLoadingStudents(false);
+      }
+    };
+    fetchStudents();
   }, [token]);
 
-  // ✅ Form change handler
+  // ✅ Handle form change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  // ✅ Submit profile
+  // ✅ Save alumni profile
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setStatus(null);
     setIsSubmitting(true);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
@@ -148,13 +146,13 @@ const Alumni = () => {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok)
-        setStatus({ type: "danger", text: data.error || "Error saving profile" });
-      else {
+      if (!res.ok) {
+        setStatus({ type: "danger", text: data.error || "Error saving details" });
+      } else {
         setStatus({ type: "success", text: "Profile saved successfully!" });
         setProfile(data.alumni);
       }
-    } catch (err) {
+    } catch {
       setStatus({ type: "danger", text: "Server error. Try again later." });
     }
     setIsSubmitting(false);
@@ -162,7 +160,7 @@ const Alumni = () => {
 
   // ✅ Delete profile
   const handleDelete = async () => {
-    if (!window.confirm("Delete your profile?")) return;
+    if (!window.confirm("Are you sure you want to delete your profile?")) return;
     setIsDeleting(true);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
@@ -172,58 +170,80 @@ const Alumni = () => {
       if (res.ok) {
         setProfile(null);
         setStatus({ type: "success", text: "Profile deleted successfully." });
+      } else {
+        const data = await res.json();
+        setStatus({
+          type: "danger",
+          text: data.error || "Error deleting profile",
+        });
       }
-    } catch (err) {
+    } catch {
       setStatus({ type: "danger", text: "Server error. Try again later." });
     }
     setIsDeleting(false);
   };
 
-  // ✅ Open Chat Modal
-  const openChat = async (studentId) => {
-    setLoadingChat(true);
+  // ✅ View student details
+  const handleStudentClick = async (student) => {
+    setSelectedStudent(student);
+    setLoadingPerformance(true);
+    try {
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/alumni/student/${student._id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setStudentPerformance(data.quizAttempts || []);
+        setSelectedStudent({ ...student, ...data.student });
+      } else setStudentPerformance([]);
+    } catch {
+      setStudentPerformance([]);
+    } finally {
+      setLoadingPerformance(false);
+    }
+  };
+
+  // ✅ Start chat with a student (only if connected)
+  const startChat = async (studentId) => {
     try {
       const res = await fetch(
         `https://neuraliftx.onrender.com/api/chat/start/${studentId}`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { method: "POST", headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
       if (res.ok && data.success) {
         setActiveChat(data.conversation);
+        // Fetch messages
         const msgRes = await fetch(
           `https://neuraliftx.onrender.com/api/chat/${data.conversation._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const msgData = await msgRes.json();
-        if (msgRes.ok) setMessages(msgData.messages || []);
+        if (msgRes.ok && msgData.success) setMessages(msgData.messages);
+      } else {
+        alert("You can only chat with connected students.");
       }
     } catch (err) {
-      console.error("Error opening chat:", err);
+      console.error("Error starting chat:", err);
     }
-    setLoadingChat(false);
   };
 
   // ✅ Send message
   const sendMessage = async () => {
     if (!messageText.trim() || !activeChat) return;
     try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/chat/message`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            conversationId: activeChat._id,
-            text: messageText,
-          }),
-        }
-      );
+      const res = await fetch("https://neuraliftx.onrender.com/api/chat/message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          conversationId: activeChat._id,
+          text: messageText,
+        }),
+      });
       const data = await res.json();
       if (res.ok && data.success) {
         setMessages((prev) => [...prev, data.message]);
@@ -234,14 +254,31 @@ const Alumni = () => {
     }
   };
 
+  // ✅ Refresh chat manually
+  const refreshMessages = async () => {
+    if (!activeChat) return;
+    try {
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/chat/${activeChat._id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (res.ok && data.success) setMessages(data.messages);
+    } catch (err) {
+      console.error("Error refreshing messages:", err);
+    }
+  };
+
   return (
     <div className="alumni-wrapper">
       <Container className="py-5">
         <Row className="justify-content-center">
           <Col md={8} lg={6}>
-            <Card className="alumni-card p-4 shadow-lg border-0 rounded-4">
-              <h2 className="text-center mb-4">🎓 Alumni Profile</h2>
+            <Card className="alumni-card glass-card shadow-lg border-0 p-4 rounded-4">
+              <h2 className="text-center mb-4 alumni-heading">🎓 Alumni Profile</h2>
               {status && <Alert variant={status.type}>{status.text}</Alert>}
+
+              {/* ===== Profile Creation or Display ===== */}
               {!profile ? (
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
@@ -274,23 +311,41 @@ const Alumni = () => {
                       required
                     />
                   </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Description</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                    />
+                  </Form.Group>
                   <Button
                     type="submit"
-                    className="w-100"
+                    className="w-100 py-2 mt-3 alumni-btn"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Saving..." : "Submit"}
                   </Button>
                 </Form>
               ) : (
-                <div className="text-center">
+                <div className="text-center alumni-profile">
+                  <div className="alumni-avatar mx-auto mb-3">
+                    <img
+                      src="https://via.placeholder.com/120"
+                      alt="Profile"
+                      className="rounded-circle"
+                    />
+                  </div>
                   <h4>{profile.name}</h4>
-                  <p>
+                  <p className="mb-1">
                     {profile.designation} at {profile.company}
                   </p>
+                  <p className="text-muted">{profile.description}</p>
                   <Button
                     variant="danger"
-                    className="mt-3"
+                    className="w-100 mt-4"
                     onClick={handleDelete}
                     disabled={isDeleting}
                   >
@@ -302,10 +357,10 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* Connection Requests */}
+        {/* ===== Connection Requests ===== */}
         <Row className="mt-5">
           <Col>
-            <h3>📩 Connection Requests</h3>
+            <h3 className="mb-3">📩 Connection Requests</h3>
             {loadingRequests ? (
               <Spinner animation="border" />
             ) : requests.length === 0 ? (
@@ -319,16 +374,16 @@ const Alumni = () => {
                     </strong>{" "}
                     ({req.studentId.email})
                     <Button
+                      onClick={() => handleAction(req._id, "accepted")}
                       variant="success"
                       className="ms-2"
-                      onClick={() => handleAction(req._id, "accepted")}
                     >
                       Accept
                     </Button>
                     <Button
+                      onClick={() => handleAction(req._id, "rejected")}
                       variant="danger"
                       className="ms-2"
-                      onClick={() => handleAction(req._id, "rejected")}
                     >
                       Reject
                     </Button>
@@ -339,26 +394,32 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* Connected Students */}
+        {/* ===== Student Directory ===== */}
         <Row className="mt-5">
           <Col>
-            <h3>💬 Connected Students</h3>
+            <h3 className="mb-3">👩‍🎓 Student Directory</h3>
             {loadingStudents ? (
               <Spinner animation="border" />
-            ) : students.length === 0 ? (
-              <p>No connected students</p>
             ) : (
               <ListGroup>
-                {students.map((stu) => (
-                  <ListGroup.Item key={stu._id}>
-                    {stu.firstName} {stu.lastName} ({stu.email})
-                    <Button
-                      className="ms-2"
-                      variant="primary"
-                      onClick={() => openChat(stu._id)}
-                    >
-                      💬 Chat
-                    </Button>
+                {students.map((student) => (
+                  <ListGroup.Item key={student._id}>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div
+                        onClick={() => handleStudentClick(student)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        {student.firstName} {student.lastName} -{" "}
+                        {student.roleIdValue} ({student.coins} coins)
+                      </div>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => startChat(student._id)}
+                      >
+                        💬 Chat
+                      </Button>
+                    </div>
                   </ListGroup.Item>
                 ))}
               </ListGroup>
@@ -367,57 +428,70 @@ const Alumni = () => {
         </Row>
       </Container>
 
-      {/* ✅ Chat Modal */}
-      <Modal show={!!activeChat} onHide={() => setActiveChat(null)} size="lg">
+      {/* ===== Student Modal ===== */}
+      <Modal show={!!selectedStudent} onHide={() => setSelectedStudent(null)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Chat with Student</Modal.Title>
+          <Modal.Title>
+            Student Details - {selectedStudent?.firstName} {selectedStudent?.lastName}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {loadingChat ? (
+          {loadingPerformance ? (
             <Spinner animation="border" />
           ) : (
-            <div
-              style={{
-                maxHeight: "400px",
-                overflowY: "auto",
-                background: "#f7f7f7",
-                padding: "1rem",
-                borderRadius: "8px",
-              }}
-            >
-              {messages.length === 0 ? (
-                <p className="text-center text-muted">No messages yet.</p>
+            <>
+              <p><b>Email:</b> {selectedStudent?.email}</p>
+              <p><b>UID:</b> {selectedStudent?.roleIdValue}</p>
+              <p><b>Coins:</b> {selectedStudent?.coins}</p>
+              <h5>📊 Recent Quiz Performance</h5>
+              {studentPerformance.length > 0 ? (
+                <ul>
+                  {studentPerformance.map((p, i) => (
+                    <li key={i}>
+                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total}
+                    </li>
+                  ))}
+                </ul>
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg._id}
-                    style={{
-                      background:
-                        msg.senderId === activeChat.members[0]
-                          ? "#d1e7ff"
-                          : "#e9ecef",
-                      borderRadius: "8px",
-                      marginBottom: "8px",
-                      padding: "6px 10px",
-                    }}
-                  >
-                    {msg.text}
-                  </div>
-                ))
+                <p>No quiz data available.</p>
               )}
-            </div>
+            </>
           )}
         </Modal.Body>
-        <Modal.Footer>
-          <Form.Control
-            type="text"
-            placeholder="Type a message..."
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-          />
-          <Button onClick={sendMessage}>Send</Button>
-        </Modal.Footer>
       </Modal>
+
+      {/* ===== Chat Modal ===== */}
+      {activeChat && (
+        <Modal show centered onHide={() => setActiveChat(null)}>
+          <Modal.Header closeButton>
+            <Modal.Title>💬 Chat Window</Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ maxHeight: "400px", overflowY: "auto" }}>
+            {messages.map((msg) => (
+              <div
+                key={msg._id}
+                className={`p-2 my-1 rounded ${
+                  msg.senderId === activeChat.members[0] ? "bg-primary text-white" : "bg-light"
+                }`}
+              >
+                {msg.text}
+              </div>
+            ))}
+          </Modal.Body>
+          <Modal.Footer className="d-flex">
+            <Form.Control
+              type="text"
+              placeholder="Type message..."
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+            />
+            <Button onClick={sendMessage}>Send</Button>
+            <Button variant="outline-secondary" onClick={refreshMessages}>
+              🔁 Refresh
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </div>
   );
 };
