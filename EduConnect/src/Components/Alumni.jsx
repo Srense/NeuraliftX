@@ -16,7 +16,7 @@ import "./Alumni.css";
 
 const Alumni = () => {
   const [form, setForm] = useState({
-    name: "", // <-- Added 'name' field
+    name: "",
     company: "",
     designation: "",
     description: "",
@@ -27,21 +27,23 @@ const Alumni = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profile, setProfile] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Students
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentPerformance, setStudentPerformance] = useState([]);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
 
-  // Connection requests
-  const [requests, setRequests] = useState([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
+  // ✅ Chat states
+  const [activeChat, setActiveChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState("");
+  const [loadingChat, setLoadingChat] = useState(false);
 
   const token = localStorage.getItem("token_alumni");
 
-  // Fetch connection requests
+  // ✅ Fetch connection requests
   useEffect(() => {
     const fetchRequests = async () => {
       if (!token) return;
@@ -52,11 +54,7 @@ const Alumni = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
-        if (res.ok && data.success) {
-          setRequests(data.requests || []);
-        } else {
-          setRequests([]);
-        }
+        if (res.ok && data.success) setRequests(data.requests || []);
       } catch (err) {
         console.error("Error fetching requests:", err);
       } finally {
@@ -66,7 +64,7 @@ const Alumni = () => {
     fetchRequests();
   }, [token]);
 
-  // Handle Accept / Reject
+  // ✅ Accept/Reject connection
   const handleAction = async (id, action) => {
     try {
       const res = await fetch(
@@ -83,13 +81,15 @@ const Alumni = () => {
       const data = await res.json();
       if (res.ok && data.success) {
         setRequests((prev) => prev.filter((r) => r._id !== id));
+        // Refresh connected students after acceptance
+        fetchConnectedStudents();
       }
     } catch (err) {
       console.error("Error updating request:", err);
     }
   };
 
-  // Fetch alumni profile
+  // ✅ Fetch alumni profile
   useEffect(() => {
     const fetchProfile = async () => {
       if (!token) return;
@@ -98,9 +98,7 @@ const Alumni = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (res.ok) {
-          setProfile(data.alumni);
-        }
+        if (res.ok) setProfile(data.alumni);
       } catch (err) {
         console.error("Error fetching alumni profile:", err);
       }
@@ -108,39 +106,37 @@ const Alumni = () => {
     fetchProfile();
   }, [token]);
 
-  // Fetch all students
+  // ✅ Fetch connected students
+  const fetchConnectedStudents = async () => {
+    if (!token) return;
+    setLoadingStudents(true);
+    try {
+      const res = await fetch(
+        "https://neuraliftx.onrender.com/api/alumni/connections",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (res.ok && data.success) setStudents(data.connections || []);
+    } catch (err) {
+      console.error("Error fetching connected students:", err);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStudents = async () => {
-      if (!token) return;
-      setLoadingStudents(true);
-      try {
-        const res = await fetch(
-          "https://neuraliftx.onrender.com/api/alumni/students",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const data = await res.json();
-        if (res.ok) {
-          setStudents(data.students || []);
-        }
-      } catch (err) {
-        console.error("Error fetching students:", err);
-      } finally {
-        setLoadingStudents(false);
-      }
-    };
-    fetchStudents();
+    fetchConnectedStudents();
   }, [token]);
 
-  // Handle form changes
+  // ✅ Form change handler
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  // Save profile
+  // ✅ Submit profile
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(null);
     setIsSubmitting(true);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
@@ -152,12 +148,9 @@ const Alumni = () => {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setStatus({
-          type: "danger",
-          text: data.error || "Error saving details",
-        });
-      } else {
+      if (!res.ok)
+        setStatus({ type: "danger", text: data.error || "Error saving profile" });
+      else {
         setStatus({ type: "success", text: "Profile saved successfully!" });
         setProfile(data.alumni);
       }
@@ -167,9 +160,9 @@ const Alumni = () => {
     setIsSubmitting(false);
   };
 
-  // Delete Alumni Profile
+  // ✅ Delete profile
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete your profile?")) return;
+    if (!window.confirm("Delete your profile?")) return;
     setIsDeleting(true);
     try {
       const res = await fetch("https://neuraliftx.onrender.com/api/alumni", {
@@ -178,16 +171,7 @@ const Alumni = () => {
       });
       if (res.ok) {
         setProfile(null);
-        setStatus({
-          type: "success",
-          text: "Profile deleted successfully.",
-        });
-      } else {
-        const data = await res.json();
-        setStatus({
-          type: "danger",
-          text: data.error || "Error deleting profile",
-        });
+        setStatus({ type: "success", text: "Profile deleted successfully." });
       }
     } catch (err) {
       setStatus({ type: "danger", text: "Server error. Try again later." });
@@ -195,27 +179,58 @@ const Alumni = () => {
     setIsDeleting(false);
   };
 
-  // Select student & fetch full details
-  const handleStudentClick = async (student) => {
-    setSelectedStudent(student);
-    setLoadingPerformance(true);
+  // ✅ Open Chat Modal
+  const openChat = async (studentId) => {
+    setLoadingChat(true);
     try {
       const res = await fetch(
-        `https://neuraliftx.onrender.com/api/alumni/student/${student._id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `https://neuraliftx.onrender.com/api/chat/start/${studentId}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
       const data = await res.json();
-      if (res.ok) {
-        setStudentPerformance(data.quizAttempts || []);
-        setSelectedStudent({ ...student, ...data.student });
-      } else {
-        setStudentPerformance([]);
+      if (res.ok && data.success) {
+        setActiveChat(data.conversation);
+        const msgRes = await fetch(
+          `https://neuraliftx.onrender.com/api/chat/${data.conversation._id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const msgData = await msgRes.json();
+        if (msgRes.ok) setMessages(msgData.messages || []);
       }
     } catch (err) {
-      console.error("Error fetching student performance:", err);
-      setStudentPerformance([]);
-    } finally {
-      setLoadingPerformance(false);
+      console.error("Error opening chat:", err);
+    }
+    setLoadingChat(false);
+  };
+
+  // ✅ Send message
+  const sendMessage = async () => {
+    if (!messageText.trim() || !activeChat) return;
+    try {
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/chat/message`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            conversationId: activeChat._id,
+            text: messageText,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMessages((prev) => [...prev, data.message]);
+        setMessageText("");
+      }
+    } catch (err) {
+      console.error("Error sending message:", err);
     }
   };
 
@@ -224,10 +239,8 @@ const Alumni = () => {
       <Container className="py-5">
         <Row className="justify-content-center">
           <Col md={8} lg={6}>
-            <Card className="alumni-card glass-card shadow-lg border-0 p-4 rounded-4">
-              <h2 className="text-center mb-4 alumni-heading">
-                🎓 Alumni Profile
-              </h2>
+            <Card className="alumni-card p-4 shadow-lg border-0 rounded-4">
+              <h2 className="text-center mb-4">🎓 Alumni Profile</h2>
               {status && <Alert variant={status.type}>{status.text}</Alert>}
               {!profile ? (
                 <Form onSubmit={handleSubmit}>
@@ -261,83 +274,23 @@ const Alumni = () => {
                       required
                     />
                   </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Description</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      name="description"
-                      value={form.description}
-                      onChange={handleChange}
-                    />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>LinkedIn</Form.Label>
-                    <Form.Control
-                      type="url"
-                      name="linkedin"
-                      value={form.linkedin}
-                      onChange={handleChange}
-                    />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>GitHub</Form.Label>
-                    <Form.Control
-                      type="url"
-                      name="github"
-                      value={form.github}
-                      onChange={handleChange}
-                    />
-                  </Form.Group>
                   <Button
                     type="submit"
-                    className="w-100 py-2 mt-3 alumni-btn"
+                    className="w-100"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Saving..." : "Submit"}
                   </Button>
                 </Form>
               ) : (
-                <div className="text-center alumni-profile">
-                  <div className="alumni-avatar mx-auto mb-3">
-                    <img
-                      src="https://via.placeholder.com/120"
-                      alt="Profile"
-                      className="rounded-circle"
-                    />
-                  </div>
-                  <h4>
-                    {profile.name}
-                  </h4>
-                  <p className="mb-1">
+                <div className="text-center">
+                  <h4>{profile.name}</h4>
+                  <p>
                     {profile.designation} at {profile.company}
                   </p>
-                  <p className="text-muted">{profile.description}</p>
-                  <div className="d-flex justify-content-center gap-3 mt-3">
-                    {profile.linkedin && (
-                      <a
-                        href={profile.linkedin}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-outline-primary"
-                      >
-                        LinkedIn
-                      </a>
-                    )}
-                    {profile.github && (
-                      <a
-                        href={profile.github}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-outline-dark"
-                      >
-                        GitHub
-                      </a>
-                    )}
-                  </div>
                   <Button
                     variant="danger"
-                    className="w-100 mt-4"
+                    className="mt-3"
                     onClick={handleDelete}
                     disabled={isDeleting}
                   >
@@ -349,10 +302,10 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* Connection Requests Section */}
+        {/* Connection Requests */}
         <Row className="mt-5">
           <Col>
-            <h3 className="mb-3">📩 Connection Requests</h3>
+            <h3>📩 Connection Requests</h3>
             {loadingRequests ? (
               <Spinner animation="border" />
             ) : requests.length === 0 ? (
@@ -366,16 +319,16 @@ const Alumni = () => {
                     </strong>{" "}
                     ({req.studentId.email})
                     <Button
-                      onClick={() => handleAction(req._id, "accepted")}
                       variant="success"
                       className="ms-2"
+                      onClick={() => handleAction(req._id, "accepted")}
                     >
                       Accept
                     </Button>
                     <Button
-                      onClick={() => handleAction(req._id, "rejected")}
                       variant="danger"
                       className="ms-2"
+                      onClick={() => handleAction(req._id, "rejected")}
                     >
                       Reject
                     </Button>
@@ -386,22 +339,26 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* Student List */}
+        {/* Connected Students */}
         <Row className="mt-5">
           <Col>
-            <h3 className="mb-3">👩‍🎓 Student Directory</h3>
+            <h3>💬 Connected Students</h3>
             {loadingStudents ? (
               <Spinner animation="border" />
+            ) : students.length === 0 ? (
+              <p>No connected students</p>
             ) : (
               <ListGroup>
-                {students.map((student) => (
-                  <ListGroup.Item
-                    key={student._id}
-                    action
-                    onClick={() => handleStudentClick(student)}
-                  >
-                    {student.firstName} {student.lastName} -{" "}
-                    {student.roleIdValue} ({student.coins} coins)
+                {students.map((stu) => (
+                  <ListGroup.Item key={stu._id}>
+                    {stu.firstName} {stu.lastName} ({stu.email})
+                    <Button
+                      className="ms-2"
+                      variant="primary"
+                      onClick={() => openChat(stu._id)}
+                    >
+                      💬 Chat
+                    </Button>
                   </ListGroup.Item>
                 ))}
               </ListGroup>
@@ -410,54 +367,56 @@ const Alumni = () => {
         </Row>
       </Container>
 
-      {/* Student Detail Modal */}
-      <Modal
-        show={!!selectedStudent}
-        onHide={() => setSelectedStudent(null)}
-        size="lg"
-      >
+      {/* ✅ Chat Modal */}
+      <Modal show={!!activeChat} onHide={() => setActiveChat(null)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>
-            Student Details - {selectedStudent?.firstName}{" "}
-            {selectedStudent?.lastName}
-          </Modal.Title>
+          <Modal.Title>Chat with Student</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {loadingPerformance ? (
+          {loadingChat ? (
             <Spinner animation="border" />
           ) : (
-            <>
-              <p>
-                <b>Email:</b> {selectedStudent?.email}
-              </p>
-              <p>
-                <b>UID:</b> {selectedStudent?.roleIdValue}
-              </p>
-              <p>
-                <b>Coins:</b> {selectedStudent?.coins}
-              </p>
-              <p><b>Bio:</b> {selectedStudent?.bio || "N/A"}</p>
-              <p><b>Percentage:</b> {selectedStudent?.percentage ?? "N/A"}</p>
-              <p><b>Class:</b> {selectedStudent?.className || "N/A"}</p>
-              <p><b>Internships Done:</b> {(selectedStudent?.internshipsDone?.join(", ")) || "N/A"}</p>
-              <p><b>Courses Completed:</b> {(selectedStudent?.coursesCompleted?.join(", ")) || "N/A"}</p>
-              <p><b>Area of Interest:</b> {(selectedStudent?.areaOfInterest?.join(", ")) || "N/A"}</p>
-              <h5>📊 Recent Quiz Performance</h5>
-              {studentPerformance && studentPerformance.length > 0 ? (
-                <ul>
-                  {studentPerformance.map((p, idx) => (
-                    <li key={idx}>
-                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/
-                      {p.total} ({new Date(p.createdAt).toLocaleDateString()})
-                    </li>
-                  ))}
-                </ul>
+            <div
+              style={{
+                maxHeight: "400px",
+                overflowY: "auto",
+                background: "#f7f7f7",
+                padding: "1rem",
+                borderRadius: "8px",
+              }}
+            >
+              {messages.length === 0 ? (
+                <p className="text-center text-muted">No messages yet.</p>
               ) : (
-                <p>No quiz data available.</p>
+                messages.map((msg) => (
+                  <div
+                    key={msg._id}
+                    style={{
+                      background:
+                        msg.senderId === activeChat.members[0]
+                          ? "#d1e7ff"
+                          : "#e9ecef",
+                      borderRadius: "8px",
+                      marginBottom: "8px",
+                      padding: "6px 10px",
+                    }}
+                  >
+                    {msg.text}
+                  </div>
+                ))
               )}
-            </>
+            </div>
           )}
         </Modal.Body>
+        <Modal.Footer>
+          <Form.Control
+            type="text"
+            placeholder="Type a message..."
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+          />
+          <Button onClick={sendMessage}>Send</Button>
+        </Modal.Footer>
       </Modal>
     </div>
   );
