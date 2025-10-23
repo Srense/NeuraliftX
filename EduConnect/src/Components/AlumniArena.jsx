@@ -7,17 +7,14 @@ const AlumniArena = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // ✅ Fetch all alumni + their connection status
   useEffect(() => {
     const fetchAlumni = async () => {
       try {
-        const res = await axios.get(
-          "https://neuraliftx.onrender.com/api/alumni",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get("https://neuraliftx.onrender.com/api/alumni", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        // ✅ Ensure we always get an array
         let list = [];
         if (Array.isArray(res.data)) list = res.data;
         else if (Array.isArray(res.data.alumni)) list = res.data.alumni;
@@ -27,9 +24,10 @@ const AlumniArena = ({ token }) => {
           list.map(async (alum) => {
             try {
               const statusRes = await axios.get(
-                `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`, // 👈 must be MongoDB _id
+                `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
+
               return {
                 ...alum,
                 connectionStatus: statusRes.data.status || "not_sent",
@@ -49,29 +47,29 @@ const AlumniArena = ({ token }) => {
       }
     };
 
-    fetchAlumni();
+    if (token) fetchAlumni();
   }, [token]);
 
+  // ✅ Handle connect button click
   const handleConnect = async (alumniId) => {
-  try {
-    const res = await axios.post(
-      `https://neuraliftx.onrender.com/api/connect/${alumniId}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    if (res.data.success) {
-      // ✅ New request sent → pending
-      setAlumniList((prev) =>
-        prev.map((alum) =>
-          alum._id === alumniId
-            ? { ...alum, connectionStatus: "pending" }
-            : alum
-        )
+    try {
+      const res = await axios.post(
+        `https://neuraliftx.onrender.com/api/connect/${alumniId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-    } else {
-      // ✅ Duplicate case → use existing status
-      if (res.data.status) {
+
+      // ✅ When request is created → set status to pending
+      if (res.data.success && res.data.connection?.status === "pending") {
+        setAlumniList((prev) =>
+          prev.map((alum) =>
+            alum._id === alumniId
+              ? { ...alum, connectionStatus: "pending" }
+              : alum
+          )
+        );
+      } else if (res.data.status) {
+        // If backend says already accepted/pending/rejected
         setAlumniList((prev) =>
           prev.map((alum) =>
             alum._id === alumniId
@@ -79,14 +77,44 @@ const AlumniArena = ({ token }) => {
               : alum
           )
         );
+      } else {
+        alert(res.data.message || "Failed to send request");
       }
-      alert(res.data.message || "Failed to send request");
+    } catch (err) {
+      console.error("❌ Error sending connection request:", err);
+      alert("Failed to send connection request");
     }
-  } catch (err) {
-    console.error("❌ Error sending connection request:", err);
-  }
-};
+  };
 
+  // ✅ Reload connection status from backend after alumni accepts/rejects
+  const refreshStatus = async () => {
+    try {
+      const updated = await Promise.all(
+        alumniList.map(async (alum) => {
+          try {
+            const statusRes = await axios.get(
+              `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            return { ...alum, connectionStatus: statusRes.data.status || "not_sent" };
+          } catch {
+            return alum;
+          }
+        })
+      );
+      setAlumniList(updated);
+    } catch (err) {
+      console.error("Error refreshing connection statuses:", err);
+    }
+  };
+
+  // 🔁 Auto-refresh every 15 seconds (to update from alumni approvals)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshStatus();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [alumniList, token]);
 
   if (loading) return <p className="alumni-loading">Loading alumni...</p>;
   if (error) return <p className="alumni-error">{error}</p>;
@@ -113,7 +141,7 @@ const AlumniArena = ({ token }) => {
                 </p>
               )}
 
-              {/* ✅ Connect Button with status */}
+              {/* ✅ Connection button with real-time status */}
               <button
                 className={`connect-btn status-${alum.connectionStatus}`}
                 onClick={() => handleConnect(alum._id)}
