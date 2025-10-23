@@ -24,9 +24,10 @@ const AlumniArena = ({ token }) => {
           list.map(async (alum) => {
             try {
               const statusRes = await axios.get(
-                `https://neuraliftx.onrender.com/api/connect/status/${alum._id}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
+  `https://neuraliftx.onrender.com/api/connect/status/${alum.userId?._id || alum._id}`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
 
               return {
                 ...alum,
