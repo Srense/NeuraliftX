@@ -8,6 +8,8 @@ const AlumniArena = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeChat, setActiveChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState("");
 
   // ✅ Fetch all alumni + their connection status
   useEffect(() => {
@@ -133,12 +135,50 @@ const AlumniArena = ({ token }) => {
 
       if (res.data.success) {
         setActiveChat(res.data.conversation);
+        // Fetch messages immediately after chat opens
+        await loadMessages(res.data.conversation._id);
       } else {
         alert(res.data.message || "Unable to start chat.");
       }
     } catch (err) {
       console.error("❌ Error starting chat:", err);
       alert("You can chat only with connected alumni/students.");
+    }
+  };
+
+  // ✅ Load messages for a conversation
+  const loadMessages = async (conversationId) => {
+    try {
+      const res = await axios.get(
+        `https://neuraliftx.onrender.com/api/chat/${conversationId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        setMessages(res.data.messages);
+      }
+    } catch (err) {
+      console.error("❌ Error loading messages:", err);
+    }
+  };
+
+  // ✅ Send a new message
+  const sendMessage = async () => {
+    if (!messageText.trim()) return;
+    try {
+      const res = await axios.post(
+        "https://neuraliftx.onrender.com/api/chat/message",
+        {
+          conversationId: activeChat._id,
+          text: messageText,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        setMessages((prev) => [...prev, res.data.message]);
+        setMessageText("");
+      }
+    } catch (err) {
+      console.error("❌ Error sending message:", err);
     }
   };
 
@@ -197,13 +237,48 @@ const AlumniArena = ({ token }) => {
         </div>
       )}
 
-      {/* ✅ Integrated Chat Component */}
+      {/* ✅ Chat Modal / Chat Area */}
       {activeChat && (
-        <ChatArea
-          token={token}
-          conversation={activeChat}
-          onClose={() => setActiveChat(null)}
-        />
+        <div className="chat-modal">
+          <div className="chat-header">
+            <h4>💬 Chat Room</h4>
+            <div className="chat-actions">
+              <button className="refresh-btn" onClick={() => loadMessages(activeChat._id)}>
+                🔁 Refresh
+              </button>
+              <button className="close-btn" onClick={() => setActiveChat(null)}>
+                ✖ Close
+              </button>
+            </div>
+          </div>
+
+          <div className="chat-body">
+            {messages.length === 0 ? (
+              <p className="chat-empty">No messages yet. Start the conversation!</p>
+            ) : (
+              messages.map((msg) => (
+                <div
+                  key={msg._id}
+                  className={`chat-bubble ${
+                    msg.senderId === activeChat.members[0] ? "sent" : "received"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="chat-input">
+            <input
+              type="text"
+              placeholder="Type your message..."
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+            />
+            <button onClick={sendMessage}>Send</button>
+          </div>
+        </div>
       )}
     </div>
   );
