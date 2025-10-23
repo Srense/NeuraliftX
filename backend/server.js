@@ -316,6 +316,44 @@ const connectionSchema = new mongoose.Schema(
 );
 
 
+const conversationSchema = new mongoose.Schema(
+  {
+    members: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+// ✅ Only one default export
+const Conversation = mongoose.model("Conversation", conversationSchema);
+const messageSchema = new mongoose.Schema(
+  {
+    conversationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Conversation",
+      required: true,
+    },
+    senderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    text: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
+const Message = mongoose.model("Message", messageSchema);
+
 
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
@@ -1875,6 +1913,90 @@ app.put(
     }
   }
 );
+
+
+/ ✅ Start or get a chat (only if connected)
+app.post("/api/chat/start/:alumniId", authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { alumniId } = req.params;
+
+    // Verify connection exists & is accepted
+    const connection = await Connection.findOne({
+      $or: [
+        { studentId: userId, alumniId, status: "accepted" },
+        { studentId: alumniId, alumniId: userId, status: "accepted" },
+      ],
+    });
+
+    if (!connection) {
+      return res
+        .status(403)
+        .json({ success: false, message: "No valid connection found." });
+    }
+
+    // Check if conversation already exists
+    let convo = await Conversation.findOne({
+      members: { $all: [userId, alumniId] },
+    });
+
+    if (!convo) {
+      convo = await Conversation.create({ members: [userId, alumniId] });
+    }
+
+    res.json({ success: true, conversation: convo });
+  } catch (err) {
+    console.error("❌ Error starting chat:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ✅ Get messages of a conversation
+app.get("/api/chat/:conversationId", authenticateJWT, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+
+    const convo = await Conversation.findById(conversationId);
+    if (!convo || !convo.members.includes(userId)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Access denied to this chat." });
+    }
+
+    const messages = await Message.find({ conversationId }).sort("createdAt");
+    res.json({ success: true, messages });
+  } catch (err) {
+    console.error("❌ Error fetching messages:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ✅ Send a new message
+app.post("/api/chat/message", authenticateJWT, async (req, res) => {
+  try {
+    const { conversationId, text } = req.body;
+    const userId = req.user._id;
+
+    const convo = await Conversation.findById(conversationId);
+    if (!convo || !convo.members.includes(userId)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Access denied to this chat." });
+    }
+
+    const newMessage = await Message.create({
+      conversationId,
+      senderId: userId,
+      text,
+    });
+
+    res.json({ success: true, message: newMessage });
+  } catch (err) {
+    console.error("❌ Error sending message:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
 
 // Start server
 app.listen(PORT, () => {
