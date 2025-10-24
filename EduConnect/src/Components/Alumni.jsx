@@ -214,7 +214,6 @@ const Alumni = () => {
       const data = await res.json();
       if (res.ok && data.success) {
         setActiveChat(data.conversation);
-        // Fetch messages
         const msgRes = await fetch(
           `https://neuraliftx.onrender.com/api/chat/${data.conversation._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -278,7 +277,7 @@ const Alumni = () => {
               <h2 className="text-center mb-4 alumni-heading">🎓 Alumni Profile</h2>
               {status && <Alert variant={status.type}>{status.text}</Alert>}
 
-              {/* ===== Profile Creation or Display ===== */}
+              {/* Profile Section */}
               {!profile ? (
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
@@ -428,62 +427,42 @@ const Alumni = () => {
         </Row>
       </Container>
 
-      {/* ===== Student Modal ===== */}
-      <Modal show={!!selectedStudent} onHide={() => setSelectedStudent(null)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>
-            Student Details - {selectedStudent?.firstName} {selectedStudent?.lastName}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {loadingPerformance ? (
-            <Spinner animation="border" />
-          ) : (
-            <>
-              <p><b>Email:</b> {selectedStudent?.email}</p>
-              <p><b>UID:</b> {selectedStudent?.roleIdValue}</p>
-              <p><b>Coins:</b> {selectedStudent?.coins}</p>
-              <h5>📊 Recent Quiz Performance</h5>
-              {studentPerformance.length > 0 ? (
-                <ul>
-                  {studentPerformance.map((p, i) => (
-                    <li key={i}>
-                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No quiz data available.</p>
-              )}
-            </>
-          )}
-        </Modal.Body>
-      </Modal>
-
       {/* ===== Chat Modal ===== */}
       {activeChat && (
-        <Modal show centered onHide={() => setActiveChat(null)}>
+        <Modal show centered onHide={() => setActiveChat(null)} size="lg">
           <Modal.Header closeButton>
             <Modal.Title>💬 Chat Window</Modal.Title>
           </Modal.Header>
-          <Modal.Body style={{ maxHeight: "400px", overflowY: "auto" }}>
-            {messages.map((msg) => (
-              <div
-                key={msg._id}
-                className={`p-2 my-1 rounded ${
-                  msg.senderId === activeChat.members[0] ? "bg-primary text-white" : "bg-light"
-                }`}
-              >
-                {msg.text}
-              </div>
-            ))}
+
+          <Modal.Body className="chat-body">
+            {messages.length === 0 ? (
+              <p className="text-center text-muted">No messages yet...</p>
+            ) : (
+              messages.map((msg) => (
+                <div
+                  key={msg._id}
+                  className={`chat-bubble ${
+                    msg.senderId === activeChat.members[0]
+                      ? "chat-sender"
+                      : "chat-receiver"
+                  }`}
+                >
+                  <div className="chat-text">{msg.text}</div>
+                  <div className="chat-sender-name">
+                    {msg.senderId === activeChat.members[0] ? "You" : "Student"}
+                  </div>
+                </div>
+              ))
+            )}
           </Modal.Body>
-          <Modal.Footer className="d-flex">
+
+          <Modal.Footer className="d-flex align-items-center">
             <Form.Control
               type="text"
-              placeholder="Type message..."
+              placeholder="Type your message..."
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
+              style={{ color: "black" }}
             />
             <Button onClick={sendMessage}>Send</Button>
             <Button variant="outline-secondary" onClick={refreshMessages}>
