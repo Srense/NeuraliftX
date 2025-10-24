@@ -214,6 +214,7 @@ const Alumni = () => {
       const data = await res.json();
       if (res.ok && data.success) {
         setActiveChat(data.conversation);
+        // Fetch messages
         const msgRes = await fetch(
           `https://neuraliftx.onrender.com/api/chat/${data.conversation._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -427,41 +428,62 @@ const Alumni = () => {
         </Row>
       </Container>
 
+      {/* ===== Student Modal ===== */}
+      <Modal show={!!selectedStudent} onHide={() => setSelectedStudent(null)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Student Details - {selectedStudent?.firstName} {selectedStudent?.lastName}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {loadingPerformance ? (
+            <Spinner animation="border" />
+          ) : (
+            <>
+              <p><b>Email:</b> {selectedStudent?.email}</p>
+              <p><b>UID:</b> {selectedStudent?.roleIdValue}</p>
+              <p><b>Coins:</b> {selectedStudent?.coins}</p>
+              <h5>📊 Recent Quiz Performance</h5>
+              {studentPerformance.length > 0 ? (
+                <ul>
+                  {studentPerformance.map((p, i) => (
+                    <li key={i}>
+                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No quiz data available.</p>
+              )}
+            </>
+          )}
+        </Modal.Body>
+      </Modal>
+
       {/* ===== Chat Modal ===== */}
       {activeChat && (
-        <Modal show centered onHide={() => setActiveChat(null)} size="lg">
+        <Modal show centered onHide={() => setActiveChat(null)}>
           <Modal.Header closeButton>
             <Modal.Title>💬 Chat Window</Modal.Title>
           </Modal.Header>
-
-          <Modal.Body className="chat-body">
-            {messages.length === 0 ? (
-              <p className="text-center text-muted">No messages yet...</p>
-            ) : (
-              messages.map((msg) => {
-                const isYou = msg.senderId === profile?._id;
-                return (
-                  <div
-                    key={msg._id}
-                    className={`chat-bubble ${isYou ? "chat-sender" : "chat-receiver"}`}
-                  >
-                    <div className="chat-text">{msg.text}</div>
-                    <div className="chat-sender-name">
-                      {isYou ? "You" : "Student"}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+          <Modal.Body style={{ maxHeight: "400px", overflowY: "auto" }}>
+            {messages.map((msg) => (
+              <div
+                key={msg._id}
+                className={`p-2 my-1 rounded ${
+                  msg.senderId === activeChat.members[0] ? "bg-primary text-white" : "bg-light"
+                }`}
+              >
+                {msg.text}
+              </div>
+            ))}
           </Modal.Body>
-
-          <Modal.Footer className="d-flex align-items-center">
+          <Modal.Footer className="d-flex">
             <Form.Control
               type="text"
               placeholder="Type message..."
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              style={{ color: "black" }}
             />
             <Button onClick={sendMessage}>Send</Button>
             <Button variant="outline-secondary" onClick={refreshMessages}>
