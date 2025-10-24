@@ -5,32 +5,50 @@ import "./ChatArea.css";
 const ChatArea = ({ token, conversation, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [userId, setUserId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // ✅ Load messages initially
+  // ✅ Decode token to get current user's ID
+  useEffect(() => {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setUserId(payload.id || payload._id || payload.userId);
+    } catch (err) {
+      console.warn("Unable to parse JWT:", err);
+    }
+  }, [token]);
+
+  // ✅ Fetch chat messages
   const loadMessages = async () => {
+    if (!conversation?._id) return;
+    setLoading(true);
     try {
       const res = await axios.get(
         `https://neuraliftx.onrender.com/api/chat/${conversation._id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
       if (res.data.success) {
         setMessages(res.data.messages);
       }
     } catch (err) {
-      console.error("❌ Error loading messages:", err);
+      console.error("Error loading messages:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (conversation?._id) loadMessages();
+    loadMessages();
   }, [conversation]);
 
-  // ✅ Send new message
+  // ✅ Send message
   const sendMessage = async () => {
     if (!text.trim()) return;
     try {
       const res = await axios.post(
-        "https://neuraliftx.onrender.com/api/chat/message",
+        `https://neuraliftx.onrender.com/api/chat/message`,
         {
           conversationId: conversation._id,
           text,
@@ -42,37 +60,43 @@ const ChatArea = ({ token, conversation, onClose }) => {
         setText("");
       }
     } catch (err) {
-      console.error("❌ Error sending message:", err);
+      console.error("Error sending message:", err);
     }
   };
 
   return (
-    <div className="chat-window">
+    <div className="chat-modal">
       <div className="chat-header">
-        <span className="chat-title">💬 Chat Window</span>
-        <button className="close-btn" onClick={onClose}>
+        <h4>💬 Chat Window</h4>
+        <button className="close-chat" onClick={onClose}>
           ✖
         </button>
       </div>
 
       <div className="chat-body">
-        {messages.length === 0 ? (
-          <p className="chat-empty">No messages yet. Start the conversation!</p>
+        {loading ? (
+          <p className="loading-msg">Loading messages...</p>
+        ) : messages.length === 0 ? (
+          <p className="no-msg">No messages yet. Say hi 👋</p>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg._id}
-              className={`chat-bubble ${
-                msg.senderId === conversation.members[0] ? "sent" : "received"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))
+          messages.map((msg) => {
+            const isMine = msg.senderId === userId;
+            return (
+              <div
+                key={msg._id}
+                className={`message-bubble ${isMine ? "sent" : "received"}`}
+              >
+                <div className="message-text">{msg.text}</div>
+                <div className="sender-name">
+                  {isMine ? "You" : msg.senderName || "Other"}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
-      <div className="chat-footer">
+      <div className="chat-input">
         <input
           type="text"
           placeholder="Type message..."
@@ -80,12 +104,8 @@ const ChatArea = ({ token, conversation, onClose }) => {
           onChange={(e) => setText(e.target.value)}
         />
         <div className="chat-actions">
-          <button onClick={sendMessage} className="send-btn">
-            Send
-          </button>
-          <button onClick={loadMessages} className="refresh-btn">
-            Refresh
-          </button>
+          <button onClick={sendMessage}>Send</button>
+          <button onClick={loadMessages}>🔄 Refresh</button>
         </div>
       </div>
     </div>
