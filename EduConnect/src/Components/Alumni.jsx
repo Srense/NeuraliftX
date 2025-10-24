@@ -277,7 +277,7 @@ const Alumni = () => {
               <h2 className="text-center mb-4 alumni-heading">🎓 Alumni Profile</h2>
               {status && <Alert variant={status.type}>{status.text}</Alert>}
 
-              {/* Profile Section */}
+              {/* ===== Profile Creation or Display ===== */}
               {!profile ? (
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
@@ -438,28 +438,27 @@ const Alumni = () => {
             {messages.length === 0 ? (
               <p className="text-center text-muted">No messages yet...</p>
             ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg._id}
-                  className={`chat-bubble ${
-                    msg.senderId === activeChat.members[0]
-                      ? "chat-sender"
-                      : "chat-receiver"
-                  }`}
-                >
-                  <div className="chat-text">{msg.text}</div>
-                  <div className="chat-sender-name">
-                    {msg.senderId === activeChat.members[0] ? "You" : "Student"}
+              messages.map((msg) => {
+                const isYou = msg.senderId === profile?._id;
+                return (
+                  <div
+                    key={msg._id}
+                    className={`chat-bubble ${isYou ? "chat-sender" : "chat-receiver"}`}
+                  >
+                    <div className="chat-text">{msg.text}</div>
+                    <div className="chat-sender-name">
+                      {isYou ? "You" : "Student"}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </Modal.Body>
 
           <Modal.Footer className="d-flex align-items-center">
             <Form.Control
               type="text"
-              placeholder="Type your message..."
+              placeholder="Type message..."
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               style={{ color: "black" }}
