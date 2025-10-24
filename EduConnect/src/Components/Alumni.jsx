@@ -37,11 +37,10 @@ const Alumni = () => {
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
 
-  // Chat states
+  // ✅ Chat States
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
-
   const token = localStorage.getItem("token_alumni");
 
   // ✅ Fetch connection requests
@@ -65,7 +64,7 @@ const Alumni = () => {
     fetchRequests();
   }, [token]);
 
-  // ✅ Accept / Reject request
+  // ✅ Accept / Reject connection requests
   const handleAction = async (id, action) => {
     try {
       const res = await fetch(
@@ -105,7 +104,7 @@ const Alumni = () => {
     fetchProfile();
   }, [token]);
 
-  // ✅ Fetch students
+  // ✅ Fetch all students
   useEffect(() => {
     const fetchStudents = async () => {
       if (!token) return;
@@ -158,7 +157,7 @@ const Alumni = () => {
     setIsSubmitting(false);
   };
 
-  // ✅ Delete profile
+  // ✅ Delete alumni profile
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete your profile?")) return;
     setIsDeleting(true);
@@ -183,28 +182,7 @@ const Alumni = () => {
     setIsDeleting(false);
   };
 
-  // ✅ View student details
-  const handleStudentClick = async (student) => {
-    setSelectedStudent(student);
-    setLoadingPerformance(true);
-    try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/alumni/student/${student._id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        setStudentPerformance(data.quizAttempts || []);
-        setSelectedStudent({ ...student, ...data.student });
-      } else setStudentPerformance([]);
-    } catch {
-      setStudentPerformance([]);
-    } finally {
-      setLoadingPerformance(false);
-    }
-  };
-
-  // ✅ Start chat with a student (only if connected)
+  // ✅ Start chat with connected student
   const startChat = async (studentId) => {
     try {
       const res = await fetch(
@@ -214,7 +192,6 @@ const Alumni = () => {
       const data = await res.json();
       if (res.ok && data.success) {
         setActiveChat(data.conversation);
-        // Fetch messages
         const msgRes = await fetch(
           `https://neuraliftx.onrender.com/api/chat/${data.conversation._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -229,7 +206,7 @@ const Alumni = () => {
     }
   };
 
-  // ✅ Send message
+  // ✅ Send a message
   const sendMessage = async () => {
     if (!messageText.trim() || !activeChat) return;
     try {
@@ -278,7 +255,6 @@ const Alumni = () => {
               <h2 className="text-center mb-4 alumni-heading">🎓 Alumni Profile</h2>
               {status && <Alert variant={status.type}>{status.text}</Alert>}
 
-              {/* ===== Profile Creation or Display ===== */}
               {!profile ? (
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
@@ -331,13 +307,11 @@ const Alumni = () => {
                 </Form>
               ) : (
                 <div className="text-center alumni-profile">
-                  <div className="alumni-avatar mx-auto mb-3">
-                    <img
-                      src="https://via.placeholder.com/120"
-                      alt="Profile"
-                      className="rounded-circle"
-                    />
-                  </div>
+                  <img
+                    src="https://via.placeholder.com/120"
+                    alt="Profile"
+                    className="rounded-circle mb-3"
+                  />
                   <h4>{profile.name}</h4>
                   <p className="mb-1">
                     {profile.designation} at {profile.company}
@@ -357,10 +331,10 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* ===== Connection Requests ===== */}
+        {/* Connection Requests */}
         <Row className="mt-5">
           <Col>
-            <h3 className="mb-3">📩 Connection Requests</h3>
+            <h3>📩 Connection Requests</h3>
             {loadingRequests ? (
               <Spinner animation="border" />
             ) : requests.length === 0 ? (
@@ -394,10 +368,10 @@ const Alumni = () => {
           </Col>
         </Row>
 
-        {/* ===== Student Directory ===== */}
+        {/* Student Directory */}
         <Row className="mt-5">
           <Col>
-            <h3 className="mb-3">👩‍🎓 Student Directory</h3>
+            <h3>👩‍🎓 Student Directory</h3>
             {loadingStudents ? (
               <Spinner animation="border" />
             ) : (
@@ -405,12 +379,8 @@ const Alumni = () => {
                 {students.map((student) => (
                   <ListGroup.Item key={student._id}>
                     <div className="d-flex justify-content-between align-items-center">
-                      <div
-                        onClick={() => handleStudentClick(student)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        {student.firstName} {student.lastName} -{" "}
-                        {student.roleIdValue} ({student.coins} coins)
+                      <div onClick={() => setSelectedStudent(student)} style={{ cursor: "pointer" }}>
+                        {student.firstName} {student.lastName}
                       </div>
                       <Button
                         variant="outline-primary"
@@ -428,62 +398,49 @@ const Alumni = () => {
         </Row>
       </Container>
 
-      {/* ===== Student Modal ===== */}
-      <Modal show={!!selectedStudent} onHide={() => setSelectedStudent(null)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>
-            Student Details - {selectedStudent?.firstName} {selectedStudent?.lastName}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {loadingPerformance ? (
-            <Spinner animation="border" />
-          ) : (
-            <>
-              <p><b>Email:</b> {selectedStudent?.email}</p>
-              <p><b>UID:</b> {selectedStudent?.roleIdValue}</p>
-              <p><b>Coins:</b> {selectedStudent?.coins}</p>
-              <h5>📊 Recent Quiz Performance</h5>
-              {studentPerformance.length > 0 ? (
-                <ul>
-                  {studentPerformance.map((p, i) => (
-                    <li key={i}>
-                      {p.assignmentId?.originalName || "Quiz"}: {p.score}/{p.total}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No quiz data available.</p>
-              )}
-            </>
-          )}
-        </Modal.Body>
-      </Modal>
-
-      {/* ===== Chat Modal ===== */}
+      {/* Chat Modal */}
       {activeChat && (
         <Modal show centered onHide={() => setActiveChat(null)}>
           <Modal.Header closeButton>
             <Modal.Title>💬 Chat Window</Modal.Title>
           </Modal.Header>
-          <Modal.Body style={{ maxHeight: "400px", overflowY: "auto" }}>
+          <Modal.Body style={{ background: "#ece5dd", maxHeight: "400px", overflowY: "auto" }}>
             {messages.map((msg) => (
               <div
                 key={msg._id}
-                className={`p-2 my-1 rounded ${
-                  msg.senderId === activeChat.members[0] ? "bg-primary text-white" : "bg-light"
-                }`}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems:
+                    msg.senderId === activeChat.members[0] ? "flex-end" : "flex-start",
+                }}
               >
-                {msg.text}
+                <div
+                  style={{
+                    backgroundColor:
+                      msg.senderId === activeChat.members[0] ? "#dcf8c6" : "white",
+                    padding: "8px 14px",
+                    borderRadius: "15px",
+                    maxWidth: "70%",
+                    marginBottom: "5px",
+                    color: "#111",
+                  }}
+                >
+                  {msg.text}
+                </div>
+                <small style={{ color: "#555", fontSize: "11px", marginBottom: "10px" }}>
+                  {msg.senderId === activeChat.members[0] ? "You" : "Student"}
+                </small>
               </div>
             ))}
           </Modal.Body>
-          <Modal.Footer className="d-flex">
+          <Modal.Footer style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <Form.Control
               type="text"
               placeholder="Type message..."
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
+              style={{ color: "black" }} // ✅ Input text black
             />
             <Button onClick={sendMessage}>Send</Button>
             <Button variant="outline-secondary" onClick={refreshMessages}>
