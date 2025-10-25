@@ -1091,7 +1091,7 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
           <span
   className="icon"
   title="Home"
-  onClick={() => setActiveSection("home")}
+  onClick={() => handleMainClick("Home")}
   style={{ cursor: "pointer" }}
 >
   &#8962;
