@@ -1088,9 +1088,15 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
           <span className="icon" title="Library">
             &#128214;
           </span>
-          <span className="icon" title="Home">
-            &#8962;
-          </span>
+          <span
+  className="icon"
+  title="Home"
+  onClick={() => setActiveSection("home")}
+  style={{ cursor: "pointer" }}
+>
+  &#8962;
+</span>
+
           <span className="icon" title="Settings">
             &#9881;
           </span>
