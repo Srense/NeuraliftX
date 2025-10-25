@@ -388,6 +388,7 @@ export default function Faculty() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeSection, setActiveSection] = useState("home");
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMain, setActiveMain] = useState("Home");
@@ -409,8 +410,6 @@ export default function Faculty() {
 
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
-  const [activeSection, setActiveSection] = useState("home");
-
 
   const [showFacultyAnswersModal, setShowFacultyAnswersModal] = useState(false);
   const [selectedTaskForAnswers, setSelectedTaskForAnswers] = useState(null);
@@ -473,6 +472,11 @@ export default function Faculty() {
       ],
     },
   ];
+
+  let contentArea;
+  if (activeSection === "home") contentArea = <FacultyHomeDashboard />;
+  else if (activeSection === "assignments") contentArea = <Assignments />;
+  else if (activeSection === "students") contentArea = <StudentList />;
 
   useEffect(() => {
   async function fetchSyllabusUploads() {
@@ -907,10 +911,11 @@ export default function Faculty() {
           <span className="icon" title="Library">
             📚
           </span>
-          <span className="icon"
+          <span  className="icon"
   title="Home"
   onClick={() => setActiveSection("home")}
-  style={{ cursor: "pointer" }}>
+  style={{ cursor: "pointer", marginRight: "1rem" }}
+>
             🏠
           </span>
           <span className="icon" title="Settings">
