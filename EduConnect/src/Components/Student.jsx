@@ -1085,8 +1085,8 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
           <span className="icon" title="Notifications">
             &#128276;
           </span>
-          <span className="icon" title="Library">
-            &#128214;
+          <span className="icon" title="Social">
+           &#128172;
           </span>
           <span
   className="icon"
