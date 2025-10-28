@@ -355,28 +355,30 @@ const messageSchema = new mongoose.Schema(
 const Message = mongoose.model("Message", messageSchema);
 
 
+const mediaSchema = new mongoose.Schema({
+  fileUrl: { type: String },
+  mimeType: { type: String },
+  originalName: { type: String },
+  size: { type: Number },
+}, { _id: false });
+
 const commentSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   text: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
-});
-const Comment = mongoose.model("Comment", commentSchema);
+}, { _id: true });
 
-
-const postSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  text: { type: String, required: false },
-  mediaUrl: { type: String },
-  mediaType: { type: String, enum: ["image", "video", "pdf", null], default: null },
-  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-  comments: [commentSchema],
-  shareCount: { type: Number, default: 0 },
-  createdAt: { type: Date, default: Date.now },
-});
+const postSchema = new mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    text: { type: String, default: "" },
+    media: { type: mediaSchema, default: null },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    comments: [commentSchema],
+    shareCount: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
 
 const Post = mongoose.model("Post", postSchema);
 // Disposable email checks (using AbstractAPI and deep-email-validator)
@@ -2022,34 +2024,49 @@ app.post("/api/chat/message", authenticateJWT, async (req, res) => {
   }
 });
 
-app.post("/api/posts", upload.single("media"), async (req, res) => {
+// Create a post (multipart/form-data, field name: "media")
+app.post("/api/posts", authenticateJWT, upload.single("media"), async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-    const user = await User.findById(userId);
-    if (!user || user.role !== "student") {
-      return res.status(403).json({ error: "Only students can post." });
-    }
+    // Only allow students to post (your previous logic used role check)
+    if (user.role !== "student") return res.status(403).json({ error: "Only students can post." });
 
-    const { text } = req.body;
-    let mediaUrl = null;
-    let mediaType = null;
+    const text = (req.body.text || "").toString().trim() || null;
+    let media = null;
 
     if (req.file) {
-      mediaUrl = `/uploads/${req.file.filename}`;
-      const mime = req.file.mimetype;
-      if (mime.startsWith("image")) mediaType = "image";
-      else if (mime.startsWith("video")) mediaType = "video";
-      else if (mime === "application/pdf") mediaType = "pdf";
+      // multer placed file to uploads directory; create media object with path the frontend expects
+      media = {
+        fileUrl: `/uploads/${req.file.filename}`,
+        mimeType: req.file.mimetype,
+        originalName: req.file.originalname,
+        size: req.file.size,
+      };
     }
 
-    const newPost = new Post({ user: userId, text, mediaUrl, mediaType });
+    const newPost = new Post({
+      user: user._id,
+      text,
+      media,
+      likes: [],
+      comments: [],
+      shareCount: 0,
+    });
+
     await newPost.save();
 
+    // populate user + comments.user for frontend convenience
     const populated = await Post.findById(newPost._id)
       .populate("user", "firstName lastName profilePicUrl roleIdValue")
-      .populate("comments.user", "firstName lastName profilePicUrl");
+      .populate("comments.user", "firstName lastName profilePicUrl")
+      .lean();
+
+    // add computed fields
+    populated.likeCount = (populated.likes || []).length;
+    populated.commentCount = (populated.comments || []).length;
+    populated.likedByMe = !!(populated.likes || []).find((id) => id.toString() === user._id.toString());
 
     res.status(201).json({ post: populated });
   } catch (err) {
@@ -2058,34 +2075,44 @@ app.post("/api/posts", upload.single("media"), async (req, res) => {
   }
 });
 
-// Get all posts (latest first)
-app.get("/api/posts", async (req, res) => {
+// Get all posts (latest first) - requires auth so likedByMe computed per user
+app.get("/api/posts", authenticateJWT, async (req, res) => {
   try {
+    const userId = req.user ? req.user._id.toString() : null;
+
     const posts = await Post.find()
       .populate("user", "firstName lastName profilePicUrl roleIdValue")
       .populate("comments.user", "firstName lastName profilePicUrl")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.json({ posts });
+    const shaped = posts.map((p) => {
+      return {
+        ...p,
+        likeCount: (p.likes || []).length,
+        commentCount: (p.comments || []).length,
+        likedByMe: userId ? !!(p.likes || []).find((id) => id.toString() === userId.toString()) : false,
+      };
+    });
+
+    res.json({ posts: shaped });
   } catch (err) {
     console.error("Error fetching posts:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Like or unlike post
-app.post("/api/posts/:id/like", async (req, res) => {
+// Like/unlike post
+app.post("/api/posts/:id/like", authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
+    const userId = req.user._id;
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: "Post not found" });
 
-    const alreadyLiked = post.likes.includes(userId);
+    const found = post.likes.findIndex((l) => l.toString() === userId.toString());
     let action;
-    if (alreadyLiked) {
-      post.likes.pull(userId);
+    if (found !== -1) {
+      post.likes.splice(found, 1);
       action = "unliked";
     } else {
       post.likes.push(userId);
@@ -2101,12 +2128,11 @@ app.post("/api/posts/:id/like", async (req, res) => {
 });
 
 // Add comment
-app.post("/api/posts/:id/comment", async (req, res) => {
+app.post("/api/posts/:id/comment", authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user?.id;
-    const { text } = req.body;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-    if (!text || !text.trim()) return res.status(400).json({ error: "Comment text required" });
+    const userId = req.user._id;
+    const text = (req.body.text || "").toString().trim();
+    if (!text) return res.status(400).json({ error: "Comment text required" });
 
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: "Post not found" });
@@ -2114,7 +2140,8 @@ app.post("/api/posts/:id/comment", async (req, res) => {
     post.comments.push({ user: userId, text });
     await post.save();
 
-    const populated = await Post.findById(post._id).populate("comments.user", "firstName lastName profilePicUrl");
+    // populate comments.user to return the created comment with user info
+    const populated = await Post.findById(post._id).populate("comments.user", "firstName lastName profilePicUrl").lean();
     const comment = populated.comments[populated.comments.length - 1];
 
     res.json({ comment, commentCount: populated.comments.length });
@@ -2124,12 +2151,13 @@ app.post("/api/posts/:id/comment", async (req, res) => {
   }
 });
 
-// Share post (simulated)
-app.post("/api/posts/:id/share", async (req, res) => {
+// Share post (simple increment)
+app.post("/api/posts/:id/share", authenticateJWT, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: "Post not found" });
-    post.shareCount += 1;
+
+    post.shareCount = (post.shareCount || 0) + 1;
     await post.save();
     res.json({ shareCount: post.shareCount });
   } catch (err) {

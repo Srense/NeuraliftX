@@ -5,7 +5,7 @@ import "./Social.css";
 export default function Social() {
   const navigate = useNavigate();
   const token =
-    localStorage.getItem("token_student") || localStorage.getItem("token"); // fallback if stored differently
+    localStorage.getItem("token_student") || localStorage.getItem("token");
 
   const [me, setMe] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -17,15 +17,14 @@ export default function Social() {
 
   const fileInputRef = useRef();
 
+  // --- Fetch current user & posts ---
   useEffect(() => {
     if (!token) {
-      console.warn("No token found, redirecting to login...");
       navigate("/login");
       return;
     }
     fetchMe();
     fetchPosts();
-    // eslint-disable-next-line
   }, [token]);
 
   async function fetchMe() {
@@ -36,8 +35,8 @@ export default function Social() {
       if (!res.ok) throw new Error("Failed to fetch profile");
       const data = await res.json();
       setMe(data.user);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error("Profile error:", err);
     }
   }
 
@@ -50,27 +49,26 @@ export default function Social() {
       if (!res.ok) throw new Error("Failed to fetch posts");
       const data = await res.json();
       setPosts(data.posts || []);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error("Fetch posts error:", err);
     } finally {
       setLoading(false);
     }
   }
 
+  // --- File Preview ---
   function handleFileChange(e) {
     const f = e.target.files[0];
     setFile(f || null);
-    if (!f) {
-      setPreviewUrl(null);
-      return;
-    }
+    if (!f) return setPreviewUrl(null);
     const url = URL.createObjectURL(f);
     setPreviewUrl(url);
   }
 
+  // --- Create Post ---
   async function handleSubmitPost() {
     if (!text.trim() && !file) {
-      alert("Add text or attach a file");
+      alert("Please write something or attach a file.");
       return;
     }
     setSubmitting(true);
@@ -86,32 +84,41 @@ export default function Social() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to create post");
+        throw new Error(err.error || "Failed to post");
       }
       const data = await res.json();
-      setPosts((prev) => [data.post, ...prev]); // new post at top
+      setPosts((prev) => [data.post, ...prev]);
       setText("");
       setFile(null);
       setPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = null;
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Failed to post");
+    } catch (err) {
+      console.error("Post error:", err);
+      alert(err.message);
     } finally {
       setSubmitting(false);
     }
   }
 
+  // --- Like / Unlike Post ---
   async function toggleLike(postId) {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p._id === postId
+          ? {
+              ...p,
+              likedByMe: !p.likedByMe,
+              likeCount: (p.likeCount || 0) + (p.likedByMe ? -1 : 1),
+            }
+          : p
+      )
+    );
     try {
       const res = await fetch(
         `https://neuraliftx.onrender.com/api/posts/${postId}/like`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (!res.ok) throw new Error("Like failed");
@@ -119,21 +126,19 @@ export default function Social() {
       setPosts((p) =>
         p.map((post) =>
           post._id === postId
-            ? {
-                ...post,
-                likedByMe: data.action === "liked",
-                likeCount: data.likeCount,
-              }
+            ? { ...post, likedByMe: data.action === "liked", likeCount: data.likeCount }
             : post
         )
       );
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error("Like error:", err);
+      fetchPosts();
     }
   }
 
+  // --- Comment on Post ---
   async function addComment(postId, commentText, setLocalInput) {
-    if (!commentText || !commentText.trim()) return;
+    if (!commentText.trim()) return;
     try {
       const res = await fetch(
         `https://neuraliftx.onrender.com/api/posts/${postId}/comment`,
@@ -148,8 +153,8 @@ export default function Social() {
       );
       if (!res.ok) throw new Error("Comment failed");
       const data = await res.json();
-      setPosts((p) =>
-        p.map((post) =>
+      setPosts((prev) =>
+        prev.map((post) =>
           post._id === postId
             ? {
                 ...post,
@@ -160,40 +165,36 @@ export default function Social() {
         )
       );
       setLocalInput("");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to add comment");
+    } catch (err) {
+      console.error("Comment error:", err);
+      alert("Unable to comment.");
     }
   }
 
+  // --- Share Post ---
   async function sharePost(postId) {
     try {
       const res = await fetch(
         `https://neuraliftx.onrender.com/api/posts/${postId}/share`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (!res.ok) throw new Error("Share failed");
       const data = await res.json();
       setPosts((p) =>
         p.map((post) =>
-          post._id === postId
-            ? { ...post, shareCount: data.shareCount }
-            : post
+          post._id === postId ? { ...post, shareCount: data.shareCount } : post
         )
       );
-      alert("Shared to your feed (simulated).");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to share");
+      alert("Shared successfully!");
+    } catch (err) {
+      console.error("Share error:", err);
     }
   }
 
+  // --- Media Renderer ---
   function MediaRenderer({ media }) {
     if (!media || !media.fileUrl) return null;
     const url = `https://neuraliftx.onrender.com${media.fileUrl}`;
@@ -204,7 +205,6 @@ export default function Social() {
       return (
         <video className="post-media-video" controls>
           <source src={url} type={media.mimeType} />
-          Your browser does not support video.
         </video>
       );
     }
@@ -217,11 +217,11 @@ export default function Social() {
     );
   }
 
+  // --- Post Card ---
   function PostCard({ post }) {
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState("");
-
-    const author = post.user || post.author || {};
+    const author = post.user || {};
     const comments = post.comments || [];
 
     return (
@@ -236,12 +236,10 @@ export default function Social() {
             alt="avatar"
             className="avatar-small"
             onClick={() => navigate(`/profile/${author._id}`)}
-            style={{ cursor: "pointer" }}
           />
           <div className="post-meta">
             <div
               className="post-author"
-              style={{ cursor: "pointer" }}
               onClick={() => navigate(`/profile/${author._id}`)}
             >
               {author.firstName} {author.lastName}
@@ -264,10 +262,7 @@ export default function Social() {
           >
             👍 {post.likeCount || 0}
           </button>
-          <button
-            className="action-btn"
-            onClick={() => setShowComments((s) => !s)}
-          >
+          <button className="action-btn" onClick={() => setShowComments(!showComments)}>
             💬 {post.commentCount || comments.length || 0}
           </button>
           <button className="action-btn" onClick={() => sharePost(post._id)}>
@@ -278,14 +273,14 @@ export default function Social() {
         {showComments && (
           <div className="comments-section">
             {comments.map((c) => (
-              <div className="comment" key={c._id || c.createdAt + c.text}>
+              <div className="comment" key={c._id}>
                 <img
                   src={
                     c.user?.profilePicUrl
                       ? `https://neuraliftx.onrender.com${c.user.profilePicUrl}`
                       : "https://via.placeholder.com/40"
                   }
-                  alt="avatar"
+                  alt="commenter"
                   className="avatar-comment"
                 />
                 <div className="comment-body">
@@ -302,17 +297,12 @@ export default function Social() {
                 placeholder="Write a comment..."
                 value={commentInput}
                 onChange={(e) => setCommentInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    addComment(post._id, commentInput, setCommentInput);
-                  }
-                }}
-              />
-              <button
-                onClick={() =>
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
                   addComment(post._id, commentInput, setCommentInput)
                 }
-              >
+              />
+              <button onClick={() => addComment(post._id, commentInput, setCommentInput)}>
                 Post
               </button>
             </div>
@@ -322,6 +312,7 @@ export default function Social() {
     );
   }
 
+  // --- UI ---
   return (
     <div className="social-root">
       <div className="social-container">
@@ -339,30 +330,20 @@ export default function Social() {
           </div>
           <div className="create-right">
             <textarea
-              placeholder="Share an update, idea, file or story..."
+              placeholder="Share an update, idea, file, or story..."
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
             />
             {previewUrl && (
               <div className="preview-box">
-                {file && file.type.startsWith("image/") && (
-                  <img
-                    src={previewUrl}
-                    alt="preview"
-                    className="preview-img"
-                  />
+                {file?.type.startsWith("image/") && (
+                  <img src={previewUrl} alt="preview" className="preview-img" />
                 )}
-                {file && file.type.startsWith("video/") && (
-                  <video
-                    src={previewUrl}
-                    controls
-                    className="preview-video"
-                  />
+                {file?.type.startsWith("video/") && (
+                  <video src={previewUrl} controls className="preview-video" />
                 )}
-                {file && file.type === "application/pdf" && (
-                  <div>📄 {file.name}</div>
-                )}
+                {file?.type === "application/pdf" && <div>📄 {file.name}</div>}
               </div>
             )}
             <div className="create-actions">
@@ -386,8 +367,7 @@ export default function Social() {
                     setText("");
                     setFile(null);
                     setPreviewUrl(null);
-                    if (fileInputRef.current)
-                      fileInputRef.current.value = null;
+                    if (fileInputRef.current) fileInputRef.current.value = null;
                   }}
                 >
                   Clear
