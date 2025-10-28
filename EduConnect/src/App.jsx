@@ -11,6 +11,7 @@ import VerifyEmail from "./Components/VerifyEmail";
 import PdfViewerPage from "./Components/PDFViewer";
 import Admin from "./Components/Admin";
 import Alumni from "./Components/Alumni";
+import Social from "./Components/Social";
 
 // Role-based protected route for multi-session support
 const RoleBasedRoute = ({ allowedRoles }) => {
@@ -110,6 +111,7 @@ const App = () => {
         <Route path="/quiz/:assignmentId" element={<QuizPage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/pdf-viewer" element={<PdfViewerPage />} />
+        <Route path="/social" element={<Social />} />
 
         {/* Protected routes per role */}
         <Route element={<RoleBasedRoute allowedRoles={['student']} />}>
