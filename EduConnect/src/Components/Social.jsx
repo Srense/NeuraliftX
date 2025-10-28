@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Social.css"; // create this file for styles (I give quick CSS below)
-import defaultAvatar from "../assets/default-avatar.png"; // fallback if you have one
+//import defaultAvatar from "../assets/default-avatar.png"; // fallback if you have one
 
 export default function Social() {
   const navigate = useNavigate();
@@ -197,7 +197,7 @@ export default function Social() {
       <div className="post-card">
         <div className="post-header">
           <img
-            src={post.author?.profilePicUrl ? `https://neuraliftx.onrender.com${post.author.profilePicUrl}` : defaultAvatar}
+            src={post.author?.profilePicUrl ? `https://neuraliftx.onrender.com${post.author.profilePicUrl}` : "https://via.placeholder.com/40"}
             alt="avatar"
             className="avatar-small"
             onClick={() => navigate(`/profile/${post.author._id}`)}
@@ -237,7 +237,7 @@ export default function Social() {
             {(post.comments || []).map((c) => (
               <div className="comment" key={c._id || c.createdAt + c.text}>
                 <img
-                  src={c.user?.profilePicUrl ? `https://neuraliftx.onrender.com${c.user.profilePicUrl}` : defaultAvatar}
+                  src={c.user?.profilePicUrl ? `https://neuraliftx.onrender.com${c.user.profilePicUrl}` : "https://via.placeholder.com/40"}
                   alt="avatar"
                   className="avatar-comment"
                 />
@@ -274,7 +274,7 @@ export default function Social() {
         <div className="create-card">
           <div className="create-left">
             <img
-              src={me?.profilePicUrl ? `https://neuraliftx.onrender.com${me.profilePicUrl}` : defaultAvatar}
+              src={me?.profilePicUrl ? `https://neuraliftx.onrender.com${me.profilePicUrl}` : "https://via.placeholder.com/40"}
               alt="me"
               className="avatar-small"
             />
