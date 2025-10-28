@@ -10,6 +10,7 @@ import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 import Grades from "./Grades.jsx";
 import AlumniArena from "./AlumniArena";
+import Social from "./Social";
 
 function CoinBadge({ coins }) {
   return (
@@ -1085,8 +1086,13 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
           <span className="icon" title="Notifications">
             &#128276;
           </span>
-          <span className="icon" title="Social">
-           &#128172;
+          <span
+            className="icon"
+            title="Social"
+            onClick={() => navigate("/social")}
+            style={{ cursor: "pointer", fontSize: "24px" }}
+          >
+            &#128172;
           </span>
           <span
   className="icon"

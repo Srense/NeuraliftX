@@ -355,6 +355,30 @@ const messageSchema = new mongoose.Schema(
 const Message = mongoose.model("Message", messageSchema);
 
 
+const commentSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  text: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+const Comment = mongoose.model("Comment", commentSchema);
+
+
+const postSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  text: { type: String, required: false },
+  mediaUrl: { type: String },
+  mediaType: { type: String, enum: ["image", "video", "pdf", null], default: null },
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  comments: [commentSchema],
+  shareCount: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const Post = mongoose.model("Post", postSchema);
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -1998,6 +2022,121 @@ app.post("/api/chat/message", authenticateJWT, async (req, res) => {
   }
 });
 
+app.post("/api/posts", upload.single("media"), async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = await User.findById(userId);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ error: "Only students can post." });
+    }
+
+    const { text } = req.body;
+    let mediaUrl = null;
+    let mediaType = null;
+
+    if (req.file) {
+      mediaUrl = `/uploads/${req.file.filename}`;
+      const mime = req.file.mimetype;
+      if (mime.startsWith("image")) mediaType = "image";
+      else if (mime.startsWith("video")) mediaType = "video";
+      else if (mime === "application/pdf") mediaType = "pdf";
+    }
+
+    const newPost = new Post({ user: userId, text, mediaUrl, mediaType });
+    await newPost.save();
+
+    const populated = await Post.findById(newPost._id)
+      .populate("user", "firstName lastName profilePicUrl roleIdValue")
+      .populate("comments.user", "firstName lastName profilePicUrl");
+
+    res.status(201).json({ post: populated });
+  } catch (err) {
+    console.error("Error creating post:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get all posts (latest first)
+app.get("/api/posts", async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate("user", "firstName lastName profilePicUrl roleIdValue")
+      .populate("comments.user", "firstName lastName profilePicUrl")
+      .sort({ createdAt: -1 });
+
+    res.json({ posts });
+  } catch (err) {
+    console.error("Error fetching posts:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Like or unlike post
+app.post("/api/posts/:id/like", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
+    const alreadyLiked = post.likes.includes(userId);
+    let action;
+    if (alreadyLiked) {
+      post.likes.pull(userId);
+      action = "unliked";
+    } else {
+      post.likes.push(userId);
+      action = "liked";
+    }
+
+    await post.save();
+    res.json({ action, likeCount: post.likes.length });
+  } catch (err) {
+    console.error("Like error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Add comment
+app.post("/api/posts/:id/comment", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { text } = req.body;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!text || !text.trim()) return res.status(400).json({ error: "Comment text required" });
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
+    post.comments.push({ user: userId, text });
+    await post.save();
+
+    const populated = await Post.findById(post._id).populate("comments.user", "firstName lastName profilePicUrl");
+    const comment = populated.comments[populated.comments.length - 1];
+
+    res.json({ comment, commentCount: populated.comments.length });
+  } catch (err) {
+    console.error("Comment error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Share post (simulated)
+app.post("/api/posts/:id/share", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+    post.shareCount += 1;
+    await post.save();
+    res.json({ shareCount: post.shareCount });
+  } catch (err) {
+    console.error("Share error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
