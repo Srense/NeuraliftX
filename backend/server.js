@@ -2165,6 +2165,56 @@ app.post("/api/posts/:id/share", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+// Edit post text (only post owner can edit)
+app.put("/api/posts/:id", authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const text = (req.body.text || "").toString().trim();
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
+    if (post.user.toString() !== userId.toString()) {
+      return res.status(403).json({ error: "Not authorized to edit this post" });
+    }
+
+    post.text = text;
+    await post.save();
+
+    // repopulate for frontend consistency
+    const populated = await Post.findById(post._id)
+      .populate("user", "firstName lastName profilePicUrl roleIdValue")
+      .populate("comments.user", "firstName lastName profilePicUrl")
+      .lean();
+
+    populated.likeCount = (populated.likes || []).length;
+    populated.commentCount = (populated.comments || []).length;
+
+    res.json({ post: populated });
+  } catch (err) {
+    console.error("Edit post error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+// Delete a post (only post owner can delete)
+app.delete("/api/posts/:id", authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
+    if (post.user.toString() !== userId.toString()) {
+      return res.status(403).json({ error: "Not authorized to delete this post" });
+    }
+
+    await Post.findByIdAndDelete(req.params.id);
+    res.json({ message: "Post deleted successfully" });
+  } catch (err) {
+    console.error("Delete post error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

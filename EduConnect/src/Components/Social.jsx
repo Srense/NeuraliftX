@@ -17,7 +17,6 @@ export default function Social() {
 
   const fileInputRef = useRef();
 
-  // --- Fetch current user & posts ---
   useEffect(() => {
     if (!token) {
       navigate("/login");
@@ -56,7 +55,6 @@ export default function Social() {
     }
   }
 
-  // --- File Preview ---
   function handleFileChange(e) {
     const f = e.target.files[0];
     setFile(f || null);
@@ -65,7 +63,6 @@ export default function Social() {
     setPreviewUrl(url);
   }
 
-  // --- Create Post ---
   async function handleSubmitPost() {
     if (!text.trim() && !file) {
       alert("Please write something or attach a file.");
@@ -82,10 +79,7 @@ export default function Social() {
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to post");
-      }
+      if (!res.ok) throw new Error("Failed to post");
       const data = await res.json();
       setPosts((prev) => [data.post, ...prev]);
       setText("");
@@ -100,19 +94,7 @@ export default function Social() {
     }
   }
 
-  // --- Like / Unlike Post ---
   async function toggleLike(postId) {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p._id === postId
-          ? {
-              ...p,
-              likedByMe: !p.likedByMe,
-              likeCount: (p.likeCount || 0) + (p.likedByMe ? -1 : 1),
-            }
-          : p
-      )
-    );
     try {
       const res = await fetch(
         `https://neuraliftx.onrender.com/api/posts/${postId}/like`,
@@ -132,11 +114,9 @@ export default function Social() {
       );
     } catch (err) {
       console.error("Like error:", err);
-      fetchPosts();
     }
   }
 
-  // --- Comment on Post ---
   async function addComment(postId, commentText, setLocalInput) {
     if (!commentText.trim()) return;
     try {
@@ -167,11 +147,9 @@ export default function Social() {
       setLocalInput("");
     } catch (err) {
       console.error("Comment error:", err);
-      alert("Unable to comment.");
     }
   }
 
-  // --- Share Post ---
   async function sharePost(postId) {
     try {
       const res = await fetch(
@@ -194,7 +172,45 @@ export default function Social() {
     }
   }
 
-  // --- Media Renderer ---
+  async function deletePost(postId) {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/posts/${postId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      setPosts((prev) => prev.filter((p) => p._id !== postId));
+      alert("Post deleted successfully.");
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete post.");
+    }
+  }
+
+  async function editPost(postId, newText, onClose) {
+    if (!newText.trim()) return alert("Post text cannot be empty.");
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/posts/${postId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: newText }),
+      });
+      if (!res.ok) throw new Error("Edit failed");
+      const data = await res.json();
+      setPosts((prev) =>
+        prev.map((p) => (p._id === postId ? { ...p, text: data.post.text } : p))
+      );
+      onClose();
+    } catch (err) {
+      console.error("Edit error:", err);
+      alert("Failed to edit post.");
+    }
+  }
+
   function MediaRenderer({ media }) {
     if (!media || !media.fileUrl) return null;
     const url = `https://neuraliftx.onrender.com${media.fileUrl}`;
@@ -217,12 +233,15 @@ export default function Social() {
     );
   }
 
-  // --- Post Card ---
   function PostCard({ post }) {
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState("");
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [editText, setEditText] = useState(post.text);
+
     const author = post.user || {};
-    const comments = post.comments || [];
+    const isMine = me && author._id === me._id;
 
     return (
       <div className="post-card">
@@ -235,24 +254,50 @@ export default function Social() {
             }
             alt="avatar"
             className="avatar-small"
-            onClick={() => navigate(`/profile/${author._id}`)}
           />
           <div className="post-meta">
-            <div
-              className="post-author"
-              onClick={() => navigate(`/profile/${author._id}`)}
-            >
+            <div className="post-author">
               {author.firstName} {author.lastName}
             </div>
-            <div className="post-time">
-              {new Date(post.createdAt).toLocaleString()}
-            </div>
+            <div className="post-time">{new Date(post.createdAt).toLocaleString()}</div>
           </div>
+
+          {isMine && (
+            <div className="post-menu">
+              <button className="menu-btn" onClick={() => setMenuOpen((s) => !s)}>
+                ⋮
+              </button>
+              {menuOpen && (
+                <div className="menu-dropdown">
+                  <button onClick={() => { setEditing(true); setMenuOpen(false); }}>✏️ Edit</button>
+                  <button onClick={() => { deletePost(post._id); setMenuOpen(false); }}>🗑️ Delete</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="post-body">
-          {post.text && <div className="post-text">{post.text}</div>}
-          {post.media && <MediaRenderer media={post.media} />}
+          {editing ? (
+            <div className="edit-box">
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={3}
+              />
+              <div className="edit-actions">
+                <button onClick={() => editPost(post._id, editText, () => setEditing(false))}>
+                  Save
+                </button>
+                <button onClick={() => setEditing(false)}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {post.text && <div className="post-text">{post.text}</div>}
+              {post.media && <MediaRenderer media={post.media} />}
+            </>
+          )}
         </div>
 
         <div className="post-actions">
@@ -263,7 +308,7 @@ export default function Social() {
             👍 {post.likeCount || 0}
           </button>
           <button className="action-btn" onClick={() => setShowComments(!showComments)}>
-            💬 {post.commentCount || comments.length || 0}
+            💬 {post.commentCount || post.comments?.length || 0}
           </button>
           <button className="action-btn" onClick={() => sharePost(post._id)}>
             ↪️ {post.shareCount || 0}
@@ -272,7 +317,7 @@ export default function Social() {
 
         {showComments && (
           <div className="comments-section">
-            {comments.map((c) => (
+            {post.comments?.map((c) => (
               <div className="comment" key={c._id}>
                 <img
                   src={
@@ -312,10 +357,10 @@ export default function Social() {
     );
   }
 
-  // --- UI ---
   return (
     <div className="social-root">
       <div className="social-container">
+        {/* Create Post */}
         <div className="create-card">
           <div className="create-left">
             <img
@@ -337,9 +382,7 @@ export default function Social() {
             />
             {previewUrl && (
               <div className="preview-box">
-                {file?.type.startsWith("image/") && (
-                  <img src={previewUrl} alt="preview" className="preview-img" />
-                )}
+                {file?.type.startsWith("image/") && <img src={previewUrl} alt="preview" />}
                 {file?.type.startsWith("video/") && (
                   <video src={previewUrl} controls className="preview-video" />
                 )}
@@ -354,11 +397,7 @@ export default function Social() {
                 ref={fileInputRef}
               />
               <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  className="primary-btn"
-                  onClick={handleSubmitPost}
-                  disabled={submitting}
-                >
+                <button className="primary-btn" onClick={handleSubmitPost} disabled={submitting}>
                   {submitting ? "Posting..." : "Post"}
                 </button>
                 <button
@@ -377,6 +416,7 @@ export default function Social() {
           </div>
         </div>
 
+        {/* Feed */}
         <div className="feed">
           {loading ? (
             <p>Loading feed...</p>
