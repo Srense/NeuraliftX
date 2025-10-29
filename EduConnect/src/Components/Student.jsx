@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import  { Suspense, lazy } from "react";
+
 import { useNavigate } from "react-router-dom";
 import "./Admin.css";
 import "./Student.css";
@@ -10,7 +12,8 @@ import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 import Grades from "./Grades.jsx";
 import AlumniArena from "./AlumniArena";
-import Social from "./Social";
+const Social = lazy(() => import("./Social"));
+
 
 function CoinBadge({ coins }) {
   return (
@@ -384,6 +387,7 @@ function StudentTasks({ token }) {
   const [uploadingAnswer, setUploadingAnswer] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
+  
 
   useEffect(() => {
     async function fetchTasks() {
@@ -586,6 +590,10 @@ export default function Student() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredMenu, setFilteredMenu] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Social panel state (moved to Student so header controls are available)
+  const [showSocial, setShowSocial] = useState(false);
+  const [loadingSocial, setLoadingSocial] = useState(false);
 
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
@@ -1087,13 +1095,18 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
             &#128276;
           </span>
           <span
-            className="icon"
-            title="Social"
-            onClick={() => navigate("/social")}
-            style={{ cursor: "pointer", fontSize: "24px" }}
-          >
-            &#128172;
-          </span>
+  className="icon"
+  title="Social"
+  onClick={() => {
+    setLoadingSocial(true);
+    setShowSocial(true);
+    setTimeout(() => setLoadingSocial(false), 600);
+  }}
+  style={{ cursor: "pointer", fontSize: "24px" }}
+>
+  &#128172;
+</span>
+
           <span
   className="icon"
   title="Home"
@@ -1190,7 +1203,28 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
           </ul>
         </nav>
 
-        <main className="student-content">{contentArea}</main>
+        <main className="student-content">
+  {loadingSocial ? (
+    <div className="loader-container">
+      <div className="spinner"></div>
+      <p>Loading...</p>
+    </div>
+  ) : showSocial ? (
+    <Suspense
+      fallback={
+        <div className="loader-container">
+          <div className="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      }
+    >
+      <Social />
+    </Suspense>
+  ) : (
+    contentArea
+  )}
+</main>
+
       </div>
 
       {showProfileModal && (
