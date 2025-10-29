@@ -14,13 +14,12 @@ export default function Social() {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-
   const [editPost, setEditPost] = useState(null);
   const [editText, setEditText] = useState("");
 
   const fileInputRef = useRef();
 
-  // Fetch current user & posts
+  // Fetch user and posts
   useEffect(() => {
     if (!token) {
       navigate("/login");
@@ -59,7 +58,6 @@ export default function Social() {
     }
   }
 
-  // File preview
   function handleFileChange(e) {
     const f = e.target.files[0];
     setFile(f || null);
@@ -68,7 +66,6 @@ export default function Social() {
     setPreviewUrl(url);
   }
 
-  // Create new post
   async function handleSubmitPost() {
     if (!text.trim() && !file) {
       alert("Please write something or attach a file.");
@@ -103,7 +100,6 @@ export default function Social() {
     }
   }
 
-  // Like/unlike
   async function toggleLike(postId) {
     setPosts((prev) =>
       prev.map((p) =>
@@ -139,7 +135,6 @@ export default function Social() {
     }
   }
 
-  // Comment
   async function addComment(postId, commentText, setLocalInput) {
     if (!commentText.trim()) return;
     try {
@@ -174,7 +169,6 @@ export default function Social() {
     }
   }
 
-  // Share
   async function sharePost(postId) {
     try {
       const res = await fetch(
@@ -197,7 +191,6 @@ export default function Social() {
     }
   }
 
-  // Edit Post
   async function handleEditSubmit() {
     try {
       const res = await fetch(
@@ -224,7 +217,6 @@ export default function Social() {
     }
   }
 
-  // Delete Post
   async function handleDelete(postId) {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
@@ -243,7 +235,6 @@ export default function Social() {
     }
   }
 
-  // Media renderer
   function MediaRenderer({ media }) {
     if (!media || !media.fileUrl) return null;
     const url = `https://neuraliftx.onrender.com${media.fileUrl}`;
@@ -266,7 +257,6 @@ export default function Social() {
     );
   }
 
-  // Post card
   function PostCard({ post }) {
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState("");
@@ -275,7 +265,9 @@ export default function Social() {
     const author = post.user || {};
     const comments = post.comments || [];
 
-    const isOwner = me && author && me._id === author._id;
+    // ✅ FIXED: handle ObjectId vs String mismatch
+    const isOwner =
+      me && author && me._id?.toString() === author._id?.toString();
 
     return (
       <div className="post-card">
@@ -298,6 +290,7 @@ export default function Social() {
             </div>
           </div>
 
+          {/* ✅ Edit/Delete Menu visible only for post owner */}
           {isOwner && (
             <div className="post-menu">
               <span
@@ -393,7 +386,6 @@ export default function Social() {
     );
   }
 
-  // UI
   return (
     <div className="social-root">
       <div className="social-container">
@@ -458,7 +450,6 @@ export default function Social() {
           </div>
         </div>
 
-        {/* Edit Modal */}
         {editPost && (
           <div className="modal-overlay">
             <div className="modal">
