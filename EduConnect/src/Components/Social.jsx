@@ -258,133 +258,148 @@ export default function Social() {
   }
 
   function PostCard({ post }) {
-    const [showComments, setShowComments] = useState(false);
-    const [commentInput, setCommentInput] = useState("");
-    const [menuOpen, setMenuOpen] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentInput, setCommentInput] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
 
-    const author = post.user || {};
-    const comments = post.comments || [];
+  const author = post.user || {};
+  const comments = post.comments || [];
 
-    // ✅ FIXED: handle ObjectId vs String mismatch
-    const isOwner =
-      me && author && me._id?.toString() === author._id?.toString();
+  // ✅ FIXED: handle _id coming as string or {$oid: "..."}
+  const meId =
+    me?._id?.$oid?.toString?.() || me?._id?.toString?.() || null;
+  const authorId =
+    author?._id?.$oid?.toString?.() || author?._id?.toString?.() || null;
 
-    return (
-      <div className="post-card">
-        <div className="post-header">
-          <img
-            src={
-              author.profilePicUrl
-                ? `https://neuraliftx.onrender.com${author.profilePicUrl}`
-                : "https://via.placeholder.com/40"
-            }
-            alt="avatar"
-            className="avatar-small"
-          />
-          <div className="post-meta">
-            <div className="post-author">
-              {author.firstName} {author.lastName}
-            </div>
-            <div className="post-time">
-              {new Date(post.createdAt).toLocaleString()}
-            </div>
+  const isOwner = meId && authorId && meId === authorId;
+
+  return (
+    <div className="post-card">
+      <div className="post-header">
+        <img
+          src={
+            author.profilePicUrl
+              ? `https://neuraliftx.onrender.com${author.profilePicUrl}`
+              : "https://via.placeholder.com/40"
+          }
+          alt="avatar"
+          className="avatar-small"
+        />
+
+        <div className="post-meta">
+          <div className="post-author">
+            {author.firstName} {author.lastName}
           </div>
-
-          {/* ✅ Edit/Delete Menu visible only for post owner */}
-          {isOwner && (
-            <div className="post-menu">
-              <span
-                className="menu-trigger"
-                onClick={() => setMenuOpen((prev) => !prev)}
-              >
-                ⋮
-              </span>
-              {menuOpen && (
-                <div className="menu-dropdown">
-                  <button
-                    onClick={() => {
-                      setEditPost(post);
-                      setEditText(post.text);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleDelete(post._id);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="post-time">
+            {new Date(post.createdAt).toLocaleString()}
+          </div>
         </div>
 
-        <div className="post-body">
-          {post.text && <div className="post-text">{post.text}</div>}
-          {post.media && <MediaRenderer media={post.media} />}
-        </div>
+        {/* ✅ Visible only if current user is the post owner */}
+        {isOwner && (
+          <div className="post-menu">
+            <span
+              className="menu-trigger"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              title="More options"
+            >
+              ⋮
+            </span>
 
-        <div className="post-actions">
-          <button
-            className={`action-btn ${post.likedByMe ? "liked" : ""}`}
-            onClick={() => toggleLike(post._id)}
-          >
-            👍 {post.likeCount || 0}
-          </button>
-          <button className="action-btn" onClick={() => setShowComments(!showComments)}>
-            💬 {post.commentCount || comments.length || 0}
-          </button>
-          <button className="action-btn" onClick={() => sharePost(post._id)}>
-            ↪️ {post.shareCount || 0}
-          </button>
-        </div>
-
-        {showComments && (
-          <div className="comments-section">
-            {comments.map((c) => (
-              <div className="comment" key={c._id}>
-                <img
-                  src={
-                    c.user?.profilePicUrl
-                      ? `https://neuraliftx.onrender.com${c.user.profilePicUrl}`
-                      : "https://via.placeholder.com/40"
-                  }
-                  alt="commenter"
-                  className="avatar-comment"
-                />
-                <div className="comment-body">
-                  <div className="comment-author">
-                    {c.user?.firstName} {c.user?.lastName}
-                  </div>
-                  <div className="comment-text">{c.text}</div>
-                </div>
+            {menuOpen && (
+              <div className="menu-dropdown">
+                <button
+                  onClick={() => {
+                    setEditPost(post);
+                    setEditText(post.text);
+                    setMenuOpen(false);
+                  }}
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={() => {
+                    handleDelete(post._id);
+                    setMenuOpen(false);
+                  }}
+                >
+                  🗑️ Delete
+                </button>
               </div>
-            ))}
-            <div className="comment-input">
-              <input
-                type="text"
-                placeholder="Write a comment..."
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" &&
-                  addComment(post._id, commentInput, setCommentInput)
-                }
-              />
-              <button onClick={() => addComment(post._id, commentInput, setCommentInput)}>
-                Post
-              </button>
-            </div>
+            )}
           </div>
         )}
       </div>
-    );
-  }
+
+      <div className="post-body">
+        {post.text && <div className="post-text">{post.text}</div>}
+        {post.media && <MediaRenderer media={post.media} />}
+      </div>
+
+      <div className="post-actions">
+        <button
+          className={`action-btn ${post.likedByMe ? "liked" : ""}`}
+          onClick={() => toggleLike(post._id)}
+        >
+          👍 {post.likeCount || 0}
+        </button>
+        <button
+          className="action-btn"
+          onClick={() => setShowComments(!showComments)}
+        >
+          💬 {post.commentCount || comments.length || 0}
+        </button>
+        <button className="action-btn" onClick={() => sharePost(post._id)}>
+          ↪️ {post.shareCount || 0}
+        </button>
+      </div>
+
+      {showComments && (
+        <div className="comments-section">
+          {comments.map((c) => (
+            <div className="comment" key={c._id}>
+              <img
+                src={
+                  c.user?.profilePicUrl
+                    ? `https://neuraliftx.onrender.com${c.user.profilePicUrl}`
+                    : "https://via.placeholder.com/40"
+                }
+                alt="commenter"
+                className="avatar-comment"
+              />
+              <div className="comment-body">
+                <div className="comment-author">
+                  {c.user?.firstName} {c.user?.lastName}
+                </div>
+                <div className="comment-text">{c.text}</div>
+              </div>
+            </div>
+          ))}
+          <div className="comment-input">
+            <input
+              type="text"
+              placeholder="Write a comment..."
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              onKeyDown={(e) =>
+                e.key === "Enter" &&
+                addComment(post._id, commentInput, setCommentInput)
+              }
+            />
+            <button
+              onClick={() =>
+                addComment(post._id, commentInput, setCommentInput)
+              }
+            >
+              Post
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
   return (
     <div className="social-root">
