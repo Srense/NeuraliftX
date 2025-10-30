@@ -635,23 +635,8 @@ app.post("/api/signup", async (req, res) => {
   try {
     const { firstName, lastName, email, password, confirmPassword, role, roleIdValue } = req.body;
 
-    const errors = await validateSignupInput({ 
-      firstName, 
-      lastName, 
-      email, 
-      password, 
-      confirmPassword, 
-      role, 
-      roleIdValue 
-    });
-    
-    if (Object.keys(errors).length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: Object.values(errors).join(", "),
-        errors // Send individual field errors as well
-      });
-    }
+    const errors = await validateSignupInput({ firstName, lastName, email, password, confirmPassword, role, roleIdValue });
+    if (Object.keys(errors).length > 0) return res.status(400).json({ success: false, error: Object.values(errors).join(", ") });
 
     const passwordHash = await bcrypt.hash(password, 12);
     const verificationToken = crypto.randomBytes(32).toString("hex");
@@ -659,110 +644,70 @@ app.post("/api/signup", async (req, res) => {
     verificationTokenExpires.setHours(verificationTokenExpires.getHours() + Number(EMAIL_VERIFICATION_TOKEN_EXPIRY));
 
     const user = new User({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.toLowerCase().trim(),
+      firstName,
+      lastName,
+      email: email.toLowerCase(),
       passwordHash,
       role,
-      roleIdValue: roleIdValue.trim(),
+      roleIdValue,
       emailVerified: false,
       verificationToken,
       verificationTokenExpires,
     });
-    
     await user.save();
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(user, verificationToken);
-      res.json({ 
-        success: true, 
-        message: "Signup successful. Please verify your email with the link sent to your inbox." 
-      });
-    } catch (emailError) {
-      // If email sending fails, still consider signup successful but inform user
-      console.error("Email sending failed:", emailError);
-      res.json({ 
-        success: true, 
-        message: "Signup successful but verification email could not be sent. Please contact support.",
-        emailError: true
-      });
-    }
+    await sendVerificationEmail(user, verificationToken);
+
+    res.json({ success: true, message: "Signup successful. Please verify your email with the link sent to your inbox." });
 
   } catch (err) {
     console.error("Signup error:", err);
-    if (err.code === 11000) {
-      return res.status(400).json({ success: false, error: "Email already registered" });
-    }
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 });
-// Email verification
+
 // Email verification
 app.get("/api/verify-email", async (req, res) => {
   try {
     const { token } = req.query;
-    if (!token) {
-      return res.status(400).json({ success: false, error: "Verification token missing" });
-    }
+    if (!token) return res.status(400).json({ success: false, error: "Verification token missing" });
 
     const user = await User.findOne({
       verificationToken: token,
       verificationTokenExpires: { $gt: new Date() }
     });
-    
-    if (!user) {
-      return res.status(400).json({ success: false, error: "Invalid or expired token" });
-    }
+    if (!user) return res.status(400).json({ success: false, error: "Invalid or expired token" });
 
     user.emailVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpires = undefined;
     await user.save();
 
-    res.json({ success: true, message: "Email verified successfully. You can now log in." });
+    // Respond with JSON, as requested
+    res.json({ success: true, message: "Email verified. You can now log in." });
   } catch (err) {
     console.error("Email verification error:", err);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 });
 
+
 // Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: "Email and password required" });
-    }
+    if (!email || !password) return res.status(400).json({ success: false, error: "Email and password required" });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) {
-      return res.status(400).json({ success: false, error: "Invalid credentials" });
-    }
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(400).json({ success: false, error: "Invalid credentials" });
 
-    if (!user.emailVerified) {
-      return res.status(403).json({ success: false, error: "Please verify your email before login" });
-    }
+    if (!user.emailVerified) return res.status(403).json({ success: false, error: "Please verify your email before login" });
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, error: "Invalid credentials" });
-    }
+    if (!isMatch) return res.status(400).json({ success: false, error: "Invalid credentials" });
 
     const token = user.generateJWT();
-    res.json({ 
-      success: true, 
-      message: "Login successful", 
-      token, 
-      user: { 
-        id: user._id, 
-        email: user.email, 
-        role: user.role, 
-        firstName: user.firstName, 
-        lastName: user.lastName 
-      } 
-    });
+    res.json({ success: true, message: "Login successful", token, user: { id: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } });
 
   } catch (err) {
     console.error("Login error:", err);
@@ -774,14 +719,9 @@ app.post("/api/login", async (req, res) => {
 app.post("/api/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, error: "Email required" });
-    }
-    
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) {
-      return res.status(400).json({ success: false, error: "Email not found" });
-    }
+    if (!email) return res.status(400).json({ success: false, error: "Email required" });
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(400).json({ success: false, error: "Email not found" });
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetPasswordExpires = new Date();
@@ -791,13 +731,8 @@ app.post("/api/forgot-password", async (req, res) => {
     user.resetPasswordExpires = resetPasswordExpires;
     await user.save();
 
-    try {
-      await sendPasswordResetEmail(user, resetToken);
-      res.json({ success: true, message: "Password reset link sent to your email" });
-    } catch (emailError) {
-      console.error("Password reset email error:", emailError);
-      res.status(500).json({ success: false, error: "Failed to send password reset email" });
-    }
+    await sendPasswordResetEmail(user, resetToken);
+    res.json({ success: true, message: "Password reset link sent to your email" });
 
   } catch (err) {
     console.error("Forgot password error:", err);
@@ -809,31 +744,13 @@ app.post("/api/forgot-password", async (req, res) => {
 app.post("/api/reset-password", async (req, res) => {
   try {
     const { token, newPassword, confirmPassword } = req.body;
-    
-    if (!token) {
-      return res.status(400).json({ success: false, error: "Token required" });
-    }
-    if (!newPassword || !confirmPassword) {
-      return res.status(400).json({ success: false, error: "New password required" });
-    }
-    if (newPassword !== confirmPassword) {
-      return res.status(400).json({ success: false, error: "Passwords do not match" });
-    }
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(newPassword)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Password must have min 8 chars with uppercase, lowercase, number, special char" 
-      });
-    }
+    if (!token) return res.status(400).json({ success: false, error: "Token required" });
+    if (!newPassword || !confirmPassword) return res.status(400).json({ success: false, error: "New password required" });
+    if (newPassword !== confirmPassword) return res.status(400).json({ success: false, error: "Passwords do not match" });
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(newPassword)) return res.status(400).json({ success: false, error: "Password must have min 8 chars with uppercase, lowercase, number, special char" });
 
-    const user = await User.findOne({ 
-      resetPasswordToken: token, 
-      resetPasswordExpires: { $gt: new Date() } 
-    });
-    
-    if (!user) {
-      return res.status(400).json({ success: false, error: "Invalid or expired token" });
-    }
+    const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: new Date() } });
+    if (!user) return res.status(400).json({ success: false, error: "Invalid or expired token" });
 
     user.passwordHash = await bcrypt.hash(newPassword, 12);
     user.resetPasswordToken = undefined;
@@ -847,7 +764,6 @@ app.post("/api/reset-password", async (req, res) => {
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 });
-
 
 // Get user profile info
 app.get("/api/profile", authenticateJWT, (req, res) => {
