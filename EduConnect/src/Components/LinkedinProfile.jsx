@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, MapPin, Mail, Phone, Calendar, Award, Briefcase, GraduationCap, Heart, MessageCircle, Share2, Edit2, Plus, X } from 'lucide-react';
-import './LinkedInProfile.css';
+import './LinkedinProfile.css';
 
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/150";
