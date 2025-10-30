@@ -829,6 +829,11 @@ export default function Student() {
     setUser(updatedUser);
   };
 
+  // NEW: Function to open profile in new tab
+  const handleOpenProfile = () => {
+    window.open('/profile', '_blank');
+  };
+
   const closeAnnouncementPopup = () => {
     const currentIndex = announcements.findIndex(
       (a) => a._id === currentAnnouncement?._id
@@ -1123,7 +1128,7 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
         <div
           className="profile-info"
           style={{ cursor: "pointer" }}
-          onClick={() => setShowProfileModal(true)}
+          onClick={handleOpenProfile}
         >
           <span className="profile-name">
             {user?.firstName} {user?.lastName}
