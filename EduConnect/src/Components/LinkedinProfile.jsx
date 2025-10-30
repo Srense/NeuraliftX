@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, MapPin, Mail, Phone, Calendar, Award, Briefcase, GraduationCap, Heart, MessageCircle, Share2, Edit2, Plus, X } from 'lucide-react';
+import './LinkedInProfile.css';
 
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/150";
@@ -126,7 +127,7 @@ export default function LinkedInProfile() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-40 w-40 border-t-4 border-blue-600"></div>
       </div>
     );
   }
@@ -143,7 +144,7 @@ export default function LinkedInProfile() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">EduConnect</h1>
             <button
@@ -156,11 +157,11 @@ export default function LinkedInProfile() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Profile Header Card */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6 hover-lift">
           {/* Cover Photo */}
-          <div className="h-48 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+          <div className="h-48 bg-gradient-to-r"></div>
           
           {/* Profile Info Section */}
           <div className="relative px-6 pb-6">
@@ -172,7 +173,7 @@ export default function LinkedInProfile() {
                   alt="Profile"
                   className="w-40 h-40 rounded-full border-4 border-white shadow-xl object-cover"
                 />
-                <label className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                <label className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-lg cursor-pointer hover:bg-gray-100 transition-colors camera-icon">
                   <Camera className="w-5 h-5 text-gray-700" />
                   <input
                     type="file"
@@ -185,7 +186,8 @@ export default function LinkedInProfile() {
                   <button
                     onClick={handleUploadPicture}
                     disabled={uploading}
-                    className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-blue-600 text-white px-4 py-1 rounded-full text-sm hover:bg-blue-700 disabled:bg-gray-400"
+                    className="absolute -bottom-8 left-1/2 transform whitespace-nowrap bg-blue-600 text-white px-4 py-1 rounded-full text-sm hover:bg-blue-700"
+                    style={{ transform: 'translateX(-50%)' }}
                   >
                     {uploading ? 'Uploading...' : 'Save Photo'}
                   </button>
@@ -213,16 +215,16 @@ export default function LinkedInProfile() {
               
               {/* Stats */}
               <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-4">
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 contact-item">
                   <MapPin className="w-4 h-4" />
                   <span>{profileData.location || 'Location not specified'}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 contact-item">
                   <Mail className="w-4 h-4" />
                   <span>{user.email}</span>
                 </div>
                 {profileData.phone && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 contact-item">
                     <Phone className="w-4 h-4" />
                     <span>{profileData.phone}</span>
                   </div>
@@ -231,20 +233,20 @@ export default function LinkedInProfile() {
 
               {/* Badges */}
               <div className="flex flex-wrap gap-3 mt-4">
-                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
+                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold badge">
                   {user.roleIdValue}
                 </div>
                 {profileData.percentage && (
-                  <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                  <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold badge">
                     {profileData.percentage}% Average
                   </div>
                 )}
                 {profileData.className && (
-                  <div className="bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-semibold">
+                  <div className="bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-semibold badge">
                     {profileData.className}
                   </div>
                 )}
-                <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1">
+                <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1 badge">
                   <Award className="w-4 h-4" />
                   {user.coins || 0} Coins
                 </div>
@@ -252,15 +254,15 @@ export default function LinkedInProfile() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 mt-6">
-                <button className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
+                <button className="action-button bg-blue-600 text-white">
                   <Plus className="w-4 h-4" />
                   Connect
                 </button>
-                <button className="flex items-center gap-2 px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors">
+                <button className="action-button bg-gray-200 text-gray-700 hover:bg-gray-300">
                   <MessageCircle className="w-4 h-4" />
                   Message
                 </button>
-                <button className="flex items-center gap-2 px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors">
+                <button className="action-button bg-gray-200 text-gray-700 hover:bg-gray-300">
                   <Share2 className="w-4 h-4" />
                   Share
                 </button>
@@ -280,11 +282,7 @@ export default function LinkedInProfile() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-                      activeTab === tab
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`tab-button ${activeTab === tab ? 'active bg-blue-600 text-white' : 'text-gray-600'}`}
                   >
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>
@@ -294,7 +292,7 @@ export default function LinkedInProfile() {
 
             {/* About Section */}
             {activeTab === 'about' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
                 <h2 className="text-2xl font-bold mb-4">About</h2>
                 {isEditing ? (
                   <textarea
@@ -302,11 +300,11 @@ export default function LinkedInProfile() {
                     value={profileData.bio}
                     onChange={handleChange}
                     rows={6}
-                    className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
+                    className="w-full"
                     placeholder="Tell us about yourself..."
                   />
                 ) : (
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-gray-700" style={{ lineHeight: '1.8' }}>
                     {profileData.bio || 'No bio added yet.'}
                   </p>
                 )}
@@ -315,7 +313,7 @@ export default function LinkedInProfile() {
 
             {/* Experience Section */}
             {activeTab === 'experience' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-bold">Experience</h2>
                   {isEditing && (
@@ -334,7 +332,6 @@ export default function LinkedInProfile() {
                       name="internshipsDone"
                       value={profileData.internshipsDone}
                       onChange={handleChange}
-                      className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       placeholder="e.g., Software Developer Intern at XYZ Corp, Data Analyst at ABC Inc"
                     />
                   </div>
@@ -344,7 +341,7 @@ export default function LinkedInProfile() {
                       profileData.internshipsDone.split(',').map((internship, idx) => (
                         <div key={idx} className="flex gap-4">
                           <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center icon-container">
                               <Briefcase className="w-6 h-6 text-blue-600" />
                             </div>
                           </div>
@@ -364,7 +361,7 @@ export default function LinkedInProfile() {
 
             {/* Education Section */}
             {activeTab === 'education' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-bold">Education</h2>
                   {isEditing && (
@@ -384,7 +381,6 @@ export default function LinkedInProfile() {
                         name="className"
                         value={profileData.className}
                         onChange={handleChange}
-                        className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., Grade 12, B.Tech CSE"
                       />
                     </div>
@@ -400,7 +396,6 @@ export default function LinkedInProfile() {
                         min={0}
                         max={100}
                         step={0.01}
-                        className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., 85.5"
                       />
                     </div>
@@ -409,7 +404,7 @@ export default function LinkedInProfile() {
                   <div className="space-y-4">
                     <div className="flex gap-4">
                       <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center icon-container">
                           <GraduationCap className="w-6 h-6 text-purple-600" />
                         </div>
                       </div>
@@ -430,7 +425,7 @@ export default function LinkedInProfile() {
 
             {/* Skills Section */}
             {activeTab === 'skills' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-bold">Skills & Interests</h2>
                   {isEditing && (
@@ -450,7 +445,6 @@ export default function LinkedInProfile() {
                         name="areaOfInterest"
                         value={profileData.areaOfInterest}
                         onChange={handleChange}
-                        className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., Machine Learning, Web Development, Data Science"
                       />
                     </div>
@@ -463,7 +457,6 @@ export default function LinkedInProfile() {
                         name="coursesCompleted"
                         value={profileData.coursesCompleted}
                         onChange={handleChange}
-                        className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., Python for Data Science, Full Stack Development"
                       />
                     </div>
@@ -477,7 +470,7 @@ export default function LinkedInProfile() {
                           profileData.areaOfInterest.split(',').map((skill, idx) => (
                             <span
                               key={idx}
-                              className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                              className="skill-tag bg-blue-100 text-blue-800"
                             >
                               {skill.trim()}
                             </span>
@@ -494,7 +487,7 @@ export default function LinkedInProfile() {
                           profileData.coursesCompleted.split(',').map((course, idx) => (
                             <span
                               key={idx}
-                              className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+                              className="skill-tag bg-green-100 text-green-800"
                             >
                               {course.trim()}
                             </span>
@@ -525,50 +518,44 @@ export default function LinkedInProfile() {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* Contact Info Card */}
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 hover-lift glass">
               <h3 className="text-lg font-bold mb-4">Contact Information</h3>
               {isEditing ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Location
-                    </label>
+                    <label>Location</label>
                     <input
                       type="text"
                       name="location"
                       value={profileData.location}
                       onChange={handleChange}
-                      className="w-full border-2 border-gray-300 rounded-lg p-2 focus:border-blue-500 focus:outline-none"
                       placeholder="City, Country"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Phone
-                    </label>
+                    <label>Phone</label>
                     <input
                       type="tel"
                       name="phone"
                       value={profileData.phone}
                       onChange={handleChange}
-                      className="w-full border-2 border-gray-300 rounded-lg p-2 focus:border-blue-500 focus:outline-none"
                       placeholder="+1234567890"
                     />
                   </div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3">
+                  <div className="contact-item">
                     <Mail className="w-5 h-5 text-gray-600" />
                     <span className="text-sm text-gray-700">{user.email}</span>
                   </div>
                   {profileData.phone && (
-                    <div className="flex items-center gap-3">
+                    <div className="contact-item">
                       <Phone className="w-5 h-5 text-gray-600" />
                       <span className="text-sm text-gray-700">{profileData.phone}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-3">
+                  <div className="contact-item">
                     <MapPin className="w-5 h-5 text-gray-600" />
                     <span className="text-sm text-gray-700">
                       {profileData.location || 'Not specified'}
@@ -579,17 +566,17 @@ export default function LinkedInProfile() {
             </div>
 
             {/* Achievements Card */}
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
               <h3 className="text-lg font-bold mb-4">Achievements</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div className="achievement-card flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Award className="w-6 h-6 text-yellow-600" />
                     <span className="font-semibold text-gray-900">Total Coins</span>
                   </div>
                   <span className="text-xl font-bold text-yellow-600">{user.coins || 0}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="achievement-card flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <GraduationCap className="w-6 h-6 text-blue-600" />
                     <span className="font-semibold text-gray-900">Courses</span>
@@ -598,7 +585,7 @@ export default function LinkedInProfile() {
                     {profileData.coursesCompleted ? profileData.coursesCompleted.split(',').length : 0}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="achievement-card flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Briefcase className="w-6 h-6 text-green-600" />
                     <span className="font-semibold text-gray-900">Internships</span>
@@ -611,25 +598,25 @@ export default function LinkedInProfile() {
             </div>
 
             {/* Activity Card */}
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 hover-lift">
               <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
               <div className="space-y-4">
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                  <div className="activity-dot bg-blue-600"></div>
                   <div>
                     <p className="text-sm text-gray-700 font-medium">Completed Quiz on Data Structures</p>
                     <p className="text-xs text-gray-500">2 days ago</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                  <div className="activity-dot bg-green-600"></div>
                   <div>
                     <p className="text-sm text-gray-700 font-medium">Earned 50 coins for perfect attendance</p>
                     <p className="text-xs text-gray-500">5 days ago</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
+                  <div className="activity-dot bg-purple-600"></div>
                   <div>
                     <p className="text-sm text-gray-700 font-medium">Joined Web Development course</p>
                     <p className="text-xs text-gray-500">1 week ago</p>
