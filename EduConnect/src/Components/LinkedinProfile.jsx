@@ -196,15 +196,15 @@ export default function LinkedInProfile() {
             </div>
 
             {/* Edit Button */}
-            <div className="flex justify-end pt-4">
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 px-4 py-2 border-2 border-blue-600 text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-                {isEditing ? 'Cancel' : 'Edit Profile'}
-              </button>
-            </div>
+            <div className="flex justify-end pt-4 relative z-10 mt-4">
+  <button
+    onClick={() => setIsEditing(!isEditing)}
+    className="flex items-center gap-2 px-4 py-2 border-2 border-blue-600 text-blue-600 rounded-full hover:bg-blue-50 transition-colors relative z-20"
+  >
+    <Edit2 className="w-4 h-4" />
+    {isEditing ? 'Cancel' : 'Edit Profile'}
+  </button>
+</div>
 
             {/* Name and Title */}
             <div className="mt-12 space-y-2">

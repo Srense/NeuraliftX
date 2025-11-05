@@ -1002,3 +1002,13 @@ a:focus-visible {
     color: var(--text-primary);
   }
 }
+/* If needed */
+.profile-container {
+  position: relative;
+  z-index: 1;
+}
+
+.edit-button {
+  z-index: 20;
+  position: relative;
+}
