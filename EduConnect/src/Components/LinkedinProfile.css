@@ -1010,5 +1010,6 @@ a:focus-visible {
 
 .edit-button {
   z-index: 20;
+  margin-top:10;
   position: relative;
 }
