@@ -2214,6 +2214,122 @@ app.delete("/api/posts/:id", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+// ✅ Student Search API
+app.get("/api/students/search", authenticateJWT, async (req, res) => {
+  try {
+    const query = (req.query.query || "").trim();
+    if (!query) return res.json([]);
+
+    const regex = new RegExp(query, "i");
+
+    const results = await User.find({
+      role: "student",
+      $or: [
+        { firstName: regex },
+        { lastName: regex },
+        { email: regex },
+        { roleIdValue: regex },
+        { className: regex },
+      ],
+    })
+      .select("firstName lastName email roleIdValue className percentage bio profilePicUrl areaOfInterest")
+      .limit(20);
+
+    res.json(results);
+  } catch (err) {
+    console.error("❌ Student search error:", err);
+    res.status(500).json({ error: "Failed to search students" });
+  }
+});
+
+// ✅ Student-to-Student Connection Request
+app.post("/api/connect/student/:targetId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+  try {
+    const { targetId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(targetId)) {
+      return res.status(400).json({ error: "Invalid student ID" });
+    }
+
+    if (req.user._id.toString() === targetId) {
+      return res.status(400).json({ error: "Cannot connect with yourself" });
+    }
+
+    const targetUser = await User.findById(targetId);
+    if (!targetUser || targetUser.role !== "student") {
+      return res.status(404).json({ error: "Target student not found" });
+    }
+
+    const existing = await Connection.findOne({
+      $or: [
+        { studentId: req.user._id, alumniId: targetId },
+        { studentId: targetId, alumniId: req.user._id },
+      ],
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        message:
+          existing.status === "pending"
+            ? "Request already pending"
+            : "Already connected",
+        status: existing.status,
+      });
+    }
+
+    const connection = await Connection.create({
+      studentId: req.user._id,
+      alumniId: targetId, // reused same field for student-to-student
+      status: "pending",
+    });
+
+    res.json({ success: true, message: "Connection request sent", connection });
+  } catch (err) {
+    console.error("❌ Error sending student connection:", err);
+    res.status(500).json({ error: "Failed to send connection" });
+  }
+});
+// ✅ Check Student-to-Student Connection Status
+app.get("/api/connect/student/status/:targetId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+  try {
+    const { targetId } = req.params;
+    const currentUserId = req.user._id;
+
+    const connection = await Connection.findOne({
+      $or: [
+        { studentId: currentUserId, alumniId: targetId },
+        { studentId: targetId, alumniId: currentUserId },
+      ],
+    });
+
+    res.json({
+      success: true,
+      status: connection ? connection.status : "not_connected",
+    });
+  } catch (err) {
+    console.error("❌ Check connection status error:", err);
+    res.status(500).json({ error: "Failed to check connection status" });
+  }
+});
+// ✅ Get All Student Connections for Logged-In User
+app.get("/api/students/connections", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+  try {
+    const myId = req.user._id;
+
+    const connections = await Connection.find({
+      $or: [{ studentId: myId }, { alumniId: myId }],
+      status: "accepted",
+    })
+      .populate("studentId", "firstName lastName email profilePicUrl")
+      .populate("alumniId", "firstName lastName email profilePicUrl");
+
+    res.json(connections);
+  } catch (err) {
+    console.error("❌ Fetch student connections error:", err);
+    res.status(500).json({ error: "Failed to fetch connections" });
+  }
+});
+
 
 // Start server
 app.listen(PORT, () => {

@@ -239,6 +239,79 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onPr
   );
 }
 
+/* ----------------- NEW: StudentProfileModal (for search results) ----------------- */
+function StudentProfileModal({ student, token, onClose }) {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!student?._id) return;
+    async function fetchStatus() {
+      try {
+        const res = await fetch(`https://neuraliftx.onrender.com/api/connect/status/${student._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStatus(data.status);
+        } else {
+          setStatus(null);
+        }
+      } catch {
+        setStatus(null);
+      }
+    }
+    fetchStatus();
+  }, [student, token]);
+
+  const sendRequest = async () => {
+    if (!student?._id) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/connect/${student._id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to send connection request");
+      alert("Connection request sent!");
+      setStatus("pending");
+    } catch (err) {
+      alert(err.message || "Request failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!student) return null;
+
+  return (
+    <div className="profile-modal-backdrop" onClick={onClose}>
+      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn">×</button>
+        <img src={getProfileImageUrl(student.profilePicUrl)} alt="Profile" className="profile-large-pic" />
+        <h2>{student.firstName} {student.lastName}</h2>
+        <p><b>UID:</b> {student.roleIdValue}</p>
+        <p><b>Email:</b> {student.email}</p>
+        <p><b>Class:</b> {student.className || "N/A"}</p>
+        <p><b>Percentage:</b> {student.percentage ?? "N/A"}{student.percentage ? "%" : ""}</p>
+        <p><b>Bio:</b> {student.bio || "No bio provided."}</p>
+        <p><b>Interests:</b> {Array.isArray(student.areaOfInterest) ? student.areaOfInterest.join(", ") : (student.areaOfInterest || "N/A")}</p>
+
+        {status ? (
+          <button className="action-btn" disabled>
+            {status === "pending" ? "Request Sent" : status === "accepted" ? "Connected" : "Status: " + status}
+          </button>
+        ) : (
+          <button onClick={sendRequest} className="action-btn" disabled={loading}>
+            {loading ? "Sending..." : "Connect"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ----------------- AnnouncementPopup stays as before ----------------- */
 function AnnouncementPopup({ announcement, onClose, token }) {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -362,6 +435,7 @@ function AnnouncementPopup({ announcement, onClose, token }) {
   );
 }
 
+/* ----------------- useGlobalTheme stays as before ----------------- */
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
@@ -378,6 +452,7 @@ function useGlobalTheme() {
   }, []);
 }
 
+/* ----------------- StudentTasks stays as before ----------------- */
 function StudentTasks({ token }) {
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
@@ -573,6 +648,8 @@ function StudentTasks({ token }) {
   );
 }
 
+/* ----------------- MAIN STUDENT COMPONENT (keeps original logic) ----------------- */
+
 export default function Student() {
   useGlobalTheme();
 
@@ -606,6 +683,14 @@ export default function Student() {
   const [expandedSyllabusSubject, setExpandedSyllabusSubject] = useState(null);
   const [unitUploadedFiles, setUnitUploadedFiles] = useState({});
   const [selectedPdf, setSelectedPdf] = useState(null);
+
+  // ------------- NEW: search related states --------------
+  const [searchResults, setSearchResults] = useState([]); // mixed results: {type:'Student'|'Assignment'|'Task', data:...}
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [searchAbortController, setSearchAbortController] = useState(null);
+  // ------------------------------------------------------
 
   const menu = [
     { label: "Home", icon: "🏠", subLinks: [] },
@@ -712,6 +797,24 @@ export default function Student() {
     fetchUser();
   }, [token, navigate]);
 
+  // prefetch assignments for search merging (keeps original fetch pattern)
+  useEffect(() => {
+    async function prefetch() {
+      try {
+        const res = await fetch("https://neuraliftx.onrender.com/api/assignments", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAssignments(data);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (token) prefetch();
+  }, [token]);
+
   useEffect(() => {
     if (!user) return;
     async function fetchAnnouncements() {
@@ -771,6 +874,7 @@ export default function Student() {
     }
   }, [user, navigate]);
 
+  /* -------------------- EXISTING SEARCH MENU FILTER (kept intact) -------------------- */
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredMenu(menu);
@@ -793,6 +897,121 @@ export default function Student() {
       .filter(Boolean);
     setFilteredMenu(filtered);
   }, [searchTerm]);
+  /* ---------------------------------------------------------------------------------- */
+
+  // ----------------- NEW: Global students/content search effect (debounced + abortable) -----------------
+  useEffect(() => {
+    // if empty search, clear searchResults
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      if (searchAbortController) {
+        try { searchAbortController.abort(); } catch {}
+        setSearchAbortController(null);
+      }
+      return;
+    }
+
+    const query = searchTerm.trim();
+    setSearchLoading(true);
+
+    // debounce timer
+    const timer = setTimeout(async () => {
+      // abort previous
+      if (searchAbortController) {
+        try { searchAbortController.abort(); } catch {}
+      }
+      const ac = new AbortController();
+      setSearchAbortController(ac);
+
+      try {
+        // fetch students
+        const studentRes = await fetch(`https://neuraliftx.onrender.com/api/students/search?query=${encodeURIComponent(query)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: ac.signal,
+        });
+        let studentResults = [];
+        if (studentRes.ok) {
+          studentResults = await studentRes.json();
+        }
+
+        // local filtering for assignments & syllabus & tasks (non-blocking)
+        const locals = [];
+
+        // assignments already prefetched sometimes; include them if present
+        if (Array.isArray(assignments)) {
+          assignments.forEach((a) => {
+            if (a.originalName && a.originalName.toLowerCase().includes(query.toLowerCase())) {
+              locals.push({ type: "Assignment", label: a.originalName, data: a });
+            }
+          });
+        }
+
+        // tasks fetch here lightweight (fetch first page to match)
+        try {
+          const tasksRes = await fetch("https://neuraliftx.onrender.com/api/tasks", {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: ac.signal,
+          });
+          if (tasksRes.ok) {
+            const tasksData = await tasksRes.json();
+            tasksData.forEach((t) => {
+              if (t.originalName && t.originalName.toLowerCase().includes(query.toLowerCase())) {
+                locals.push({ type: "Task", label: t.originalName, data: t });
+              }
+            });
+          }
+        } catch (e) {
+          // ignore tasks fetch failures
+        }
+
+        // menu items (client-side) - include menu matches
+        menu.forEach((m) => {
+          if (m.label.toLowerCase().includes(query.toLowerCase())) {
+            locals.push({ type: "Menu", label: m.label, data: m });
+          } else if (Array.isArray(m.subLinks)) {
+            m.subLinks.forEach((s) => {
+              if ((s.label || "").toLowerCase().includes(query.toLowerCase())) {
+                locals.push({ type: "Menu", label: `${m.label} > ${s.label}`, data: s });
+              }
+              if (s.subLinks && Array.isArray(s.subLinks)) {
+                s.subLinks.forEach((u) => {
+                  if ((u.label || "").toLowerCase().includes(query.toLowerCase())) {
+                    locals.push({ type: "Menu", label: `${m.label} > ${s.label} > ${u.label}`, data: u });
+                  }
+                });
+              }
+            });
+          }
+        });
+
+        // Combine: students first, then local content
+        const combined = [
+          ...studentResults.map((s) => ({ type: "Student", data: s })),
+          ...locals,
+        ];
+
+        setSearchResults(combined);
+      } catch (err) {
+        if (err.name === "AbortError") {
+          // aborted, ignore
+        } else {
+          console.warn("Search error:", err);
+          setSearchResults([]);
+        }
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 350); // debounce 350ms
+
+    return () => {
+      clearTimeout(timer);
+      if (searchAbortController) {
+        try { searchAbortController.abort(); } catch {}
+      }
+    };
+  }, [searchTerm, token, assignments, menu]);
+  // -------------------------------------------------------------------------------------------------------
 
   const toggleSidebar = () => setSidebarOpen((open) => !open);
 
@@ -849,6 +1068,56 @@ export default function Student() {
 
   const handleGenerateQuiz = (assignmentId) => {
     navigate(`/quiz/${assignmentId}`);
+  };
+
+  // handle clicking a search result
+  const handleSelectSearchResult = (result) => {
+    if (!result) return;
+    if (result.type === "Student") {
+      setSelectedStudent(result.data);
+      setShowStudentModal(true);
+      setSearchResults([]);
+      setSearchTerm("");
+    } else if (result.type === "Assignment") {
+      // open assignment file
+      if (result.data?.fileUrl) {
+        window.open(`https://neuraliftx.onrender.com${result.data.fileUrl}`, "_blank");
+      } else {
+        alert("Opening assignment: " + result.label);
+      }
+    } else if (result.type === "Task") {
+      if (result.data?._id) {
+        // open tasks view by setting active main or focusing tasks
+        setActiveMain("Tasks");
+        // attempt to set selected task inside StudentTasks is not possible from here without prop drilling;
+        // but user can view tasks. Optionally you could implement a global event or context — keeping simple.
+      } else {
+        alert("Opening task: " + result.label);
+      }
+    } else if (result.type === "Menu") {
+      // Try to navigate/expand to that menu/submenu
+      if (result.data?.key) {
+        // find parent menu label from the label string if it's composite
+        const key = result.data.key;
+        // find which main contains this key
+        const foundMain = menu.find((m) => {
+          if (m.subLinks && m.subLinks.find((s) => s.key === key)) return true;
+          // search deeper
+          return m.subLinks && m.subLinks.some((s) => s.subLinks && s.subLinks.find((u) => u.key === key));
+        });
+        if (foundMain) {
+          setActiveMain(foundMain.label);
+          setActiveSub(key);
+        } else {
+          alert("Menu: " + result.label);
+        }
+      } else {
+        // simple menu label
+        setActiveMain(result.label);
+      }
+    } else {
+      alert(`${result.type}: ${result.label || JSON.stringify(result)}`);
+    }
   };
 
   let contentArea = null;
@@ -1085,15 +1354,81 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
           <img src={logo} alt="EduConnect Logo" className="header-logo" />
           <span className="header-title">EduConnect</span>
         </div>
-        <div className="search-bar">
+        <div className="search-bar" style={{ position: "relative" }}>
           <input
             type="text"
             placeholder="Search & Bookmark your page"
             aria-label="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            autoComplete="off"
           />
           <span className="search-icon">&#128269;</span>
+
+          {/* NEW: search results dropdown */}
+          { (searchResults.length > 0 || searchLoading) && (
+            <div className="search-results-dropdown" style={{
+              position: "absolute",
+              top: "110%",
+              left: 0,
+              right: 0,
+              zIndex: 1200,
+              background: "#fff",
+              color: "#000",
+              borderRadius: 8,
+              boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+              maxHeight: 360,
+              overflow: "auto",
+              padding: 8
+            }}>
+              {searchLoading && (
+                <div style={{ padding: 12, textAlign: "center" }}>
+                  <div className="spinner" style={{ width: 24, height: 24, margin: "0 auto" }}></div>
+                </div>
+              )}
+              {!searchLoading && searchResults.length === 0 && (
+                <div style={{ padding: 12 }}>No results.</div>
+              )}
+              {!searchLoading && searchResults.map((r, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => handleSelectSearchResult(r)}
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    padding: "8px 10px",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    borderRadius: 6,
+                    transition: "background .12s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.04)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  {r.type === "Student" ? (
+                    <>
+                      <img src={getProfileImageUrl(r.data.profilePicUrl)} alt="p" style={{ width: 40, height: 40, borderRadius: "50%" }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700 }}>{r.data.firstName} {r.data.lastName}</div>
+                        <div style={{ fontSize: 12, color: "#555" }}>{r.data.roleIdValue} • {r.data.className || ""}</div>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#666" }}>Student</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ width: 40, height: 40, borderRadius: 6, background: "#f1f1f1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: 14 }}>{r.type[0]}</span>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600 }}>{r.label}</div>
+                        <div style={{ fontSize: 12, color: "#555" }}>{r.type}</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="header-icons">
           <span className="icon" title="Notifications">
@@ -1240,6 +1575,15 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
           onLogout={handleLogout}
           onUpdateProfilePic={handleUpdateProfilePic}
           onProfileUpdate={handleProfileUpdate}
+        />
+      )}
+
+      {/* NEW: student modal for profiles found via search */}
+      {showStudentModal && selectedStudent && (
+        <StudentProfileModal
+          student={selectedStudent}
+          token={token}
+          onClose={() => { setShowStudentModal(false); setSelectedStudent(null); }}
         />
       )}
 
