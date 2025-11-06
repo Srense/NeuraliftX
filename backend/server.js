@@ -2219,24 +2219,28 @@ app.get("/api/students/search", authenticateJWT, async (req, res) => {
   try {
     const query = (req.query.query || "").trim();
     if (!query) return res.json([]);
+
     const regex = new RegExp(query, "i");
+
     const results = await User.find({
       role: "student",
       $or: [
         { firstName: regex },
         { lastName: regex },
-        { roleIdValue: regex },
         { email: regex },
+        { roleIdValue: regex },
         { className: regex },
       ],
-    }).select("firstName lastName roleIdValue email className bio profilePicUrl areaOfInterest percentage");
+    })
+      .select("firstName lastName email roleIdValue className percentage bio profilePicUrl areaOfInterest")
+      .limit(20);
+
     res.json(results);
   } catch (err) {
-    console.error("Student search error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ Student search error:", err);
+    res.status(500).json({ error: "Failed to search students" });
   }
 });
-
 
 // ✅ Student-to-Student Connection Request
 app.post("/api/connect/student/:targetId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {

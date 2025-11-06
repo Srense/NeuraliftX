@@ -899,101 +899,118 @@ export default function Student() {
   }, [searchTerm]);
   /* ---------------------------------------------------------------------------------- */
 
- // ----------------- NEW: Global students/content search effect (debounced + abortable, FIXED) -----------------
-useEffect(() => {
-  if (!searchTerm.trim()) {
-    setSearchResults([]);
-    setSearchLoading(false);
-    if (searchAbortController) {
-      try { searchAbortController.abort(); } catch {}
-      setSearchAbortController(null);
+  // ----------------- NEW: Global students/content search effect (debounced + abortable) -----------------
+  useEffect(() => {
+    // if empty search, clear searchResults
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      if (searchAbortController) {
+        try { searchAbortController.abort(); } catch {}
+        setSearchAbortController(null);
+      }
+      return;
     }
-    return;
-  }
 
-  const query = searchTerm.trim();
-  setSearchLoading(true);
+    const query = searchTerm.trim();
+    setSearchLoading(true);
 
-  const controller = new AbortController();
-  setSearchAbortController(controller);
-
-  // debounce so it waits until typing stops
-  const timer = setTimeout(async () => {
-    try {
-      const studentRes = await fetch(
-        `https://neuraliftx.onrender.com/api/students/search?query=${encodeURIComponent(query)}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        }
-      );
-
-      let studentResults = [];
-      if (studentRes.ok) {
-        studentResults = await studentRes.json();
+    // debounce timer
+    const timer = setTimeout(async () => {
+      // abort previous
+      if (searchAbortController) {
+        try { searchAbortController.abort(); } catch {}
       }
-
-      // Local results (assignments, tasks, menu)
-      const locals = [];
-      if (Array.isArray(assignments)) {
-        assignments.forEach((a) => {
-          if (a.originalName?.toLowerCase().includes(query.toLowerCase()))
-            locals.push({ type: "Assignment", label: a.originalName, data: a });
-        });
-      }
+      const ac = new AbortController();
+      setSearchAbortController(ac);
 
       try {
-        const tasksRes = await fetch(`https://neuraliftx.onrender.com/api/tasks`, {
+        // fetch students
+        const studentRes = await fetch(`https://neuraliftx.onrender.com/api/students/search?query=${encodeURIComponent(query)}`, {
           headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
+          signal: ac.signal,
         });
-        if (tasksRes.ok) {
-          const tasksData = await tasksRes.json();
-          tasksData.forEach((t) => {
-            if (t.originalName?.toLowerCase().includes(query.toLowerCase()))
-              locals.push({ type: "Task", label: t.originalName, data: t });
+        let studentResults = [];
+        if (studentRes.ok) {
+          studentResults = await studentRes.json();
+        }
+
+        // local filtering for assignments & syllabus & tasks (non-blocking)
+        const locals = [];
+
+        // assignments already prefetched sometimes; include them if present
+        if (Array.isArray(assignments)) {
+          assignments.forEach((a) => {
+            if (a.originalName && a.originalName.toLowerCase().includes(query.toLowerCase())) {
+              locals.push({ type: "Assignment", label: a.originalName, data: a });
+            }
           });
         }
-      } catch {}
 
-      menu.forEach((m) => {
-        if (m.label.toLowerCase().includes(query.toLowerCase())) {
-          locals.push({ type: "Menu", label: m.label, data: m });
-        } else if (Array.isArray(m.subLinks)) {
-          m.subLinks.forEach((s) => {
-            if ((s.label || "").toLowerCase().includes(query.toLowerCase())) {
-              locals.push({ type: "Menu", label: `${m.label} > ${s.label}`, data: s });
-            }
-            s.subLinks?.forEach((u) => {
-              if ((u.label || "").toLowerCase().includes(query.toLowerCase())) {
-                locals.push({ type: "Menu", label: `${m.label} > ${s.label} > ${u.label}`, data: u });
+        // tasks fetch here lightweight (fetch first page to match)
+        try {
+          const tasksRes = await fetch("https://neuraliftx.onrender.com/api/tasks", {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: ac.signal,
+          });
+          if (tasksRes.ok) {
+            const tasksData = await tasksRes.json();
+            tasksData.forEach((t) => {
+              if (t.originalName && t.originalName.toLowerCase().includes(query.toLowerCase())) {
+                locals.push({ type: "Task", label: t.originalName, data: t });
               }
             });
-          });
+          }
+        } catch (e) {
+          // ignore tasks fetch failures
         }
-      });
 
-      const combined = [
-        ...studentResults.map((s) => ({ type: "Student", data: s })),
-        ...locals,
-      ];
-      setSearchResults(combined);
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        console.error("Search error:", err);
-        setSearchResults([]);
+        // menu items (client-side) - include menu matches
+        menu.forEach((m) => {
+          if (m.label.toLowerCase().includes(query.toLowerCase())) {
+            locals.push({ type: "Menu", label: m.label, data: m });
+          } else if (Array.isArray(m.subLinks)) {
+            m.subLinks.forEach((s) => {
+              if ((s.label || "").toLowerCase().includes(query.toLowerCase())) {
+                locals.push({ type: "Menu", label: `${m.label} > ${s.label}`, data: s });
+              }
+              if (s.subLinks && Array.isArray(s.subLinks)) {
+                s.subLinks.forEach((u) => {
+                  if ((u.label || "").toLowerCase().includes(query.toLowerCase())) {
+                    locals.push({ type: "Menu", label: `${m.label} > ${s.label} > ${u.label}`, data: u });
+                  }
+                });
+              }
+            });
+          }
+        });
+
+        // Combine: students first, then local content
+        const combined = [
+          ...studentResults.map((s) => ({ type: "Student", data: s })),
+          ...locals,
+        ];
+
+        setSearchResults(combined);
+      } catch (err) {
+        if (err.name === "AbortError") {
+          // aborted, ignore
+        } else {
+          console.warn("Search error:", err);
+          setSearchResults([]);
+        }
+      } finally {
+        setSearchLoading(false);
       }
-    } finally {
-      setSearchLoading(false);
-    }
-  }, 400); // wait 400ms after typing stops
+    }, 350); // debounce 350ms
 
-  return () => {
-    clearTimeout(timer);
-    controller.abort();
-  };
-}, [searchTerm, token, assignments, menu]);
-
+    return () => {
+      clearTimeout(timer);
+      if (searchAbortController) {
+        try { searchAbortController.abort(); } catch {}
+      }
+    };
+  }, [searchTerm, token, assignments, menu]);
   // -------------------------------------------------------------------------------------------------------
 
   const toggleSidebar = () => setSidebarOpen((open) => !open);
