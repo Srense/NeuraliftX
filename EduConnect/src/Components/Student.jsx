@@ -301,20 +301,26 @@ function StudentProfileModal({ student, token, onClose }) {
         <p><b>Interests:</b> {Array.isArray(student.areaOfInterest) ? student.areaOfInterest.join(", ") : (student.areaOfInterest || "N/A")}</p>
 
         {loading ? (
-          <button className="action-btn" disabled>Checking...</button>
-        ) : status ? (
-          <button className="action-btn" disabled>
-            {status === "pending" ? "Request Sent" : status === "accepted" ? "Connected" : "Status: " + status}
-          </button>
-        ) : (
-          <button onClick={sendRequest} className="action-btn" disabled={sending}>
-            {sending ? "Sending..." : "Connect"}
-          </button>
-        )}
+  <button className="action-btn" disabled>Checking...</button>
+) : status && status !== "not_connected" ? (
+  <button className="action-btn" disabled>
+    {status === "pending"
+      ? "Request Sent"
+      : status === "accepted"
+      ? "Connected"
+      : "Status: " + status}
+  </button>
+) : (
+  <button onClick={sendRequest} className="action-btn" disabled={sending}>
+    {sending ? "Sending..." : "Connect"}
+  </button>
+)}
+
       </div>
     </div>
   );
 }
+
 
 /* ----------------- AnnouncementPopup stays as before ----------------- */
 function AnnouncementPopup({ announcement, onClose, token }) {
