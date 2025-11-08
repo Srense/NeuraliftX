@@ -381,6 +381,33 @@ const postSchema = new mongoose.Schema(
 );
 
 const Post = mongoose.model("Post", postSchema);
+
+// ==========================
+// 🧩 Student Connection Schema
+// ==========================
+const studentConnectionSchema = new mongoose.Schema(
+  {
+    requesterId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    receiverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "accepted", "rejected"],
+      default: "pending",
+    },
+  },
+  { timestamps: true }
+);
+
+const StudentConnection = mongoose.model("StudentConnection", studentConnectionSchema);
+
 // Disposable email checks (using AbstractAPI and deep-email-validator)
 const isDisposableEmail = async (email) => {
   try {
@@ -2331,6 +2358,7 @@ app.get("/api/students/connections", authenticateJWT, authorizeRole(["student"])
 });
 
 // --- Student: View Incoming Connection Requests ---
+// --- Student: View Incoming Connection Requests ---
 app.get("/api/connect/student/requests",
   authenticateJWT,
   authorizeRole(["student"]),
@@ -2339,8 +2367,8 @@ app.get("/api/connect/student/requests",
       const userId = req.user._id;
 
       const requests = await Connection.find({
-        alumniId: userId,  // here alumniId stores the target user's id (even for students)
-        status: "pending"
+        alumniId: new mongoose.Types.ObjectId(userId),
+        status: "pending",
       })
         .populate("studentId", "firstName lastName email roleIdValue className profilePicUrl")
         .lean();
@@ -2348,7 +2376,7 @@ app.get("/api/connect/student/requests",
       res.json({
         success: true,
         count: requests.length,
-        requests
+        requests,
       });
     } catch (err) {
       console.error("📥 Student fetch connection requests error:", err);
