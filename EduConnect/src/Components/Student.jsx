@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
-
 import { useNavigate } from "react-router-dom";
 import "./Admin.css";
 import "./Student.css";
@@ -58,7 +57,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onPr
   });
 
   useEffect(() => {
-    // Update local state whenever user prop changes
     setProfileData({
       bio: user.bio || "",
       percentage: user.percentage || "",
@@ -108,7 +106,6 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onPr
   };
 
   const handleSave = async () => {
-    // Prepare array fields from comma-separated strings
     const body = {
       bio: profileData.bio,
       percentage: profileData.percentage === "" ? null : Number(profileData.percentage),
@@ -243,31 +240,35 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onPr
 function StudentProfileModal({ student, token, onClose }) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
+  // fetch connection status when modal opens or student changes
   useEffect(() => {
     if (!student?._id) return;
-    async function fetchStatus() {
+    let mounted = true;
+    setLoading(true);
+    (async () => {
       try {
+        // Use the student-to-student status endpoint
         const res = await fetch(`https://neuraliftx.onrender.com/api/connect/student/status/${student._id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.ok) {
-          const data = await res.json();
-          // backend returns { success: true, status: '...' } or { success: true, status: 'not_connected' }
-          setStatus(data.status || (data.success ? data.status : null));
-        } else {
-          setStatus(null);
-        }
-      } catch {
+        if (!res.ok) throw new Error("Failed to fetch status");
+        const data = await res.json();
+        if (!mounted) return;
+        setStatus(data.status || (data.success ? data.status : null));
+      } catch (e) {
         setStatus(null);
+      } finally {
+        if (mounted) setLoading(false);
       }
-    }
-    fetchStatus();
+    })();
+    return () => { mounted = false; };
   }, [student, token]);
 
   const sendRequest = async () => {
     if (!student?._id) return;
-    setLoading(true);
+    setSending(true);
     try {
       const res = await fetch(`https://neuraliftx.onrender.com/api/connect/student/${student._id}`, {
         method: "POST",
@@ -280,7 +281,7 @@ function StudentProfileModal({ student, token, onClose }) {
     } catch (err) {
       alert(err.message || "Request failed");
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
@@ -299,13 +300,15 @@ function StudentProfileModal({ student, token, onClose }) {
         <p><b>Bio:</b> {student.bio || "No bio provided."}</p>
         <p><b>Interests:</b> {Array.isArray(student.areaOfInterest) ? student.areaOfInterest.join(", ") : (student.areaOfInterest || "N/A")}</p>
 
-        {status ? (
+        {loading ? (
+          <button className="action-btn" disabled>Checking...</button>
+        ) : status ? (
           <button className="action-btn" disabled>
             {status === "pending" ? "Request Sent" : status === "accepted" ? "Connected" : "Status: " + status}
           </button>
         ) : (
-          <button onClick={sendRequest} className="action-btn" disabled={loading}>
-            {loading ? "Sending..." : "Connect"}
+          <button onClick={sendRequest} className="action-btn" disabled={sending}>
+            {sending ? "Sending..." : "Connect"}
           </button>
         )}
       </div>
@@ -441,11 +444,15 @@ function AnnouncementPopup({ announcement, onClose, token }) {
 function useGlobalTheme() {
   useEffect(() => {
     async function syncTheme() {
-      const res = await fetch("https://neuraliftx.onrender.com/api/theme");
-      if (res.ok) {
-        const { theme } = await res.json();
-        document.body.classList.remove("default", "dark", "blue");
-        document.body.classList.add(theme);
+      try {
+        const res = await fetch("https://neuraliftx.onrender.com/api/theme");
+        if (res.ok) {
+          const { theme } = await res.json();
+          document.body.classList.remove("default", "dark", "blue");
+          document.body.classList.add(theme);
+        }
+      } catch (e) {
+        // ignore
       }
     }
     syncTheme();
@@ -614,7 +621,7 @@ function StudentTasks({ token }) {
                       disabled={verifying}
                       className="task-btn check"
                     >
-                      {verifying ? "Checking..." : "Check"}
+                      {verifying ? "Checking..." : "Checking..."}
                     </button>
 
                     {verificationResult && (
@@ -649,7 +656,7 @@ function StudentTasks({ token }) {
   );
 }
 
-/* ----------------- MAIN STUDENT COMPONENT (complete, integrated) ----------------- */
+/* ----------------- MAIN STUDENT COMPONENT (fixed search) ----------------- */
 
 export default function Student() {
   useGlobalTheme();
@@ -691,7 +698,8 @@ export default function Student() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showStudentModal, setShowStudentModal] = useState(false);
-  const [searchAbortController, setSearchAbortController] = useState(null);
+  const searchAbortControllerRef = useRef(null);
+  const searchDebounceTimerRef = useRef(null);
   // ------------------------------------------------------
 
   const menu = [
@@ -829,7 +837,7 @@ export default function Student() {
         if (!res.ok) throw new Error("Failed to fetch announcements");
         const data = await res.json();
         setAnnouncements(Array.isArray(data) ? data : []);
-        if (data.length > 0) {
+        if (Array.isArray(data) && data.length > 0) {
           setCurrentAnnouncement(data[0]);
           setShowAnnouncementPopup(true);
         }
@@ -885,11 +893,11 @@ export default function Student() {
     const lowerSearch = searchTerm.toLowerCase();
     const filtered = menu
       .map((item) => {
-        const filteredSubs = item.subLinks.filter((sub) =>
-          sub.label.toLowerCase().includes(lowerSearch)
+        const filteredSubs = (item.subLinks || []).filter((sub) =>
+          (sub.label || "").toLowerCase().includes(lowerSearch)
         );
         if (
-          item.label.toLowerCase().includes(lowerSearch) ||
+          (item.label || "").toLowerCase().includes(lowerSearch) ||
           filteredSubs.length > 0
         ) {
           return { ...item, subLinks: filteredSubs };
@@ -903,44 +911,54 @@ export default function Student() {
 
   // ----------------- NEW: Global students/content search effect (debounced + abortable) -----------------
   useEffect(() => {
-    // if empty search, clear searchResults
+    // clear previous timer
+    if (searchDebounceTimerRef.current) {
+      clearTimeout(searchDebounceTimerRef.current);
+      searchDebounceTimerRef.current = null;
+    }
+
+    // if empty search, clear searchResults and abort
     if (!searchTerm.trim()) {
       setSearchResults([]);
       setSearchLoading(false);
-      if (searchAbortController) {
-        try { searchAbortController.abort(); } catch {}
-        setSearchAbortController(null);
+      if (searchAbortControllerRef.current) {
+        try { searchAbortControllerRef.current.abort(); } catch {}
+        searchAbortControllerRef.current = null;
       }
       return;
     }
 
-    const query = searchTerm.trim();
     setSearchLoading(true);
 
-    // debounce timer
-    const timer = setTimeout(async () => {
-      // abort previous
-      if (searchAbortController) {
-        try { searchAbortController.abort(); } catch {}
+    searchDebounceTimerRef.current = setTimeout(async () => {
+      // abort previous fetch
+      if (searchAbortControllerRef.current) {
+        try { searchAbortControllerRef.current.abort(); } catch {}
       }
       const ac = new AbortController();
-      setSearchAbortController(ac);
+      searchAbortControllerRef.current = ac;
+
+      const query = searchTerm.trim();
 
       try {
-        // fetch students — use the dedicated search endpoint and include token
+        // Fetch students using dedicated search endpoint
         const studentRes = await fetch(`https://neuraliftx.onrender.com/api/students/search?query=${encodeURIComponent(query)}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal: ac.signal,
         });
+
         let studentResults = [];
         if (studentRes.ok) {
-          studentResults = await studentRes.json();
+          const data = await studentRes.json();
+          // backend returns array of student objects
+          if (Array.isArray(data)) {
+            studentResults = data.map(s => ({ type: "Student", data: s }));
+          }
         }
 
-        // local filtering for assignments & syllabus & tasks (non-blocking)
+        // local filtering for assignments & tasks & menu
         const locals = [];
 
-        // assignments already prefetched sometimes; include them if present
         if (Array.isArray(assignments)) {
           assignments.forEach((a) => {
             if (a.originalName && a.originalName.toLowerCase().includes(query.toLowerCase())) {
@@ -949,7 +967,6 @@ export default function Student() {
           });
         }
 
-        // tasks fetch here lightweight (fetch first page to match)
         try {
           const tasksRes = await fetch("https://neuraliftx.onrender.com/api/tasks", {
             headers: { Authorization: `Bearer ${token}` },
@@ -957,7 +974,7 @@ export default function Student() {
           });
           if (tasksRes.ok) {
             const tasksData = await tasksRes.json();
-            tasksData.forEach((t) => {
+            (tasksData || []).forEach((t) => {
               if (t.originalName && t.originalName.toLowerCase().includes(query.toLowerCase())) {
                 locals.push({ type: "Task", label: t.originalName, data: t });
               }
@@ -967,9 +984,8 @@ export default function Student() {
           // ignore tasks fetch failures
         }
 
-        // menu items (client-side) - include menu matches
         menu.forEach((m) => {
-          if (m.label.toLowerCase().includes(query.toLowerCase())) {
+          if ((m.label || "").toLowerCase().includes(query.toLowerCase())) {
             locals.push({ type: "Menu", label: m.label, data: m });
           } else if (Array.isArray(m.subLinks)) {
             m.subLinks.forEach((s) => {
@@ -987,16 +1003,15 @@ export default function Student() {
           }
         });
 
-        // Combine: students first, then local content
         const combined = [
-          ...studentResults.map((s) => ({ type: "Student", data: s })),
+          ...studentResults,
           ...locals,
         ];
 
         setSearchResults(combined);
       } catch (err) {
         if (err.name === "AbortError") {
-          // aborted, ignore
+          // ignore
         } else {
           console.warn("Search error:", err);
           setSearchResults([]);
@@ -1004,12 +1019,12 @@ export default function Student() {
       } finally {
         setSearchLoading(false);
       }
-    }, 350); // debounce 350ms
+    }, 300); // debounce 300ms
 
     return () => {
-      clearTimeout(timer);
-      if (searchAbortController) {
-        try { searchAbortController.abort(); } catch {}
+      if (searchDebounceTimerRef.current) {
+        clearTimeout(searchDebounceTimerRef.current);
+        searchDebounceTimerRef.current = null;
       }
     };
   }, [searchTerm, token, assignments, menu]);
@@ -1030,7 +1045,6 @@ export default function Student() {
   const handleSubClick = (key) => {
     setActiveSub(key);
 
-    // If file exists for this unit, set it for inline viewing
     if (unitUploadedFiles[key]) {
       setSelectedPdf(`https://neuraliftx.onrender.com${unitUploadedFiles[key]}`);
     }
@@ -1076,35 +1090,24 @@ export default function Student() {
   const handleSelectSearchResult = (result) => {
     if (!result) return;
     if (result.type === "Student") {
+      // We already have the student object (from search)
       setSelectedStudent(result.data);
       setShowStudentModal(true);
       setSearchResults([]);
       setSearchTerm("");
     } else if (result.type === "Assignment") {
-      // open assignment file
       if (result.data?.fileUrl) {
         window.open(`https://neuraliftx.onrender.com${result.data.fileUrl}`, "_blank");
       } else {
         alert("Opening assignment: " + result.label);
       }
     } else if (result.type === "Task") {
-      if (result.data?._id) {
-        // open tasks view by setting active main or focusing tasks
-        setActiveMain("Tasks");
-        // attempt to set selected task inside StudentTasks is not possible from here without prop drilling;
-        // but user can view tasks. Optionally you could implement a global event or context — keeping simple.
-      } else {
-        alert("Opening task: " + result.label);
-      }
+      setActiveMain("Tasks");
     } else if (result.type === "Menu") {
-      // Try to navigate/expand to that menu/submenu
       if (result.data?.key) {
-        // find parent menu label from the label string if it's composite
         const key = result.data.key;
-        // find which main contains this key
         const foundMain = menu.find((m) => {
           if (m.subLinks && m.subLinks.find((s) => s.key === key)) return true;
-          // search deeper
           return m.subLinks && m.subLinks.some((s) => s.subLinks && s.subLinks.find((u) => u.key === key));
         });
         if (foundMain) {
@@ -1114,11 +1117,20 @@ export default function Student() {
           alert("Menu: " + result.label);
         }
       } else {
-        // simple menu label
         setActiveMain(result.label);
       }
     } else {
       alert(`${result.type}: ${result.label || JSON.stringify(result)}`);
+    }
+  };
+
+  // allow Enter to select first result / or open search results
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        handleSelectSearchResult(searchResults[0]);
+      }
     }
   };
 
@@ -1133,7 +1145,6 @@ export default function Student() {
   } else if (activeMain === "Quiz/Assignments") {
     contentArea = (
       <div className="assignments-container">
-        {/* Show a message if there are no assignments */}
         {assignments.length === 0 ? (
           <p>No assignments available.</p>
         ) : (
@@ -1356,13 +1367,22 @@ export default function Student() {
         <div className="search-bar" style={{ position: "relative" }}>
           <input
             type="text"
-            placeholder="Search & Bookmark your page"
+            placeholder="Search by name, UID or page..."
             aria-label="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             autoComplete="off"
           />
-          <span className="search-icon">&#128269;</span>
+          <button
+            aria-label="Search"
+            onClick={() => {
+              if (searchResults.length > 0) handleSelectSearchResult(searchResults[0]);
+            }}
+            className="search-icon-button"
+          >
+            <span className="search-icon">&#128269;</span>
+          </button>
 
           {/* NEW: search results dropdown */}
           { (searchResults.length > 0 || searchLoading) && (
@@ -1391,7 +1411,11 @@ export default function Student() {
               {!searchLoading && searchResults.map((r, idx) => (
                 <div
                   key={idx}
-                  onClick={() => handleSelectSearchResult(r)}
+                  onClick={(e) => {
+                    // stop propagation so dropdown doesn't close in unexpected ways
+                    e.stopPropagation();
+                    handleSelectSearchResult(r);
+                  }}
                   style={{
                     display: "flex",
                     gap: 12,
@@ -1410,6 +1434,7 @@ export default function Student() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700 }}>{r.data.firstName} {r.data.lastName}</div>
                         <div style={{ fontSize: 12, color: "#555" }}>{r.data.roleIdValue} • {r.data.className || ""}</div>
+                        <div style={{ fontSize: 11, color: "#666" }}>{r.data.bio ? (r.data.bio.length > 60 ? r.data.bio.substring(0,60) + "..." : r.data.bio) : ""}</div>
                       </div>
                       <div style={{ fontSize: 12, color: "#666" }}>Student</div>
                     </>
