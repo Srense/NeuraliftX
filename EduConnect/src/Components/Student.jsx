@@ -11,6 +11,8 @@ import CourseraCertifications from "./CourseraCertifications";
 import IndividualLeaderboard from "./IndividualLeaderboard";
 import Grades from "./Grades.jsx";
 import AlumniArena from "./AlumniArena";
+import StudentConnections from "./StudentConnections";
+
 const Social = lazy(() => import("./Social"));
 
 function CoinBadge({ coins }) {
@@ -1588,6 +1590,8 @@ export default function Student() {
                 </div>
               }
             >
+              <StudentConnections token={token} />
+
               <Social />
             </Suspense>
           ) : (

@@ -2330,6 +2330,66 @@ app.get("/api/students/connections", authenticateJWT, authorizeRole(["student"])
   }
 });
 
+// --- Student: View Incoming Connection Requests ---
+app.get("/api/connect/student/requests",
+  authenticateJWT,
+  authorizeRole(["student"]),
+  async (req, res) => {
+    try {
+      const userId = req.user._id;
+
+      const requests = await Connection.find({
+        alumniId: userId,  // here alumniId stores the target user's id (even for students)
+        status: "pending"
+      })
+        .populate("studentId", "firstName lastName email roleIdValue className profilePicUrl")
+        .lean();
+
+      res.json({
+        success: true,
+        count: requests.length,
+        requests
+      });
+    } catch (err) {
+      console.error("📥 Student fetch connection requests error:", err);
+      res.status(500).json({ error: "Failed to fetch connection requests" });
+    }
+  }
+);
+
+// --- Student: Accept or Reject Connection Request ---
+app.put("/api/connect/student/requests/:id",
+  authenticateJWT,
+  authorizeRole(["student"]),
+  async (req, res) => {
+    try {
+      const { action } = req.body; // 'accept' or 'reject'
+      const connectionId = req.params.id;
+      const userId = req.user._id;
+
+      const connection = await Connection.findById(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection request not found" });
+      }
+
+      // Only target student (the receiver) can accept/reject
+      if (connection.alumniId.toString() !== userId.toString()) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      if (action === "accept") connection.status = "accepted";
+      else if (action === "reject") connection.status = "rejected";
+      else return res.status(400).json({ error: "Invalid action" });
+
+      await connection.save();
+      res.json({ success: true, message: `Request ${action}ed successfully.` });
+    } catch (err) {
+      console.error("✅ Student accept/reject connection error:", err);
+      res.status(500).json({ error: "Failed to update connection request" });
+    }
+  }
+);
+
 
 // Start server
 app.listen(PORT, () => {
