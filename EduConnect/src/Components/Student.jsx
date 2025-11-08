@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import  { Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 
 import { useNavigate } from "react-router-dom";
 import "./Admin.css";
@@ -13,7 +13,6 @@ import IndividualLeaderboard from "./IndividualLeaderboard";
 import Grades from "./Grades.jsx";
 import AlumniArena from "./AlumniArena";
 const Social = lazy(() => import("./Social"));
-
 
 function CoinBadge({ coins }) {
   return (
@@ -42,6 +41,7 @@ function CoinIcon() {
 const getProfileImageUrl = (profilePicUrl) =>
   profilePicUrl ? `https://neuraliftx.onrender.com${profilePicUrl}` : "https://via.placeholder.com/40";
 
+/* ---------------- Profile Modal (student viewing their own profile) ---------------- */
 function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onProfileUpdate }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -111,7 +111,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onPr
     // Prepare array fields from comma-separated strings
     const body = {
       bio: profileData.bio,
-      percentage: Number(profileData.percentage),
+      percentage: profileData.percentage === "" ? null : Number(profileData.percentage),
       className: profileData.className,
       internshipsDone: profileData.internshipsDone.split(",").map((s) => s.trim()).filter(Boolean),
       coursesCompleted: profileData.coursesCompleted.split(",").map((s) => s.trim()).filter(Boolean),
@@ -239,7 +239,7 @@ function ProfileModal({ user, token, onClose, onLogout, onUpdateProfilePic, onPr
   );
 }
 
-/* ----------------- NEW: StudentProfileModal (for search results) ----------------- */
+/* ----------------- StudentProfileModal (for search results) ----------------- */
 function StudentProfileModal({ student, token, onClose }) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -248,12 +248,13 @@ function StudentProfileModal({ student, token, onClose }) {
     if (!student?._id) return;
     async function fetchStatus() {
       try {
-        const res = await fetch(`https://neuraliftx.onrender.com/api/connect/status/${student._id}`, {
+        const res = await fetch(`https://neuraliftx.onrender.com/api/connect/student/status/${student._id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
           const data = await res.json();
-          setStatus(data.status);
+          // backend returns { success: true, status: '...' } or { success: true, status: 'not_connected' }
+          setStatus(data.status || (data.success ? data.status : null));
         } else {
           setStatus(null);
         }
@@ -268,12 +269,13 @@ function StudentProfileModal({ student, token, onClose }) {
     if (!student?._id) return;
     setLoading(true);
     try {
-      const res = await fetch(`https://neuraliftx.onrender.com/api/connect/${student._id}`, {
+      const res = await fetch(`https://neuraliftx.onrender.com/api/connect/student/${student._id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to send connection request");
-      alert("Connection request sent!");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || "Failed to send connection request");
+      alert(data.message || "Connection request sent!");
       setStatus("pending");
     } catch (err) {
       alert(err.message || "Request failed");
@@ -462,7 +464,6 @@ function StudentTasks({ token }) {
   const [uploadingAnswer, setUploadingAnswer] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
-  
 
   useEffect(() => {
     async function fetchTasks() {
@@ -648,13 +649,14 @@ function StudentTasks({ token }) {
   );
 }
 
-/* ----------------- MAIN STUDENT COMPONENT (keeps original logic) ----------------- */
+/* ----------------- MAIN STUDENT COMPONENT (complete, integrated) ----------------- */
 
 export default function Student() {
   useGlobalTheme();
 
   const navigate = useNavigate();
 
+  // Keep same token key you used in your app
   const token = localStorage.getItem("token_student");
 
   const [user, setUser] = useState(null);
@@ -925,7 +927,7 @@ export default function Student() {
       setSearchAbortController(ac);
 
       try {
-        // fetch students
+        // fetch students — use the dedicated search endpoint and include token
         const studentRes = await fetch(`https://neuraliftx.onrender.com/api/students/search?query=${encodeURIComponent(query)}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal: ac.signal,
@@ -1196,145 +1198,142 @@ export default function Student() {
       </div>
     );
   } else if (activeMain === "Internships") {
-  contentArea = (
-    <div className="opportunities-container">
-      <h3 className="section-title">Internship Opportunities</h3>
-      <div className="card-list">
-        <div className="opportunity-card">
-          <h4>Frontend Developer Intern</h4>
-          <p>Work with React and TailwindCSS to build dynamic dashboards.</p>
-          <p><strong>Duration:</strong> 3 Months</p>
-          <p><strong>Location:</strong> Remote</p>
-          <button className="apply-btn">Apply Now</button>
-        </div>
+    contentArea = (
+      <div className="opportunities-container">
+        <h3 className="section-title">Internship Opportunities</h3>
+        <div className="card-list">
+          <div className="opportunity-card">
+            <h4>Frontend Developer Intern</h4>
+            <p>Work with React and TailwindCSS to build dynamic dashboards.</p>
+            <p><strong>Duration:</strong> 3 Months</p>
+            <p><strong>Location:</strong> Remote</p>
+            <button className="apply-btn">Apply Now</button>
+          </div>
 
-        <div className="opportunity-card">
-          <h4>Backend Developer Intern</h4>
-          <p>Assist in building REST APIs using Node.js and MongoDB.</p>
-          <p><strong>Duration:</strong> 2 Months</p>
-          <p><strong>Location:</strong> Hybrid (Delhi)</p>
-          <button className="apply-btn">Apply Now</button>
-        </div>
+          <div className="opportunity-card">
+            <h4>Backend Developer Intern</h4>
+            <p>Assist in building REST APIs using Node.js and MongoDB.</p>
+            <p><strong>Duration:</strong> 2 Months</p>
+            <p><strong>Location:</strong> Hybrid (Delhi)</p>
+            <button className="apply-btn">Apply Now</button>
+          </div>
 
-        <div className="opportunity-card">
-          <h4>AI Research Intern</h4>
-          <p>Work on AI/ML projects like chatbots and image recognition models.</p>
-          <p><strong>Duration:</strong> 6 Months</p>
-          <p><strong>Location:</strong> Remote</p>
-          <button className="apply-btn">Apply Now</button>
+          <div className="opportunity-card">
+            <h4>AI Research Intern</h4>
+            <p>Work on AI/ML projects like chatbots and image recognition models.</p>
+            <p><strong>Duration:</strong> 6 Months</p>
+            <p><strong>Location:</strong> Remote</p>
+            <button className="apply-btn">Apply Now</button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  } else if (activeMain === "Live Projects") {
+    contentArea = (
+      <div className="opportunities-container">
+        <h3 className="section-title">Ongoing Live Projects</h3>
+        <div className="card-list">
+          <div className="opportunity-card">
+            <h4>NeuraLiftX Student Portal</h4>
+            <p>Collaborate on enhancing the student–alumni system using MERN stack.</p>
+            <p><strong>Tech Stack:</strong> React, Node.js, MongoDB</p>
+            <button className="contribute-btn">Contribute</button>
+          </div>
 
-else if (activeMain === "Live Projects") {
-  contentArea = (
-    <div className="opportunities-container">
-      <h3 className="section-title">Ongoing Live Projects</h3>
-      <div className="card-list">
-        <div className="opportunity-card">
-          <h4>NeuraLiftX Student Portal</h4>
-          <p>Collaborate on enhancing the student–alumni system using MERN stack.</p>
-          <p><strong>Tech Stack:</strong> React, Node.js, MongoDB</p>
-          <button className="contribute-btn">Contribute</button>
-        </div>
+          <div className="opportunity-card">
+            <h4>AI Notes Summarizer</h4>
+            <p>Help build a tool that summarizes lecture notes using NLP.</p>
+            <p><strong>Tech Stack:</strong> Python, Flask, OpenAI API</p>
+            <button className="contribute-btn">Contribute</button>
+          </div>
 
-        <div className="opportunity-card">
-          <h4>AI Notes Summarizer</h4>
-          <p>Help build a tool that summarizes lecture notes using NLP.</p>
-          <p><strong>Tech Stack:</strong> Python, Flask, OpenAI API</p>
-          <button className="contribute-btn">Contribute</button>
-        </div>
-
-        <div className="opportunity-card">
-          <h4>Attendance Dashboard</h4>
-          <p>Improve student attendance visualization using Recharts.</p>
-          <p><strong>Tech Stack:</strong> React, Express</p>
-          <button className="contribute-btn">Contribute</button>
+          <div className="opportunity-card">
+            <h4>Attendance Dashboard</h4>
+            <p>Improve student attendance visualization using Recharts.</p>
+            <p><strong>Tech Stack:</strong> React, Express</p>
+            <button className="contribute-btn">Contribute</button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-} 
-else if (activeMain === "Academics" && activeSub === "academics-courses") {
-  contentArea = (
-    <div className="opportunities-container">
-      <h3 className="section-title">Available Courses</h3>
-      <div className="card-list">
-        <div className="opportunity-card">
-          <h4>Data Structures & Algorithms</h4>
-          <p>
-            Learn efficient problem-solving techniques using arrays, trees,
-            graphs, and dynamic programming.
-          </p>
-          <p><strong>Instructor:</strong> Prof. A. Sharma</p>
-          <p><strong>Duration:</strong> 10 Weeks</p>
-          <button className="enroll-btn">Enroll Now</button>
-        </div>
+    );
+  } else if (activeMain === "Academics" && activeSub === "academics-courses") {
+    contentArea = (
+      <div className="opportunities-container">
+        <h3 className="section-title">Available Courses</h3>
+        <div className="card-list">
+          <div className="opportunity-card">
+            <h4>Data Structures & Algorithms</h4>
+            <p>
+              Learn efficient problem-solving techniques using arrays, trees,
+              graphs, and dynamic programming.
+            </p>
+            <p><strong>Instructor:</strong> Prof. A. Sharma</p>
+            <p><strong>Duration:</strong> 10 Weeks</p>
+            <button className="enroll-btn">Enroll Now</button>
+          </div>
 
-        <div className="opportunity-card">
-          <h4>Web Development with MERN Stack</h4>
-          <p>
-            Build modern full-stack web apps using MongoDB, Express, React, and
-            Node.js.
-          </p>
-          <p><strong>Instructor:</strong> Mr. R. Mehta</p>
-          <p><strong>Duration:</strong> 8 Weeks</p>
-          <button className="enroll-btn">Enroll Now</button>
-        </div>
+          <div className="opportunity-card">
+            <h4>Web Development with MERN Stack</h4>
+            <p>
+              Build modern full-stack web apps using MongoDB, Express, React, and
+              Node.js.
+            </p>
+            <p><strong>Instructor:</strong> Mr. R. Mehta</p>
+            <p><strong>Duration:</strong> 8 Weeks</p>
+            <button className="enroll-btn">Enroll Now</button>
+          </div>
 
-        <div className="opportunity-card">
-          <h4>Machine Learning Fundamentals</h4>
-          <p>
-            Introduction to supervised and unsupervised learning with Python and
-            real-world datasets.
-          </p>
-          <p><strong>Instructor:</strong> Dr. N. Gupta</p>
-          <p><strong>Duration:</strong> 12 Weeks</p>
-          <button className="enroll-btn">Enroll Now</button>
+          <div className="opportunity-card">
+            <h4>Machine Learning Fundamentals</h4>
+            <p>
+              Introduction to supervised and unsupervised learning with Python and
+              real-world datasets.
+            </p>
+            <p><strong>Instructor:</strong> Dr. N. Gupta</p>
+            <p><strong>Duration:</strong> 12 Weeks</p>
+            <button className="enroll-btn">Enroll Now</button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}else if (activeMain === "Top Rankers" && activeSub === "toprankers-school") {
-  contentArea = (
-    <div className="opportunities-container">
-      <h3 className="section-title">Top Ranked Schools</h3>
-      <div className="card-list">
-        <div className="opportunity-card">
-          <h4>Delhi Public School, Ranchi</h4>
-          <p><strong>Rank:</strong> #1</p>
-          <p><strong>Rating:</strong> ⭐⭐⭐⭐⭐ (4.9/5)</p>
-          <p>
-            Known for excellent academic performance, discipline, and advanced learning infrastructure.
-          </p>
-          <button className="view-btn">View Details</button>
-        </div>
+    );
+  } else if (activeMain === "Top Rankers" && activeSub === "toprankers-school") {
+    contentArea = (
+      <div className="opportunities-container">
+        <h3 className="section-title">Top Ranked Schools</h3>
+        <div className="card-list">
+          <div className="opportunity-card">
+            <h4>Delhi Public School, Ranchi</h4>
+            <p><strong>Rank:</strong> #1</p>
+            <p><strong>Rating:</strong> ⭐⭐⭐⭐⭐ (4.9/5)</p>
+            <p>
+              Known for excellent academic performance, discipline, and advanced learning infrastructure.
+            </p>
+            <button className="view-btn">View Details</button>
+          </div>
 
-        <div className="opportunity-card">
-          <h4>D.A.V. Public School, Khalari</h4>
-          <p><strong>Rank:</strong> #2</p>
-          <p><strong>Rating:</strong> ⭐⭐⭐⭐☆ (4.7/5)</p>
-          <p>
-            Focused on holistic education with emphasis on sports, science, and moral development.
-          </p>
-          <button className="view-btn">View Details</button>
-        </div>
+          <div className="opportunity-card">
+            <h4>D.A.V. Public School, Khalari</h4>
+            <p><strong>Rank:</strong> #2</p>
+            <p><strong>Rating:</strong> ⭐⭐⭐⭐☆ (4.7/5)</p>
+            <p>
+              Focused on holistic education with emphasis on sports, science, and moral development.
+            </p>
+            <button className="view-btn">View Details</button>
+          </div>
 
-        <div className="opportunity-card">
-          <h4>D.A.V. Public School, Kurali</h4>
-          <p><strong>Rank:</strong> #3</p>
-          <p><strong>Rating:</strong> ⭐⭐⭐⭐☆ (4.6/5)</p>
-          <p>
-            Recognized for co-curricular excellence, student leadership, and modern teaching methods.
-          </p>
-          <button className="view-btn">View Details</button>
+          <div className="opportunity-card">
+            <h4>D.A.V. Public School, Kurali</h4>
+            <p><strong>Rank:</strong> #3</p>
+            <p><strong>Rating:</strong> ⭐⭐⭐⭐☆ (4.6/5)</p>
+            <p>
+              Recognized for co-curricular excellence, student leadership, and modern teaching methods.
+            </p>
+            <button className="view-btn">View Details</button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}else {
+    );
+  } else {
     contentArea = <div>Select a menu item to view its content.</div>;
   }
 
@@ -1435,26 +1434,26 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
             &#128276;
           </span>
           <span
-  className="icon"
-  title="Social"
-  onClick={() => {
-    setLoadingSocial(true);
-    setShowSocial(true);
-    setTimeout(() => setLoadingSocial(false), 600);
-  }}
-  style={{ cursor: "pointer", fontSize: "24px" }}
->
-  &#128172;
-</span>
+            className="icon"
+            title="Social"
+            onClick={() => {
+              setLoadingSocial(true);
+              setShowSocial(true);
+              setTimeout(() => setLoadingSocial(false), 600);
+            }}
+            style={{ cursor: "pointer", fontSize: "24px" }}
+          >
+            &#128172;
+          </span>
 
           <span
-  className="icon"
-  title="Home"
-  onClick={() => handleMainClick("Home")}
-  style={{ cursor: "pointer" }}
->
-  &#8962;
-</span>
+            className="icon"
+            title="Home"
+            onClick={() => handleMainClick("Home")}
+            style={{ cursor: "pointer" }}
+          >
+            &#8962;
+          </span>
 
           <span className="icon" title="Settings">
             &#9881;
@@ -1544,26 +1543,26 @@ else if (activeMain === "Academics" && activeSub === "academics-courses") {
         </nav>
 
         <main className="student-content">
-  {loadingSocial ? (
-    <div className="loader-container">
-      <div className="spinner"></div>
-      <p>Loading...</p>
-    </div>
-  ) : showSocial ? (
-    <Suspense
-      fallback={
-        <div className="loader-container">
-          <div className="spinner"></div>
-          <p>Loading...</p>
-        </div>
-      }
-    >
-      <Social />
-    </Suspense>
-  ) : (
-    contentArea
-  )}
-</main>
+          {loadingSocial ? (
+            <div className="loader-container">
+              <div className="spinner"></div>
+              <p>Loading...</p>
+            </div>
+          ) : showSocial ? (
+            <Suspense
+              fallback={
+                <div className="loader-container">
+                  <div className="spinner"></div>
+                  <p>Loading...</p>
+                </div>
+              }
+            >
+              <Social />
+            </Suspense>
+          ) : (
+            contentArea
+          )}
+        </main>
 
       </div>
 
