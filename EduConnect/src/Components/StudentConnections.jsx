@@ -1,231 +1,221 @@
-import React, { useState, useEffect } from "react";
-import "./Student.css";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { UserPlus2, Check, XCircle, Loader2 } from "lucide-react";
 
-/**
- * StudentConnections Component
- * ---------------------------------------
- * Handles:
- * - Viewing sent + received connection requests
- * - Accepting / Rejecting incoming requests
- * - Showing connected students list
- * - Unified design consistent with Student dashboard
- */
-export default function StudentConnections({ token }) {
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [connections, setConnections] = useState([]);
+const StudentConnections = ({ token }) => {
   const [sentRequests, setSentRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("connections"); // 'connections' | 'received' | 'sent'
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState("connections");
 
-  useEffect(() => {
-    if (!token) return;
-    fetchAllData();
-  }, [token]);
+  const headers = { Authorization: `Bearer ${token}` };
 
-  async function fetchAllData() {
-    setLoading(true);
+  const fetchAll = async () => {
     try {
-      const [reqRes, connRes, sentRes] = await Promise.all([
-        fetch("https://neuraliftx.onrender.com/api/student/requests", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("https://neuraliftx.onrender.com/api/student/connections", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("https://neuraliftx.onrender.com/api/student/requests/sent", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      setLoading(true);
+      const [sent, received, connected] = await Promise.all([
+        axios.get("/api/student-connection/requests/sent", { headers }),
+        axios.get("/api/student-connection/requests", { headers }),
+        axios.get("/api/student-connection/connections", { headers }),
       ]);
-
-      const [requestsData, connectionsData, sentData] = await Promise.all([
-        reqRes.ok ? reqRes.json() : [],
-        connRes.ok ? connRes.json() : [],
-        sentRes.ok ? sentRes.json() : [],
-      ]);
-
-      setPendingRequests(Array.isArray(requestsData) ? requestsData : []);
-      setConnections(Array.isArray(connectionsData) ? connectionsData : []);
-      setSentRequests(Array.isArray(sentData) ? sentData : []);
-    } catch (e) {
-      console.error("Error fetching connections data", e);
-      alert("Error loading connection data. Please try again later.");
+      setSentRequests(sent.data);
+      setReceivedRequests(received.data);
+      setConnections(connected.data);
+    } catch (err) {
+      console.error("Error fetching connections:", err);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  const handleAction = async (id, action) => {
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const handleAction = async (id, status) => {
     try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/student/requests/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status: action }),
-        }
-      );
-      if (!res.ok) throw new Error("Failed to update request");
-      alert(`Request ${action}ed successfully.`);
-      fetchAllData(); // Refresh all data
+      await axios.put(`/api/student-connection/requests/${id}`, { status }, { headers });
+      fetchAll();
     } catch (err) {
-      alert(err.message);
+      console.error("Error updating request:", err);
     }
   };
 
-  const handleRemoveConnection = async (connectionId) => {
-    if (!window.confirm("Are you sure you want to remove this connection?"))
-      return;
+  const handleRemove = async (id) => {
     try {
-      const res = await fetch(
-        `https://neuraliftx.onrender.com/api/student/connections/${connectionId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!res.ok) throw new Error("Failed to remove connection");
-      alert("Connection removed successfully.");
-      fetchAllData();
+      await axios.delete(`/api/student-connection/connections/${id}`, { headers });
+      fetchAll();
     } catch (err) {
-      alert(err.message);
+      console.error("Error removing connection:", err);
     }
   };
 
-  const getProfileImageUrl = (url) =>
-    url
-      ? `https://neuraliftx.onrender.com${url}`
-      : "https://via.placeholder.com/50";
-
-  const renderCard = (person, actions) => (
-    <div key={person._id || Math.random()} className="request-card">
-      <img
-        src={getProfileImageUrl(person.profilePicUrl)}
-        alt="Profile"
-        className="request-avatar"
-      />
-      <div className="request-info">
-        <p>
-          <strong>
-            {person.firstName} {person.lastName}
-          </strong>
-        </p>
-        <p>{person.email}</p>
-        {person.className && <p>Class: {person.className}</p>}
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64 text-gray-500">
+        <Loader2 className="animate-spin mr-2" /> Loading connections...
       </div>
-      <div className="request-actions">{actions}</div>
-    </div>
-  );
+    );
 
-  const renderView = () => {
-    if (loading) return <p>Loading connections...</p>;
+  return (
+    <div className="p-6 bg-white rounded-2xl shadow-md border">
+      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+        Student Connections
+      </h2>
 
-    switch (view) {
-      case "connections":
-        return (
-          <>
-            <h3>Connected Students</h3>
-            {connections.length === 0 ? (
-              <p>No active connections.</p>
-            ) : (
-              <div className="requests-list">
-                {connections.map((c) =>
-                  renderCard(c.connectedStudent || c.studentId || c.alumniId, (
+      <div className="flex gap-3 mb-4">
+        {["connections", "sent", "received"].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-full ${
+              tab === t ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+            }`}
+          >
+            {t === "connections"
+              ? "Connected"
+              : t === "sent"
+              ? "Sent Requests"
+              : "Received Requests"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "connections" && (
+        <div>
+          {connections.length === 0 ? (
+            <p className="text-gray-500 text-center py-6">
+              No connections yet.
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {connections.map((conn) => {
+                const partner =
+                  conn.senderId._id === conn.receiverId._id
+                    ? conn.senderId
+                    : conn.senderId._id === token.id
+                    ? conn.receiverId
+                    : conn.senderId;
+                const p = partner || {};
+                return (
+                  <div
+                    key={conn._id}
+                    className="border rounded-xl p-4 shadow-sm hover:shadow-md transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={p.profilePicUrl || "/default-avatar.png"}
+                        alt=""
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="font-semibold text-gray-800">
+                          {p.firstName} {p.lastName}
+                        </p>
+                        <p className="text-sm text-gray-500">{p.roleIdValue}</p>
+                      </div>
+                    </div>
                     <button
-                      onClick={() => handleRemoveConnection(c._id)}
-                      className="reject-btn"
+                      onClick={() => handleRemove(conn._id)}
+                      className="mt-3 text-sm text-red-600 hover:underline"
                     >
                       Remove
                     </button>
-                  ))
-                )}
-              </div>
-            )}
-          </>
-        );
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
-      case "received":
-        return (
-          <>
-            <h3>Pending Requests (Received)</h3>
-            {pendingRequests.length === 0 ? (
-              <p>No pending requests.</p>
-            ) : (
-              <div className="requests-list">
-                {pendingRequests.map((r) =>
-                  renderCard(r.studentId, (
-                    <>
-                      <button
-                        onClick={() => handleAction(r._id, "accepted")}
-                        className="accept-btn"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleAction(r._id, "rejected")}
-                        className="reject-btn"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  ))
-                )}
-              </div>
-            )}
-          </>
-        );
+      {tab === "sent" && (
+        <div>
+          {sentRequests.length === 0 ? (
+            <p className="text-gray-500 text-center py-6">
+              No sent requests yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {sentRequests.map((req) => (
+                <div
+                  key={req._id}
+                  className="flex justify-between items-center border rounded-xl p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={req.receiverId.profilePicUrl || "/default-avatar.png"}
+                      className="w-10 h-10 rounded-full object-cover"
+                      alt=""
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {req.receiverId.firstName} {req.receiverId.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {req.receiverId.roleIdValue}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-yellow-600 font-medium">Pending...</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      case "sent":
-        return (
-          <>
-            <h3>Sent Requests</h3>
-            {sentRequests.length === 0 ? (
-              <p>No sent requests.</p>
-            ) : (
-              <div className="requests-list">
-                {sentRequests.map((r) =>
-                  renderCard(r.receiverId || r.studentId || {}, (
-                    <span className="pending-tag">Pending</span>
-                  ))
-                )}
-              </div>
-            )}
-          </>
-        );
-
-      default:
-        return <p>Invalid view selected.</p>;
-    }
-  };
-
-  return (
-    <div className="connections-container">
-      <h2>Student Connections</h2>
-
-      <div className="connections-tabs">
-        <button
-          className={`tab-btn ${view === "connections" ? "active" : ""}`}
-          onClick={() => setView("connections")}
-        >
-          Connections
-        </button>
-        <button
-          className={`tab-btn ${view === "received" ? "active" : ""}`}
-          onClick={() => setView("received")}
-        >
-          Received Requests
-        </button>
-        <button
-          className={`tab-btn ${view === "sent" ? "active" : ""}`}
-          onClick={() => setView("sent")}
-        >
-          Sent Requests
-        </button>
-      </div>
-
-      <div className="connections-content">{renderView()}</div>
+      {tab === "received" && (
+        <div>
+          {receivedRequests.length === 0 ? (
+            <p className="text-gray-500 text-center py-6">
+              No received requests.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {receivedRequests.map((req) => (
+                <div
+                  key={req._id}
+                  className="flex justify-between items-center border rounded-xl p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={req.senderId.profilePicUrl || "/default-avatar.png"}
+                      className="w-10 h-10 rounded-full object-cover"
+                      alt=""
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {req.senderId.firstName} {req.senderId.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {req.senderId.roleIdValue}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAction(req._id, "accepted")}
+                      className="bg-green-600 text-white px-3 py-1 rounded-full hover:bg-green-700"
+                    >
+                      <Check className="w-4 h-4 inline-block" />
+                    </button>
+                    <button
+                      onClick={() => handleAction(req._id, "rejected")}
+                      className="bg-red-600 text-white px-3 py-1 rounded-full hover:bg-red-700"
+                    >
+                      <XCircle className="w-4 h-4 inline-block" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default StudentConnections;

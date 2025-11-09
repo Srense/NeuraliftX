@@ -1,3 +1,4 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -14,9 +15,6 @@ const fs = require("fs");
 const pdfParse = require("pdf-parse");
 const PDFDocument = require('pdfkit');
 
-
-
-// Load environment variables
 const {
   PORT = 4000,
   MONGO_URI,
@@ -34,10 +32,7 @@ const {
   API_KEY,
 } = process.env;
 
-
-
 const app = express();
-
 
 app.use(cors({
   origin: "https://neuralift-x-lfrc.vercel.app",
@@ -45,32 +40,31 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
-// This helps with preflight requests too.
-
-
-
 app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.send("Backend is working 🚀");
-});
 
 // Serve uploads directory
 const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 app.use('/uploads', express.static(uploadDir));
 
-// Multer setup
+// Multer setup (general)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
+    // if req.user exists use id, otherwise fallback
+    const uid = req.user?._id ? req.user._id.toString() : "anon";
     const ext = path.extname(file.originalname);
-    cb(null, `${req.user._id}-${Date.now()}${ext}`);
+    cb(null, `${uid}-${Date.now()}${ext}`);
   },
 });
 const upload = multer({ storage });
+
+// helper: serve verification_reports
+const verificationReportsDir = path.join(uploadDir, 'verification_reports');
+if (!fs.existsSync(verificationReportsDir)) fs.mkdirSync(verificationReportsDir, { recursive: true });
+app.use('/uploads/verification_reports', express.static(verificationReportsDir));
 
 // Blocked emails and utility functions
 const blockedEmailsOrPatterns = [
@@ -95,39 +89,38 @@ mongoose.connect(MONGO_URI)
     process.exit(1);
   });
 
-//user Schema & Model
-  const userSchema = new mongoose.Schema(
-  {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    email: { type: String, unique: true, lowercase: true, required: true },
-    passwordHash: { type: String, required: true },
-    role: {
-      type: String,
-      enum: ["student", "faculty", "alumni", "admin"],
-      default: "student",
-    },
-    roleIdValue: { type: String, required: true },
-    emailVerified: { type: Boolean, default: false },
-    verificationToken: String,
-    verificationTokenExpires: Date,
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
-    profilePicUrl: { type: String, default: "" },
-    coins: { type: Number, default: 0 },
+// ---------------------------
+// Schemas & Models
+// ---------------------------
 
-    // New fields for extended student info
-    bio: { type: String, default: "" },
-    percentage: { type: Number, default: null }, // Academic percentage or CGPA
-    className: { type: String, default: "" }, // E.g., "12th Science-A"
-    internshipsDone: [{ type: String }], // Array of internship titles or IDs
-    coursesCompleted: [{ type: String }], // Array of course names/IDs
-    areaOfInterest: [{ type: String }], // Array of interest topics
+// User
+const userSchema = new mongoose.Schema({
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String, unique: true, lowercase: true, required: true },
+  passwordHash: { type: String, required: true },
+  role: {
+    type: String,
+    enum: ["student", "faculty", "alumni", "admin"],
+    default: "student",
   },
-  { timestamps: true }
-);
+  roleIdValue: { type: String, required: true },
+  emailVerified: { type: Boolean, default: false },
+  verificationToken: String,
+  verificationTokenExpires: Date,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  profilePicUrl: { type: String, default: "" },
+  coins: { type: Number, default: 0 },
 
-// JWT generation method for authentication
+  bio: { type: String, default: "" },
+  percentage: { type: Number, default: null },
+  className: { type: String, default: "" },
+  internshipsDone: [{ type: String }],
+  coursesCompleted: [{ type: String }],
+  areaOfInterest: [{ type: String }],
+}, { timestamps: true });
+
 userSchema.methods.generateJWT = function () {
   return jwt.sign(
     { id: this._id, email: this.email, role: this.role },
@@ -138,7 +131,7 @@ userSchema.methods.generateJWT = function () {
 
 const User = mongoose.model("User", userSchema);
 
-// 1. Extend announcement schema to support text/survey and visibility
+// Announcement
 const announcementSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   title: String,
@@ -161,8 +154,7 @@ const announcementSchema = new mongoose.Schema({
 });
 const Announcement = mongoose.model("Announcement", announcementSchema);
 
-
-// 2. Feedback schema
+// Feedback
 const feedbackSchema = new mongoose.Schema({
   announcementId: { type: mongoose.Schema.Types.ObjectId, ref: "Announcement" },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -171,25 +163,24 @@ const feedbackSchema = new mongoose.Schema({
 });
 const Feedback = mongoose.model("Feedback", feedbackSchema);
 
-// Course schema
+// Course
 const courseSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   subject: String,
   classCount: Number,
   attendancePercent: Number,
 }, { timestamps: true });
-
 const Course = mongoose.model("Course", courseSchema);
 
-// Mentor schema
+// Mentor
 const mentorSchema = new mongoose.Schema({
   name: String,
   email: String,
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 }, { timestamps: true });
-
 const Mentor = mongoose.model("Mentor", mentorSchema);
 
+// Assignment
 const assignmentSchema = new mongoose.Schema({
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   filename: String,
@@ -197,61 +188,49 @@ const assignmentSchema = new mongoose.Schema({
   originalName: String,
   createdAt: { type: Date, default: Date.now },
 });
-
 const Assignment = mongoose.model("Assignment", assignmentSchema);
 
+// Task
+const TaskSchema = new mongoose.Schema({
+  originalName: String,
+  fileUrl: String,
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  uploadedAt: { type: Date, default: Date.now }
+});
+const Task = mongoose.model("Task", TaskSchema);
+
+// Quiz
 const quizQuestionSchema = new mongoose.Schema({
   question: String,
   options: [String],
   answer: String,
-  referencePage: Number,  // for suggestions, optional
-  topic: String,          // for suggestions, optional
-  highlightText: String,  //
+  referencePage: Number,
+  topic: String,
+  highlightText: String,
 });
-
 const quizSchema = new mongoose.Schema({
   assignmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Assignment" },
   questions: [quizQuestionSchema],
 });
-
 const Quiz = mongoose.model("Quiz", quizSchema);
 
 const quizAttemptSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   assignmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Assignment" },
-  answers: mongoose.Schema.Types.Mixed, // Map of question index to answer
+  answers: mongoose.Schema.Types.Mixed,
   score: Number,
   coinsEarned: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
-
-
 const QuizAttempt = mongoose.model("QuizAttempt", quizAttemptSchema);
 
-// THEME SETTINGS SCHEMA & MODEL (add directly in your server file)
+// Theme settings
 const themeSettingsSchema = new mongoose.Schema({
-  globalTheme: { type: String, default: "default" } // "default", "dark", "blue"
+  globalTheme: { type: String, default: "default" }
 });
 const ThemeSettings = mongoose.model("ThemeSettings", themeSettingsSchema);
 
-// Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: EMAIL_HOST,
-  port: Number(EMAIL_PORT) || 587,
-  secure: false,
-  auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-});
-
-// Task Model
-const TaskSchema = new mongoose.Schema({
-  originalName: String,
-  fileUrl: String, // path to file if saved in 'uploads' folder,
-  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  uploadedAt: { type: Date, default: Date.now }
-});
-
-const Task = mongoose.model("Task", TaskSchema);
-
+// Student Answer & Verification
 const studentAnswerSchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -259,20 +238,19 @@ const studentAnswerSchema = new mongoose.Schema({
   fileUrl: String,
   uploadedAt: { type: Date, default: Date.now }
 });
-
 const StudentAnswer = mongoose.model('StudentAnswer', studentAnswerSchema);
 
 const answerVerificationSchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, ref: "Task", required: true },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   score: Number,
-  report: String, // JSON or text explanation from Perplexity
+  report: String,
   documentUrl: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
 });
-
 const AnswerVerification = mongoose.model("AnswerVerification", answerVerificationSchema);
 
+// Syllabus Unit
 const syllabusUnitSchema = new mongoose.Schema({
   key: { type: String, unique: true, required: true },
   label: String,
@@ -280,7 +258,7 @@ const syllabusUnitSchema = new mongoose.Schema({
 });
 const SyllabusUnit = mongoose.model("SyllabusUnit", syllabusUnitSchema);
 
-
+// Alumni profile
 const alumniSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
   name: { type: String, required: true },
@@ -290,70 +268,38 @@ const alumniSchema = new mongoose.Schema({
   linkedin: { type: String },
   github: { type: String },
 }, { timestamps: true });
-
 const Alumni = mongoose.model("Alumni", alumniSchema);
 
+// General Connection (Alumni<->Student) - left as-is from your original backend
 const connectionSchema = new mongoose.Schema(
   {
-    studentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    alumniId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ["pending", "accepted", "rejected"],
-      default: "pending",
-    },
-  },
-  { timestamps: true }
+    studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    alumniId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    status: { type: String, enum: ["pending", "accepted", "rejected"], default: "pending" },
+  }, { timestamps: true }
 );
+const Connection = mongoose.model("Connection", connectionSchema);
 
-
+// Conversation & Message (Chat)
 const conversationSchema = new mongoose.Schema(
   {
-    members: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-    ],
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }],
   },
   { timestamps: true }
 );
-
-// ✅ Only one default export
 const Conversation = mongoose.model("Conversation", conversationSchema);
+
 const messageSchema = new mongoose.Schema(
   {
-    conversationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Conversation",
-      required: true,
-    },
-    senderId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    text: {
-      type: String,
-      trim: true,
-      required: true,
-    },
+    conversationId: { type: mongoose.Schema.Types.ObjectId, ref: "Conversation", required: true },
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    text: { type: String, trim: true, required: true },
   },
   { timestamps: true }
 );
-
 const Message = mongoose.model("Message", messageSchema);
 
-
+// Posts & comments
 const mediaSchema = new mongoose.Schema({
   fileUrl: { type: String },
   mimeType: { type: String },
@@ -378,36 +324,31 @@ const postSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 const Post = mongoose.model("Post", postSchema);
 
-// ==========================
-// 🧩 Student Connection Schema
-// ==========================
-const studentConnectionSchema = new mongoose.Schema(
-  {
-    requesterId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    receiverId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ["pending", "accepted", "rejected"],
-      default: "pending",
-    },
-  },
-  { timestamps: true }
-);
-
+// ---------------------------
+// NEW: Dedicated StudentConnection Model (separate from alumni Connection)
+// ---------------------------
+const studentConnectionSchema = new mongoose.Schema({
+  senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  receiverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  status: { type: String, enum: ["pending", "accepted", "rejected"], default: "pending" },
+}, { timestamps: true });
 const StudentConnection = mongoose.model("StudentConnection", studentConnectionSchema);
 
-// Disposable email checks (using AbstractAPI and deep-email-validator)
+// ---------------------------
+// Nodemailer transporter
+// ---------------------------
+const transporter = nodemailer.createTransport({
+  host: EMAIL_HOST,
+  port: Number(EMAIL_PORT) || 587,
+  secure: false,
+  auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+});
+
+// ---------------------------
+// Utilities: Disposable email checks
+// ---------------------------
 const isDisposableEmail = async (email) => {
   try {
     const res = await axios.get(`https://emailvalidation.abstractapi.com/v1/?api_key=${ABSTRACT_API_KEY}&email=${encodeURIComponent(email)}`);
@@ -417,7 +358,6 @@ const isDisposableEmail = async (email) => {
     return true; // fail closed
   }
 };
-
 const validateEmailExistence = async (email) => {
   try {
     return await deepEmailValidator.validate({ email });
@@ -426,7 +366,9 @@ const validateEmailExistence = async (email) => {
   }
 };
 
-// Send verification email
+// ---------------------------
+// Send emails
+// ---------------------------
 const sendVerificationEmail = async (user, token) => {
   const link = `${BASE_URL}/verify-email?token=${token}`;
   await transporter.sendMail({
@@ -436,8 +378,6 @@ const sendVerificationEmail = async (user, token) => {
     html: `<p>Click to verify your email (valid for ${EMAIL_VERIFICATION_TOKEN_EXPIRY} hours): <a href="${link}">${link}</a></p>`,
   });
 };
-
-// Send password reset email
 const sendPasswordResetEmail = async (user, token) => {
   const link = `${BASE_URL}/reset-password?token=${token}`;
   await transporter.sendMail({
@@ -448,7 +388,7 @@ const sendPasswordResetEmail = async (user, token) => {
   });
 };
 
-// Role labels
+// role labels
 const roleIdFieldLabels = {
   student: "University ID",
   faculty: "Faculty ID",
@@ -456,7 +396,9 @@ const roleIdFieldLabels = {
   admin: "Admin Email",
 };
 
+// ---------------------------
 // Validate signup input
+// ---------------------------
 const validateSignupInput = async (data) => {
   const errors = {};
   if (!data.firstName?.trim()) errors.firstName = "First name is required";
@@ -471,34 +413,29 @@ const validateSignupInput = async (data) => {
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = "Invalid email format";
   else if (await isDisposableEmail(data.email)) errors.email = "Disposable or temporary emails are not allowed";
 
- // Place this right after you check for format/disposable emails, before password checks
-
-const bigFreeProviders = [
-  "gmail.com",
-  "yahoo.com",
-  "outlook.com",
-  "hotmail.com",
-  "icloud.com",
-  "aol.com",
-  "live.com"
-];
-const emailDomain = data.email.split("@")[1].toLowerCase();
-let existenceCheck = { valid: true };
-
-// Only check SMTP for small/enterprise domains, NOT for common big free email providers
-if (!bigFreeProviders.includes(emailDomain)) {
-  existenceCheck = await validateEmailExistence(data.email);
-}
-if (!existenceCheck.valid) {
-  errors.email = "This email does not exist or cannot receive mail.";
-}
+  const bigFreeProviders = [
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "hotmail.com",
+    "icloud.com",
+    "aol.com",
+    "live.com"
+  ];
+  const emailDomain = data.email.split("@")[1].toLowerCase();
+  let existenceCheck = { valid: true };
+  if (!bigFreeProviders.includes(emailDomain)) {
+    existenceCheck = await validateEmailExistence(data.email);
+  }
+  if (!existenceCheck.valid) {
+    errors.email = "This email does not exist or cannot receive mail.";
+  }
 
   if (!data.password) errors.password = "Password is required and must meet complexity requirements";
   else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(data.password))
     errors.password = "Password must have uppercase, lowercase, number and special char, min 8 chars";
 
   if (data.password !== data.confirmPassword) errors.confirmPassword = "Passwords do not match";
-
   if (!data.role) errors.role = "Role is required";
 
   const roleLabel = roleIdFieldLabels[data.role];
@@ -513,9 +450,9 @@ if (!existenceCheck.valid) {
   return errors;
 };
 
-
-
+// ---------------------------
 // Middleware: Authenticate JWT token and attach user to req.user
+// ---------------------------
 const authenticateJWT = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ success: false, error: "Authorization header missing" });
@@ -535,7 +472,7 @@ const authenticateJWT = async (req, res, next) => {
   }
 };
 
-// Middleware: Check if user role is authorized
+// Middleware: Check role
 const authorizeRole = (allowedRoles) => (req, res, next) => {
   if (!allowedRoles.includes(req.user.role)) {
     return res.status(403).json({ success: false, error: "Access forbidden: insufficient permissions" });
@@ -543,28 +480,24 @@ const authorizeRole = (allowedRoles) => (req, res, next) => {
   next();
 };
 
-
+// ---------------------------
+// Answer upload storage (student answers)
+// ---------------------------
 const answerDir = path.join(uploadDir, "student_answers");
 if (!fs.existsSync(answerDir)) fs.mkdirSync(answerDir, { recursive: true });
 
 const answerStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, answerDir),
   filename: (req, file, cb) => {
-    cb(null, `${req.user._id}-${req.params.taskId}-${Date.now()}${path.extname(file.originalname)}`);
+    const uid = req.user?._id ? req.user._id.toString() : "anon";
+    cb(null, `${uid}-${req.params.taskId}-${Date.now()}${path.extname(file.originalname)}`);
   }
 });
-
 const uploadAnswer = multer({ storage: answerStorage });
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-
-// API Routes
-
-
-
-
-
+// ---------------------------
+// Student answers endpoints
+// ---------------------------
 app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('answerFile'), async (req, res) => {
   if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
 
@@ -591,7 +524,6 @@ app.post('/api/student-answers/:taskId', authenticateJWT, uploadAnswer.single('a
   }
 });
 
-
 app.get('/api/student-answers/:taskId', authenticateJWT, async (req, res) => {
   if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
 
@@ -606,7 +538,7 @@ app.get('/api/student-answers/:taskId', authenticateJWT, async (req, res) => {
   }
 });
 
-
+// Faculty fetches student answers (already present in your original code - slightly improved)
 app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
   if (req.user.role !== "faculty") return res.status(403).json({ error: "Faculty only" });
 
@@ -622,7 +554,7 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
     // Get verification results
     const verificationReports = await AnswerVerification.find({ taskId: req.params.taskId });
 
-    // Map by studentId for quick lookup
+    // Map by studentId
     const verificationMap = {};
     verificationReports.forEach(v => {
       verificationMap[v.studentId.toString()] = v;
@@ -642,7 +574,6 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
         verificationReport: verification?.report || null,
         verificationDate: verification?.createdAt || null,
         verificationReportUrl: verification?.documentUrl || null,
-
       };
     });
 
@@ -654,8 +585,9 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
   }
 });
 
-
-// Signup
+// ---------------------------
+// Signup / Verify / Login / Password Reset
+// ---------------------------
 app.post("/api/signup", async (req, res) => {
   try {
     const { firstName, lastName, email, password, confirmPassword, role, roleIdValue } = req.body;
@@ -691,7 +623,6 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-// Email verification
 app.get("/api/verify-email", async (req, res) => {
   try {
     const { token } = req.query;
@@ -708,7 +639,6 @@ app.get("/api/verify-email", async (req, res) => {
     user.verificationTokenExpires = undefined;
     await user.save();
 
-    // Respond with JSON, as requested
     res.json({ success: true, message: "Email verified. You can now log in." });
   } catch (err) {
     console.error("Email verification error:", err);
@@ -716,8 +646,6 @@ app.get("/api/verify-email", async (req, res) => {
   }
 });
 
-
-// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -740,7 +668,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Forgot password
 app.post("/api/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
@@ -765,7 +692,6 @@ app.post("/api/forgot-password", async (req, res) => {
   }
 });
 
-// Reset password
 app.post("/api/reset-password", async (req, res) => {
   try {
     const { token, newPassword, confirmPassword } = req.body;
@@ -790,7 +716,9 @@ app.post("/api/reset-password", async (req, res) => {
   }
 });
 
-// Get user profile info
+// ---------------------------
+// Profile endpoints
+// ---------------------------
 app.get("/api/profile", authenticateJWT, (req, res) => {
   if (!req.user) return res.status(404).json({ success: false, error: "User not found" });
   res.json({
@@ -813,7 +741,7 @@ app.get("/api/profile", authenticateJWT, (req, res) => {
     },
   });
 });
-//for update profile data
+
 app.put("/api/profile", authenticateJWT, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -840,7 +768,6 @@ app.put("/api/profile", authenticateJWT, async (req, res) => {
   }
 });
 
-
 // Profile picture upload
 app.post("/api/profile/picture", authenticateJWT, upload.single('profilePic'), async (req, res) => {
   try {
@@ -856,7 +783,9 @@ app.post("/api/profile/picture", authenticateJWT, upload.single('profilePic'), a
   }
 });
 
+// ---------------------------
 // Weather API
+// ---------------------------
 app.get("/api/weather", async (req, res) => {
   try {
     const { lat, lon } = req.query;
@@ -874,6 +803,10 @@ app.get("/api/weather", async (req, res) => {
     res.status(500).json({ success: false, error: "Failed to fetch weather" });
   }
 });
+
+// ---------------------------
+// Generate quiz endpoint (Perplexity)
+// ---------------------------
 app.post("/api/generate-quiz", authenticateJWT, async (req, res) => {
   try {
     const { assignmentId } = req.body;
@@ -883,25 +816,18 @@ app.post("/api/generate-quiz", authenticateJWT, async (req, res) => {
     if (!assignment) return res.status(404).json({ error: "Assignment not found" });
 
     const pdfPath = path.join(__dirname, "uploads", assignment.filename);
-    console.log("PDF Path:", pdfPath);
-
     if (!fs.existsSync(pdfPath)) {
       return res.status(404).json({ error: "Assignment PDF file missing" });
     }
 
-    // Read file buffer
     const dataBuffer = fs.readFileSync(pdfPath);
-
-    // Extract text from PDF
     const pdfData = await pdfParse(dataBuffer);
-    console.log("Extracted PDF Text Preview:", pdfData.text.substring(0, 500));
     const textContent = pdfData.text;
 
     if (!textContent || textContent.trim().length === 0) {
       return res.status(500).json({ error: "Failed to extract text from PDF" });
     }
 
-    // Updated prompt to include highlightText field in output
     const prompt = `
 Generate a quiz of 10 multiple choice questions with options and answers based on the following text from an academic assignment:
 ${textContent}
@@ -914,7 +840,6 @@ For each question, also provide:
 Output the result as a JSON array. Each object must have fields: question, options (array), answer, referencePage, topic, highlightText.
 `;
 
-    // Call Perplexity API
     const response = await axios.post(
       "https://api.perplexity.ai/chat/completions",
       {
@@ -928,7 +853,7 @@ Output the result as a JSON array. Each object must have fields: question, optio
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.API_KEY}`,
+          Authorization: `Bearer ${API_KEY}`,
           "Content-Type": "application/json",
         },
       }
@@ -937,10 +862,8 @@ Output the result as a JSON array. Each object must have fields: question, optio
     let content = response.data?.choices?.[0]?.message?.content;
     if (!content) return res.status(500).json({ error: "No content received from Perplexity API" });
 
-    // Remove markdown code fences if present
     content = content.replace(/``````/g, '').trim();
 
-    // Parse JSON
     let questions;
     try {
       questions = JSON.parse(content);
@@ -949,14 +872,12 @@ Output the result as a JSON array. Each object must have fields: question, optio
       return res.status(500).json({ error: "Failed to parse quiz JSON" });
     }
 
-    // Save or update quiz in DB
     const quiz = await Quiz.findOneAndUpdate(
       { assignmentId },
       { questions },
       { upsert: true, new: true }
     );
 
-    // Remove answers before sending to frontend
     const quizWithoutAnswers = quiz.questions.map(({ question, options, referencePage, topic, highlightText }) => ({
       question,
       options,
@@ -971,6 +892,8 @@ Output the result as a JSON array. Each object must have fields: question, optio
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// Submit quiz
 app.post("/api/submit-quiz", authenticateJWT, async (req, res) => {
   try {
     const { assignmentId, answers } = req.body;
@@ -980,7 +903,6 @@ app.post("/api/submit-quiz", authenticateJWT, async (req, res) => {
 
     const userId = req.user._id;
 
-    // Check attempts today for this assignment by this user
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -1022,21 +944,18 @@ app.post("/api/submit-quiz", authenticateJWT, async (req, res) => {
       }
     });
 
-    // Award coins = 5 only if all correct
     let coinsAwarded = 0;
     if (allCorrect) {
       coinsAwarded = 5;
-      // Update user coins
       await User.findByIdAndUpdate(userId, { $inc: { coins: coinsAwarded } });
     }
 
-    // Save quiz attempt
     await QuizAttempt.create({
       userId,
       assignmentId,
       answers,
       score,
-      coinsEarned: coinsAwarded,  // store coins earned in attempt
+      coinsEarned: coinsAwarded,
     });
 
     res.json({
@@ -1054,41 +973,17 @@ app.post("/api/submit-quiz", authenticateJWT, async (req, res) => {
   }
 });
 
-app.use('/pdf-viewer', express.static(path.join(__dirname, 'pdf-viewer')));
-app.use('/uploads/verification_reports', express.static(path.join(__dirname, 'uploads', 'verification_reports')));
-
-
-// Example endpoint to fetch Coursera categories or courses
-app.get("/api/coursera-courses", async (req, res) => {
-  try {
-    const response = await axios.get("https://api.coursera.org/api/courses.v1", {
-      params: {
-        includes: "partnerIds,categories",
-        limit: 20,
-      },
-    });
-
-    const courses = response.data.elements.map(course => ({
-      id: course.id,
-      name: course.name,
-      description: course.description || "",
-      photoUrl: course.photoUrl || "https://via.placeholder.com/120x80?text=No+Image",
-      slug: course.slug,
-      courseUrl: `https://www.coursera.org/learn/${course.slug}`,
-    }));
-
-    res.json({ courses });
-  } catch (error) {
-    console.error("Coursera fetch error:", error.message);
-    res.status(500).json({ error: "Failed to fetch Coursera courses" });
-  }
-});
-
-// Upload syllabus unit PDF
+// ---------------------------
+// Syllabus endpoints
+// ---------------------------
 app.post(
   "/api/syllabus/unit-upload",
   authenticateJWT,
-  authorizeRole("faculty"),
+  (req, res, next) => {
+    // authorise faculty role
+    if (req.user.role !== "faculty") return res.status(403).json({ error: "Faculty only" });
+    next();
+  },
   upload.single("pdf"),
   async (req, res) => {
     try {
@@ -1118,17 +1013,23 @@ app.post(
   }
 );
 
-// Get syllabus units with files
-app.get("/api/syllabus", authenticateJWT, authorizeRole("student","faculty"), async (req, res) => {
-  const units = await SyllabusUnit.find();
-  res.json(units);
+app.get("/api/syllabus", authenticateJWT, async (req, res) => {
+  try {
+    const units = await SyllabusUnit.find();
+    res.json(units);
+  } catch (err) {
+    console.error("Get syllabus error:", err);
+    res.status(500).json({ error: "Failed to fetch syllabus" });
+  }
 });
 
-// Delete syllabus unit uploaded file (optional: clear fileUrl)
 app.delete(
   "/api/syllabus/unit-upload",
   authenticateJWT,
-  authorizeRole("faculty"),
+  (req, res, next) => {
+    if (req.user.role !== "faculty") return res.status(403).json({ error: "Faculty only" });
+    next();
+  },
   async (req, res) => {
     try {
       const unitKey = req.query.unitKey;
@@ -1137,13 +1038,11 @@ app.delete(
       const unit = await SyllabusUnit.findOne({ key: unitKey });
       if (!unit || !unit.uploadedFileUrl) return res.status(404).json({ error: "No file found for this unit" });
 
-      // Remove file from disk
       const filePath = path.join(__dirname, "uploads", path.basename(unit.uploadedFileUrl));
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
 
-      // Remove file URL from DB
       unit.uploadedFileUrl = "";
       await unit.save();
 
@@ -1154,7 +1053,10 @@ app.delete(
     }
   }
 );
-// Get announcements
+
+// ---------------------------
+// Announcements endpoints
+// ---------------------------
 app.get("/api/announcements", authenticateJWT, async (req, res) => {
   try {
     const allAnnouncements = await Announcement.find().sort({ createdAt: -1 });
@@ -1166,7 +1068,10 @@ app.get("/api/announcements", authenticateJWT, async (req, res) => {
 });
 
 // Create announcement (faculty, alumni, admin only)
-app.post("/api/announcements", authenticateJWT, authorizeRole(["faculty", "alumni", "admin"]), async (req, res) => {
+app.post("/api/announcements", authenticateJWT, (req, res, next) => {
+  if (!["faculty", "alumni", "admin"].includes(req.user.role)) return res.status(403).json({ success: false, error: "Not authorized" });
+  next();
+}, async (req, res) => {
   try {
     const { title, date, time, refNumber, details } = req.body;
     const announcement = new Announcement({
@@ -1175,7 +1080,7 @@ app.post("/api/announcements", authenticateJWT, authorizeRole(["faculty", "alumn
       date,
       time,
       refNumber,
-      details,
+      message: details, // using message field
     });
     await announcement.save();
     res.json({ success: true, message: "Announcement created", announcement });
@@ -1185,8 +1090,11 @@ app.post("/api/announcements", authenticateJWT, authorizeRole(["faculty", "alumn
   }
 });
 
-// 3. Admin routes
-app.post("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
+// Admin announcement creation (with survey etc)
+app.post("/api/admin/announcements", authenticateJWT, (req, res, next) => {
+  if (req.user.role !== "admin") return res.status(403).json({ success: false, error: "Admin only" });
+  next();
+}, async (req, res) => {
   try {
     const { title, date, time, refNumber, contentType, message, surveyQuestions, visibleTo } = req.body;
     const announcement = new Announcement({
@@ -1201,159 +1109,24 @@ app.post("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), 
   }
 });
 
-// Ensure this is after your multer and authenticateJWT middleware setup
-
-app.post(
-  "/api/tasks",
-  authenticateJWT,            // verify the user's token, set req.user
-  upload.single("pdf"),       // multer middleware to handle single file upload 'pdf'
-  async (req, res) => {
-    try {
-      const file = req.file;
-      if (!file) {
-        return res.status(400).json({ error: "No PDF uploaded" });
-      }
-
-      // Create Task document in MongoDB
-      const task = await Task.create({
-        originalName: file.originalname,
-        fileUrl: `/uploads/${file.filename}`,
-        uploadedBy: req.user._id,   // req.user is set by authenticateJWT
-        uploadedAt: new Date(),
-      });
-
-      res.json({ success: true, message: "Task uploaded successfully", task });
-    } catch (err) {
-      console.error("Task upload failed:", err);
-      res.status(500).json({ error: "Task upload failed" });
-    }
-  }
-);
-app.get("/api/tasks", authenticateJWT, async (req, res) => {
+// Active announcements for the user's role
+app.get("/api/announcements/active", authenticateJWT, async (req, res) => {
   try {
-    // Return ALL tasks (visible to students)
-    const tasks = await Task.find().sort({ uploadedAt: -1 });
-    res.json(tasks);
-  } catch (err) {
-    console.error("Get tasks error:", err);
-    res.status(500).json({ error: "Failed to get tasks" });
-  }
-});
-app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
-  if (req.user.role !== "faculty") return res.status(403).json({ error: "Faculty only" });
-
-  try {
-    const task = await Task.findById(req.params.taskId);
-    if (!task) return res.status(404).json({ error: "Task not found" });
-    if (task.uploadedBy.toString() !== req.user._id.toString())
-      return res.status(403).json({ error: "Not authorized" });
-
-    const answers = await StudentAnswer.find({ taskId: req.params.taskId })
-      .populate('studentId', 'firstName lastName roleIdValue email');
-
-    const verificationReports = await AnswerVerification.find({ taskId: req.params.taskId });
-    const verificationMap = {};
-    verificationReports.forEach(v => {
-      verificationMap[v.studentId.toString()] = v;
-    });
-
-    const formatted = answers.map(ans => {
-      const v = verificationMap[ans.studentId?._id?.toString()] || {};
-      return {
-        id: ans._id,
-        fileName: ans.fileName,
-        fileUrl: ans.fileUrl,
-        uploadedAt: ans.uploadedAt,
-        studentName: ans.studentId ? `${ans.studentId.firstName} ${ans.studentId.lastName}` : "",
-        studentUID: ans.studentId ? ans.studentId.roleIdValue : "",
-        studentEmail: ans.studentId ? ans.studentId.email : "",
-        verificationScore: v.score || null,
-        verificationReport: v.report || null,
-        verificationDate: v.createdAt || null,
-        verificationReportUrl: v.documentUrl || null, // Send URL of PDF report
-      };
-    });
-
-    res.json(formatted);
-  } catch (err) {
-    console.error('Fetching faculty answers error:', err);
-    res.status(500).json({ error: 'Failed to fetch' });
-  }
-});
-
-
-
-
-
-app.delete("/api/tasks/:id", authenticateJWT, async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id);
-    if (!task) return res.status(404).json({ error: "Task not found" });
-    if (task.uploadedBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "Not authorized to delete this task" });
-    }
-
-    // Delete the file from server
-    const filePath = path.join(__dirname, "uploads", path.basename(task.fileUrl));
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-    await Task.deleteOne({ _id: task._id });
-    res.json({ success: true });
-  } catch (e) {
-    console.error("Delete task error:", e);
-    res.status(500).json({ error: "Failed to delete task" });
-  }
-});
-
-
-// Get current global theme (accessible to all users, no auth required)
-app.get("/api/theme", async (req, res) => {
-  try {
-    let settings = await ThemeSettings.findOne({});
-    res.json({ theme: settings?.globalTheme || "default" });
-  } catch (e) {
-    res.status(500).json({ error: "Failed to fetch theme" });
-  }
-});
-
-// Set global theme (admin only)
-app.post("/api/admin/theme", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
-  try {
-    const { theme } = req.body;
-    if (!["default", "dark", "blue"].includes(theme))
-      return res.status(400).json({ error: "Invalid theme" });
-    let settings = await ThemeSettings.findOne({});
-    if (!settings) settings = new ThemeSettings();
-    settings.globalTheme = theme;
-    await settings.save();
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: "Failed to update theme" });
-  }
-});
-
-
-app.get("/api/admin/announcements", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
-  try {
-    const announcements = await Announcement.find().sort({ createdAt: -1 });
+    const role = req.user.role;
+    const roleFilters = [];
+    if (role === "student") roleFilters.push({ "visibleTo.students": true });
+    if (role === "faculty") roleFilters.push({ "visibleTo.faculty": true });
+    if (role === "alumni") roleFilters.push({ "visibleTo.alumni": true });
+    if (!roleFilters.length) return res.json([]);
+    const announcements = await Announcement.find({ $or: roleFilters }).sort({ createdAt: -1 });
     res.json(announcements);
-  } catch (e) {
-    res.status(500).json({ success: false, error: "Failed to fetch announcements" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch announcements" });
   }
 });
 
-app.delete("/api/admin/announcements/:id", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
-  try {
-    const ann = await Announcement.findById(req.params.id);
-    if (!ann) return res.status(404).json({ error: "Not found" });
-    await Announcement.deleteOne({ _id: req.params.id });
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: "Failed to delete announcement" });
-  }
-});
-
-// 4. Feedback submission
+// Feedback submission
 app.post("/api/feedback", authenticateJWT, async (req, res) => {
   try {
     const { announcementId, responses } = req.body;
@@ -1374,233 +1147,94 @@ app.post("/api/feedback", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to submit feedback" });
   }
 });
-app.get("/api/announcements/active", authenticateJWT, async (req, res) => {
+
+// Admin announcements list & delete
+app.get("/api/admin/announcements", authenticateJWT, (req, res, next) => {
+  if (req.user.role !== "admin") return res.status(403).json({ success: false, error: "Admin only" });
+  next();
+}, async (req, res) => {
   try {
-    const role = req.user.role;
-
-    // Build filter for any matching role visibility
-    const roleFilters = [];
-
-    if (role === "student") roleFilters.push({ "visibleTo.students": true });
-    if (role === "faculty") roleFilters.push({ "visibleTo.faculty": true });
-    if (role === "alumni") roleFilters.push({ "visibleTo.alumni": true });
-
-    if (!roleFilters.length) return res.json([]);
-
-    const announcements = await Announcement.find({
-      $or: roleFilters
-    }).sort({ createdAt: -1 });
-
+    const announcements = await Announcement.find().sort({ createdAt: -1 });
     res.json(announcements);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch announcements" });
+  } catch (e) {
+    res.status(500).json({ success: false, error: "Failed to fetch announcements" });
+  }
+});
+app.delete("/api/admin/announcements/:id", authenticateJWT, (req, res, next) => {
+  if (req.user.role !== "admin") return res.status(403).json({ success: false, error: "Admin only" });
+  next();
+}, async (req, res) => {
+  try {
+    const ann = await Announcement.findById(req.params.id);
+    if (!ann) return res.status(404).json({ error: "Not found" });
+    await Announcement.deleteOne({ _id: req.params.id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to delete announcement" });
   }
 });
 
-// Get courses
-app.get("/api/courses", authenticateJWT, async (req, res) => {
-  try {
-    const courses = await Course.find().sort({ createdAt: -1 });
-    const studentName = req.user.firstName + " " + req.user.lastName;
-    res.json({ studentName, list: courses });
-  } catch (err) {
-    console.error("Get courses error:", err);
-    res.status(500).json({ success: false, error: "Failed to fetch courses" });
-  }
-});
-// Get last 3 quiz attempts for the logged-in student
-app.get("/api/student/quiz-performance", authenticateJWT, async (req, res) => {
-  try {
-    const quizAttempts = await QuizAttempt.find({ userId: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(3)
-      .populate("assignmentId");
+// ---------------------------
+// Tasks (upload/download/delete)
+// ---------------------------
+app.post(
+  "/api/tasks",
+  authenticateJWT,
+  upload.single("pdf"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No PDF uploaded" });
+      }
 
-    const formatted = quizAttempts.map(q => ({
-      date: q.createdAt,
-      score: q.score,
-      total: q.answers ? Object.keys(q.answers).length : 10, // fallback total, adjust based on your data
-      topics: q.assignmentId?.topics || [], // if you store topics per assignment
-      assignmentTitle: q.assignmentId?.originalName || 'Quiz',
-    }));
-
-    res.json(formatted.reverse()); // so oldest is first
-  } catch (err) {
-    console.error("Quiz performance fetch error:", err);
-    res.status(500).json({ error: "Failed to fetch quiz performance" });
-  }
-});
-
-
-// Create or update alumni profile
-app.post("/api/alumni", authenticateJWT, async (req, res) => {
-  try {
-    const { name, company, designation, description, linkedin, github } = req.body;
-
-    if (!name || !company || !designation) {
-      return res.status(400).json({ error: "Name, company, and designation are required" });
-    }
-
-    let alumni = await Alumni.findOne({ userId: req.user._id });
-
-    if (alumni) {
-      // Update profile
-      alumni.name = name;
-      alumni.company = company;
-      alumni.designation = designation;
-      alumni.description = description;
-      alumni.linkedin = linkedin;
-      alumni.github = github;
-      await alumni.save();
-    } else {
-      // Create new profile
-      alumni = await Alumni.create({
-        userId: req.user._id,
-        name,
-        company,
-        designation,
-        description,
-        linkedin,
-        github,
+      const task = await Task.create({
+        originalName: req.file.originalname,
+        fileUrl: `/uploads/${req.file.filename}`,
+        uploadedBy: req.user._id,
+        uploadedAt: new Date(),
       });
+
+      res.json({ success: true, message: "Task uploaded successfully", task });
+    } catch (err) {
+      console.error("Task upload failed:", err);
+      res.status(500).json({ error: "Task upload failed" });
+    }
+  }
+);
+
+app.get("/api/tasks", authenticateJWT, async (req, res) => {
+  try {
+    const tasks = await Task.find().sort({ uploadedAt: -1 });
+    res.json(tasks);
+  } catch (err) {
+    console.error("Get tasks error:", err);
+    res.status(500).json({ error: "Failed to get tasks" });
+  }
+});
+
+app.delete("/api/tasks/:id", authenticateJWT, async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (task.uploadedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: "Not authorized to delete this task" });
     }
 
-    res.json({ success: true, alumni });
-  } catch (err) {
-    console.error("Error saving alumni:", err);
-    res.status(500).json({ error: "Server error" });
+    const filePath = path.join(__dirname, "uploads", path.basename(task.fileUrl));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await Task.deleteOne({ _id: task._id });
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Delete task error:", e);
+    res.status(500).json({ error: "Failed to delete task" });
   }
 });
 
-// Get logged-in alumni profile
-app.get("/api/alumni/me", authenticateJWT, async (req, res) => {
-  try {
-    const alumni = await Alumni.findOne({ userId: req.user._id });
-    if (!alumni) return res.status(404).json({ error: "Profile not found" });
-    res.json({ success: true, alumni });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// Get all alumni (for students to view)
-app.get("/api/alumni", async (req, res) => {
-  try {
-    const alumniList = await Alumni.find().populate("userId", "firstName lastName email");
-    res.json({ success: true, alumni: alumniList });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ✅ Delete alumni profile
-app.delete("/api/alumni", authenticateJWT, async (req, res) => {
-  try {
-    const alumni = await Alumni.findOneAndDelete({ userId: req.user._id });
-
-    if (!alumni) {
-      return res.status(404).json({ error: "Profile not found" });
-    }
-
-    res.json({ success: true, message: "Alumni profile deleted successfully" });
-  } catch (err) {
-    console.error("Error deleting alumni:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ✅ Get all students (Alumni-only access)
-app.get("/api/alumni/students", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
-  try {
-    const students = await User.find({ role: "student" })
-      .select("firstName lastName email roleIdValue coins profilePicUrl");
-    res.json({ success: true, students });
-  } catch (err) {
-    console.error("Error fetching students:", err);
-    res.status(500).json({ error: "Failed to fetch students" });
-  }
-});
-
-// ✅ Get details of a single student (Alumni-only)
-// GET details of a single student (Alumni-only access)
-app.get("/api/alumni/student/:id", authenticateJWT, authorizeRole(["alumni"]), async (req, res) => {
-  try {
-    const studentId = req.params.id;
-
-    // Fetch full student profile including extended fields and profilePicUrl
-    const student = await User.findById(studentId).select(
-      "firstName lastName email roleIdValue coins profilePicUrl bio percentage className internshipsDone coursesCompleted areaOfInterest"
-    );
-    if (!student) return res.status(404).json({ error: "Student not found" });
-
-    // Fetch recent quiz attempts with assignment name
-    const quizAttempts = await QuizAttempt.find({ userId: studentId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("assignmentId", "originalName");
-
-    // Fetch answer submissions / tasks for the student
-    const tasks = await StudentAnswer.find({ studentId })
-      .populate("taskId", "originalName fileUrl uploadedAt");
-
-    res.json({
-      success: true,
-      student,
-      quizAttempts,
-      tasks
-    });
-  } catch (err) {
-    console.error("Error fetching student details:", err);
-    res.status(500).json({ error: "Failed to fetch student details" });
-  }
-});
-
-// Create course (faculty and admin only)
-app.post("/api/courses", authenticateJWT, authorizeRole(["faculty", "admin"]), async (req, res) => {
-  try {
-    const { subject, classCount, attendancePercent } = req.body;
-    const course = new Course({
-      createdBy: req.user._id,
-      subject,
-      classCount,
-      attendancePercent,
-    });
-    await course.save();
-    res.json({ success: true, message: "Course created", course });
-  } catch (err) {
-    console.error("Create course error:", err);
-    res.status(500).json({ success: false, error: "Failed to create course" });
-  }
-});
-
-// Get mentor
-app.get("/api/mentor", authenticateJWT, async (req, res) => {
-  try {
-    const mentor = await Mentor.findOne().sort({ createdAt: -1 });
-    if (!mentor) return res.status(404).json({ success: false, error: "No mentor found" });
-    res.json(mentor);
-  } catch (err) {
-    console.error("Get mentor error:", err);
-    res.status(500).json({ success: false, error: "Failed to fetch mentor" });
-  }
-});
-
-// Create mentor (admin only)
-app.post("/api/mentor", authenticateJWT, authorizeRole(["admin"]), async (req, res) => {
-  try {
-    const { name, email, assignedTo } = req.body;
-    const mentor = new Mentor({ name, email, assignedTo });
-    await mentor.save();
-    res.json({ success: true, message: "Mentor created", mentor });
-  } catch (err) {
-    console.error("Create mentor error:", err);
-    res.status(500).json({ success: false, error: "Failed to create mentor" });
-  }
-});
-
+// ---------------------------
+// Assignments upload/list/delete (faculty/admin)
+// ---------------------------
 app.post("/api/assignments", authenticateJWT, upload.single("pdf"), async (req, res) => {
-  // Only allow faculty or admin to upload
   if (!["faculty", "admin"].includes(req.user.role)) {
     return res.status(403).json({ error: "Access denied" });
   }
@@ -1618,17 +1252,44 @@ app.post("/api/assignments", authenticateJWT, upload.single("pdf"), async (req, 
     res.status(500).json({ error: "Upload failed" });
   }
 });
+
 app.get("/api/assignments", authenticateJWT, async (req, res) => {
   const assignments = await Assignment.find().sort({ createdAt: -1 });
   res.json(assignments);
 });
 
-// Individual Leaderboard API - Top Rankers by Average Quiz Score
+app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
+  if (!["faculty", "admin"].includes(req.user.role)) {
+    return res.status(403).json({ error: "Access denied" });
+  }
+  try {
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) return res.status(404).json({ error: "Assignment not found" });
 
-// In your Express app
+    const filepath = path.join(__dirname, "uploads", assignment.filename);
+    try {
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+      }
+    } catch (fileErr) {
+      console.error("Failed to delete file:", fileErr);
+      return res.status(500).json({ error: "Failed to delete PDF file: " + fileErr.message });
+    }
+
+    await Assignment.deleteOne({ _id: assignment._id });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Assignment deletion failed:", err);
+    res.status(500).json({ error: "Delete failed: " + err.message });
+  }
+});
+
+// ---------------------------
+// Leaderboard & other student endpoints
+// ---------------------------
 app.get("/api/leaderboard/individual", async (req, res) => {
   try {
-    // Fetch students and sort by coins descending
     const users = await User.find({ role: "student" })
       .sort({ coins: -1 })
       .select("firstName lastName coins")
@@ -1647,11 +1308,13 @@ app.get("/api/leaderboard/individual", async (req, res) => {
     res.json(leaderboard);
   } catch (err) {
     console.error("Leaderboard fetch error:", err);
-    // Always return array, never a crash or object!
     res.status(200).json([]);
   }
 });
 
+// ---------------------------
+// Check-answer (Perplexity grading) - student triggers check on own uploaded answer
+// ---------------------------
 app.post("/api/check-answer", authenticateJWT, async (req, res) => {
   if (req.user.role !== "student") return res.status(403).json({ error: "Only students can verify" });
 
@@ -1659,7 +1322,6 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
   const studentId = req.user._id;
 
   try {
-    // Fetch task and answer
     const task = await Task.findById(taskId);
     const answer = await StudentAnswer.findOne({ taskId, studentId });
     if (!task || !answer) return res.status(404).json({ error: "Task or answer not found" });
@@ -1674,25 +1336,23 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "PDF files not found" });
     }
 
-    // Extract text for prompt
     const taskText = (await pdfParse(fs.readFileSync(taskPdfPath))).text;
     const answerText = (await pdfParse(fs.readFileSync(answerPdfPath))).text;
 
     const prompt = `
-      You are an expert academic grader.
+You are an expert academic grader.
 
-      Task Description:
-      ${taskText}
+Task Description:
+${taskText}
 
-      Student Answer:
-      ${answerText}
+Student Answer:
+${answerText}
 
-      Provide score (0-100) and feedback in JSON: { "score":number, "feedback":string }
-    `;
+Provide score (0-100) and feedback in JSON: { "score":number, "feedback":string }
+`;
 
-    // Call Perplexity API
     const response = await axios.post(
-      "https://api.perplexity.ai/chat/completions",   // Corrected endpoint
+      "https://api.perplexity.ai/chat/completions",
       {
         model: "sonar",
         messages: [
@@ -1702,7 +1362,7 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
         max_tokens: 1000,
         temperature: 0.5,
       },
-      { headers: { Authorization: `Bearer ${process.env.API_KEY}` } }
+      { headers: { Authorization: `Bearer ${API_KEY}` } }
     );
 
     let content = response.data?.choices?.[0].message.content || "";
@@ -1717,11 +1377,8 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
 
     // Generate PDF report
     const doc = new PDFDocument();
-    const reportsDir = path.join(__dirname, 'uploads', 'verification_reports');
-    if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
-
     const filename = `verification_${studentId}_${taskId}_${Date.now()}.pdf`;
-    const filePath = path.join(reportsDir, filename);
+    const filePath = path.join(verificationReportsDir, filename);
     const writeStream = fs.createWriteStream(filePath);
     doc.pipe(writeStream);
 
@@ -1739,7 +1396,6 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
 
     await new Promise((resolve) => writeStream.on('finish', resolve));
 
-    // Save verification result and documentUrl in DB
     const docUrl = `/uploads/verification_reports/${filename}`;
     await AnswerVerification.findOneAndUpdate(
       { taskId, studentId },
@@ -1752,7 +1408,6 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Award coins for high scores
     if (result.score !== null && result.score >= 80) {
       await User.findByIdAndUpdate(studentId, { $inc: { coins: 5 } });
     }
@@ -1764,64 +1419,36 @@ app.post("/api/check-answer", authenticateJWT, async (req, res) => {
   }
 });
 
-app.delete("/api/assignments/:id", authenticateJWT, async (req, res) => {
-  if (!["faculty", "admin"].includes(req.user.role)) {
-    return res.status(403).json({ error: "Access denied" });
-  }
-  try {
-    const assignment = await Assignment.findById(req.params.id);
-    if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+// ---------------------------
+// Delete assignment (already above) - removed duplicate conflicts
+// ---------------------------
 
-    const filepath = path.join(__dirname, "uploads", assignment.filename);
-    // Log file path for debugging
-    console.log("Deleting file:", filepath);
+// ---------------------------
+// CONNECTION ROUTES (Alumni connections) - existing routes preserved from original
+// ---------------------------
+// Connection model already defined above: Connection
 
-    try {
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
-        console.log("File deleted:", filepath);
-      } else {
-        console.log("File not found, skipping:", filepath);
-      }
-    } catch (fileErr) {
-      console.error("Failed to delete file:", fileErr);
-      return res.status(500).json({ error: "Failed to delete PDF file: " + fileErr.message });
-    }
-
-    // Use recommended Mongoose deletion method
-    await Assignment.deleteOne({ _id: assignment._id });
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Assignment deletion failed:", err);
-    res.status(500).json({ error: "Delete failed: " + err.message });
-  }
-});
-
-const Connection = mongoose.model("Connection", connectionSchema);
-
-// ✅ Connection Routes (Fixed Version)
+// POST /api/connect/:alumniId (student sends connection request to alumni)
 app.post(
   "/api/connect/:alumniId",
   authenticateJWT,
-  authorizeRole(["student"]),
+  (req, res, next) => {
+    if (req.user.role !== "student") return res.status(403).json({ success: false, error: "Students only" });
+    next();
+  },
   async (req, res) => {
     try {
       let { alumniId } = req.params;
-
-      // Validate ObjectId
       if (!mongoose.Types.ObjectId.isValid(alumniId)) {
         return res.status(400).json({ success: false, error: "Invalid alumniId" });
       }
 
-      // 🔍 Allow both User._id or Alumni._id
       let targetAlumniUserId;
       const alumniProfile = await Alumni.findById(alumniId);
 
       if (alumniProfile) {
-        targetAlumniUserId = alumniProfile.userId; // alumniId refers to Alumni._id
+        targetAlumniUserId = alumniProfile.userId;
       } else {
-        // fallback: check if this is already a User._id
         const userExists = await User.findById(alumniId);
         if (!userExists || userExists.role !== "alumni") {
           return res.status(404).json({ success: false, error: "Alumni not found" });
@@ -1829,7 +1456,6 @@ app.post(
         targetAlumniUserId = alumniId;
       }
 
-      // Check for existing connection
       const existing = await Connection.findOne({
         studentId: req.user._id,
         alumniId: targetAlumniUserId,
@@ -1843,7 +1469,6 @@ app.post(
         });
       }
 
-      // Create new connection
       const newConn = await Connection.create({
         studentId: req.user._id,
         alumniId: targetAlumniUserId,
@@ -1862,21 +1487,21 @@ app.post(
   }
 );
 
-
-// ✅ Check connection status (Student)
+// GET /api/connect/status/:alumniId - student checks request status
 app.get(
   "/api/connect/status/:alumniId",
   authenticateJWT,
-  authorizeRole(["student"]),
+  (req, res, next) => {
+    if (req.user.role !== "student") return res.status(403).json({ success: false, error: "Students only" });
+    next();
+  },
   async (req, res) => {
     try {
       let { alumniId } = req.params;
-
       if (!mongoose.Types.ObjectId.isValid(alumniId)) {
         return res.status(400).json({ success: false, error: "Invalid alumniId" });
       }
 
-      // Support both Alumni._id or User._id
       let targetAlumniUserId;
       const alumniProfile = await Alumni.findById(alumniId);
 
@@ -1906,12 +1531,14 @@ app.get(
   }
 );
 
-
-// ✅ Alumni fetches pending requests
+// Alumni fetch pending requests
 app.get(
   "/api/alumni/requests",
   authenticateJWT,
-  authorizeRole(["alumni"]),
+  (req, res, next) => {
+    if (req.user.role !== "alumni") return res.status(403).json({ success: false, error: "Alumni only" });
+    next();
+  },
   async (req, res) => {
     try {
       const requests = await Connection.find({
@@ -1928,12 +1555,14 @@ app.get(
   }
 );
 
-
-// ✅ Alumni accepts or rejects connection
+// Alumni accepts/rejects
 app.put(
   "/api/alumni/requests/:id",
   authenticateJWT,
-  authorizeRole(["alumni"]),
+  (req, res, next) => {
+    if (req.user.role !== "alumni") return res.status(403).json({ success: false, error: "Alumni only" });
+    next();
+  },
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -1965,14 +1594,12 @@ app.put(
   }
 );
 
-
-// ✅ Start or get a chat (only if connected)
+// Chat endpoints for conversations & messages (preserve existing)
 app.post("/api/chat/start/:alumniId", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user._id;
     const { alumniId } = req.params;
 
-    // Verify connection exists & is accepted
     const connection = await Connection.findOne({
       $or: [
         { studentId: userId, alumniId, status: "accepted" },
@@ -1986,7 +1613,6 @@ app.post("/api/chat/start/:alumniId", authenticateJWT, async (req, res) => {
         .json({ success: false, message: "No valid connection found." });
     }
 
-    // Check if conversation already exists
     let convo = await Conversation.findOne({
       members: { $all: [userId, alumniId] },
     });
@@ -2002,7 +1628,6 @@ app.post("/api/chat/start/:alumniId", authenticateJWT, async (req, res) => {
   }
 });
 
-// ✅ Get messages of a conversation
 app.get("/api/chat/:conversationId", authenticateJWT, async (req, res) => {
   try {
     const { conversationId } = req.params;
@@ -2023,7 +1648,6 @@ app.get("/api/chat/:conversationId", authenticateJWT, async (req, res) => {
   }
 });
 
-// ✅ Send a new message
 app.post("/api/chat/message", authenticateJWT, async (req, res) => {
   try {
     const { conversationId, text } = req.body;
@@ -2049,20 +1673,20 @@ app.post("/api/chat/message", authenticateJWT, async (req, res) => {
   }
 });
 
-// Create a post (multipart/form-data, field name: "media")
+// ---------------------------
+// Posts endpoints (create, list, like, comment, share, edit, delete)
+// ---------------------------
 app.post("/api/posts", authenticateJWT, upload.single("media"), async (req, res) => {
   try {
     const user = req.user;
     if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-    // Only allow students to post (your previous logic used role check)
     if (user.role !== "student") return res.status(403).json({ error: "Only students can post." });
 
     const text = (req.body.text || "").toString().trim() || null;
     let media = null;
 
     if (req.file) {
-      // multer placed file to uploads directory; create media object with path the frontend expects
       media = {
         fileUrl: `/uploads/${req.file.filename}`,
         mimeType: req.file.mimetype,
@@ -2082,13 +1706,11 @@ app.post("/api/posts", authenticateJWT, upload.single("media"), async (req, res)
 
     await newPost.save();
 
-    // populate user + comments.user for frontend convenience
     const populated = await Post.findById(newPost._id)
       .populate("user", "firstName lastName profilePicUrl roleIdValue")
       .populate("comments.user", "firstName lastName profilePicUrl")
       .lean();
 
-    // add computed fields
     populated.likeCount = (populated.likes || []).length;
     populated.commentCount = (populated.comments || []).length;
     populated.likedByMe = !!(populated.likes || []).find((id) => id.toString() === user._id.toString());
@@ -2100,7 +1722,6 @@ app.post("/api/posts", authenticateJWT, upload.single("media"), async (req, res)
   }
 });
 
-// Get all posts (latest first) - requires auth so likedByMe computed per user
 app.get("/api/posts", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user ? req.user._id.toString() : null;
@@ -2127,7 +1748,6 @@ app.get("/api/posts", authenticateJWT, async (req, res) => {
   }
 });
 
-// Like/unlike post
 app.post("/api/posts/:id/like", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -2152,7 +1772,6 @@ app.post("/api/posts/:id/like", authenticateJWT, async (req, res) => {
   }
 });
 
-// Add comment
 app.post("/api/posts/:id/comment", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -2165,7 +1784,6 @@ app.post("/api/posts/:id/comment", authenticateJWT, async (req, res) => {
     post.comments.push({ user: userId, text });
     await post.save();
 
-    // populate comments.user to return the created comment with user info
     const populated = await Post.findById(post._id).populate("comments.user", "firstName lastName profilePicUrl").lean();
     const comment = populated.comments[populated.comments.length - 1];
 
@@ -2176,7 +1794,6 @@ app.post("/api/posts/:id/comment", authenticateJWT, async (req, res) => {
   }
 });
 
-// Share post (simple increment)
 app.post("/api/posts/:id/share", authenticateJWT, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -2190,7 +1807,7 @@ app.post("/api/posts/:id/share", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-// Edit post text (only post owner can edit)
+
 app.put("/api/posts/:id", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -2206,7 +1823,6 @@ app.put("/api/posts/:id", authenticateJWT, async (req, res) => {
     post.text = text;
     await post.save();
 
-    // repopulate for frontend consistency
     const populated = await Post.findById(post._id)
       .populate("user", "firstName lastName profilePicUrl roleIdValue")
       .populate("comments.user", "firstName lastName profilePicUrl")
@@ -2221,7 +1837,7 @@ app.put("/api/posts/:id", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-// Delete a post (only post owner can delete)
+
 app.delete("/api/posts/:id", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -2239,7 +1855,10 @@ app.delete("/api/posts/:id", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-// ✅ Student Search API
+
+// ---------------------------
+// Student Search
+// ---------------------------
 app.get("/api/students/search", authenticateJWT, async (req, res) => {
   try {
     const query = (req.query.query || "").trim();
@@ -2267,15 +1886,17 @@ app.get("/api/students/search", authenticateJWT, async (req, res) => {
   }
 });
 
-// ✅ Student-to-Student Connection Request
-app.post("/api/connect/student/:targetId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+// ---------------------------
+// Student-to-Student Connection (legacy approach using Connection model) - kept but don't use if using dedicated system
+// ---------------------------
+app.post("/api/connect/student/:targetId", authenticateJWT, async (req, res) => {
   try {
-    const { targetId } = req.params;
+    if (req.user.role !== "student") return res.status(403).json({ error: "Students only" });
 
+    const { targetId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({ error: "Invalid student ID" });
     }
-
     if (req.user._id.toString() === targetId) {
       return res.status(400).json({ error: "Cannot connect with yourself" });
     }
@@ -2304,7 +1925,7 @@ app.post("/api/connect/student/:targetId", authenticateJWT, authorizeRole(["stud
 
     const connection = await Connection.create({
       studentId: req.user._id,
-      alumniId: targetId, // reused same field for student-to-student
+      alumniId: targetId,
       status: "pending",
     });
 
@@ -2314,8 +1935,9 @@ app.post("/api/connect/student/:targetId", authenticateJWT, authorizeRole(["stud
     res.status(500).json({ error: "Failed to send connection" });
   }
 });
-// ✅ Check Student-to-Student Connection Status
-app.get("/api/connect/student/status/:targetId", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+
+// Student-to-student status (legacy)
+app.get("/api/connect/student/status/:targetId", authenticateJWT, async (req, res) => {
   try {
     const { targetId } = req.params;
     const currentUserId = req.user._id;
@@ -2336,8 +1958,9 @@ app.get("/api/connect/student/status/:targetId", authenticateJWT, authorizeRole(
     res.status(500).json({ error: "Failed to check connection status" });
   }
 });
-// ✅ Get All Student Connections for Logged-In User
-app.get("/api/students/connections", authenticateJWT, authorizeRole(["student"]), async (req, res) => {
+
+// Get all student connections for logged-in user (legacy)
+app.get("/api/students/connections", authenticateJWT, async (req, res) => {
   try {
     const myId = req.user._id;
 
@@ -2355,11 +1978,9 @@ app.get("/api/students/connections", authenticateJWT, authorizeRole(["student"])
   }
 });
 
-// --- Student: View Incoming Connection Requests ---
-// --- Student: View Incoming Connection Requests ---
+// Student incoming connection requests (legacy)
 app.get("/api/connect/student/requests",
   authenticateJWT,
-  authorizeRole(["student"]),
   async (req, res) => {
     try {
       const userId = req.user._id;
@@ -2383,10 +2004,9 @@ app.get("/api/connect/student/requests",
   }
 );
 
-// --- Student: Accept or Reject Connection Request ---
+// Student accept/reject request (legacy)
 app.put("/api/connect/student/requests/:id",
   authenticateJWT,
-  authorizeRole(["student"]),
   async (req, res) => {
     try {
       const { action } = req.body; // 'accept' or 'reject'
@@ -2398,7 +2018,6 @@ app.put("/api/connect/student/requests/:id",
         return res.status(404).json({ error: "Connection request not found" });
       }
 
-      // Only target student (the receiver) can accept/reject
       if (connection.alumniId.toString() !== userId.toString()) {
         return res.status(403).json({ error: "Not authorized" });
       }
@@ -2416,9 +2035,394 @@ app.put("/api/connect/student/requests/:id",
   }
 );
 
+// ---------------------------
+// ---------------------------
+// NEW: Dedicated Student Connection Routes (recommended for student-to-student)
+// Base path: /api/student-connection
+// ---------------------------
 
+// Send connection request (student -> student)
+app.post("/api/student-connection/connect/:id", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ message: "Students only" });
 
+    const senderId = req.user._id.toString();
+    const receiverId = req.params.id;
 
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({ message: "Invalid receiver ID" });
+    }
+    if (senderId === receiverId) {
+      return res.status(400).json({ message: "Cannot connect with yourself" });
+    }
+
+    const receiver = await User.findById(receiverId);
+    if (!receiver || receiver.role !== "student") {
+      return res.status(404).json({ message: "Receiver student not found" });
+    }
+
+    const existing = await StudentConnection.findOne({
+      $or: [
+        { senderId, receiverId },
+        { senderId: receiverId, receiverId: senderId }
+      ]
+    });
+
+    if (existing) {
+      return res.status(400).json({ message: "Request already exists", status: existing.status });
+    }
+
+    const connection = await StudentConnection.create({ senderId, receiverId, status: "pending" });
+
+    res.status(201).json({ message: "Connection request sent", connection });
+  } catch (err) {
+    console.error("Error sending student connection:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Fetch received requests (for current student)
+app.get("/api/student-connection/requests", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ message: "Students only" });
+
+    const receiverId = req.user._id;
+    const requests = await StudentConnection.find({ receiverId, status: "pending" })
+      .populate("senderId", "firstName lastName email roleIdValue profilePicUrl className");
+
+    res.json(requests);
+  } catch (err) {
+    console.error("Error fetching received requests:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Fetch sent requests (for current student)
+app.get("/api/student-connection/requests/sent", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ message: "Students only" });
+
+    const senderId = req.user._id;
+    const requests = await StudentConnection.find({ senderId, status: "pending" })
+      .populate("receiverId", "firstName lastName email roleIdValue profilePicUrl className");
+
+    res.json(requests);
+  } catch (err) {
+    console.error("Error fetching sent requests:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Accept or reject a received request (receiver only)
+app.put("/api/student-connection/requests/:id", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ message: "Students only" });
+
+    const receiverId = req.user._id.toString();
+    const { id } = req.params;
+    const { status } = req.body; // "accepted" or "rejected"
+
+    if (!["accepted", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const request = await StudentConnection.findOne({ _id: id });
+    if (!request) return res.status(404).json({ message: "Request not found" });
+
+    if (request.receiverId.toString() !== receiverId) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    request.status = status;
+    await request.save();
+
+    res.json({ message: `Request ${status}`, request });
+  } catch (err) {
+    console.error("Error updating student request:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all accepted student connections for user
+app.get("/api/student-connection/connections", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ message: "Students only" });
+
+    const userId = req.user._id;
+    const connections = await StudentConnection.find({
+      $or: [
+        { senderId: userId, status: "accepted" },
+        { receiverId: userId, status: "accepted" }
+      ]
+    })
+      .populate("senderId", "firstName lastName email roleIdValue profilePicUrl className")
+      .populate("receiverId", "firstName lastName email roleIdValue profilePicUrl className");
+
+    res.json(connections);
+  } catch (err) {
+    console.error("Error fetching student connections:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Remove a connection (either side)
+app.delete("/api/student-connection/connections/:id", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ message: "Students only" });
+
+    const userId = req.user._id.toString();
+    const connection = await StudentConnection.findOne({ _id: req.params.id });
+    if (!connection) return res.status(404).json({ message: "Connection not found" });
+
+    if (connection.senderId.toString() !== userId && connection.receiverId.toString() !== userId) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    await connection.deleteOne();
+    res.json({ message: "Connection removed" });
+  } catch (err) {
+    console.error("Error removing connection:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ---------------------------
+// Individual student endpoints & other admin/alumni helpers
+// ---------------------------
+
+// Create or update alumni profile
+app.post("/api/alumni", authenticateJWT, async (req, res) => {
+  try {
+    const { name, company, designation, description, linkedin, github } = req.body;
+
+    if (!name || !company || !designation) {
+      return res.status(400).json({ error: "Name, company, and designation are required" });
+    }
+
+    let alumni = await Alumni.findOne({ userId: req.user._id });
+
+    if (alumni) {
+      alumni.name = name;
+      alumni.company = company;
+      alumni.designation = designation;
+      alumni.description = description;
+      alumni.linkedin = linkedin;
+      alumni.github = github;
+      await alumni.save();
+    } else {
+      alumni = await Alumni.create({
+        userId: req.user._id,
+        name,
+        company,
+        designation,
+        description,
+        linkedin,
+        github,
+      });
+    }
+
+    res.json({ success: true, alumni });
+  } catch (err) {
+    console.error("Error saving alumni:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/alumni/me", authenticateJWT, async (req, res) => {
+  try {
+    const alumni = await Alumni.findOne({ userId: req.user._id });
+    if (!alumni) return res.status(404).json({ error: "Profile not found" });
+    res.json({ success: true, alumni });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/alumni", async (req, res) => {
+  try {
+    const alumniList = await Alumni.find().populate("userId", "firstName lastName email");
+    res.json({ success: true, alumni: alumniList });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/api/alumni", authenticateJWT, async (req, res) => {
+  try {
+    const alumni = await Alumni.findOneAndDelete({ userId: req.user._id });
+
+    if (!alumni) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    res.json({ success: true, message: "Alumni profile deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting alumni:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Alumni fetching students (alumni-only)
+app.get("/api/alumni/students", authenticateJWT, (req, res, next) => {
+  if (req.user.role !== "alumni") return res.status(403).json({ error: "Alumni only" });
+  next();
+}, async (req, res) => {
+  try {
+    const students = await User.find({ role: "student" })
+      .select("firstName lastName email roleIdValue coins profilePicUrl");
+    res.json({ success: true, students });
+  } catch (err) {
+    console.error("Error fetching students:", err);
+    res.status(500).json({ error: "Failed to fetch students" });
+  }
+});
+
+// Get details of a single student (Alumni-only)
+app.get("/api/alumni/student/:id", authenticateJWT, (req, res, next) => {
+  if (req.user.role !== "alumni") return res.status(403).json({ error: "Alumni only" });
+  next();
+}, async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const student = await User.findById(studentId).select(
+      "firstName lastName email roleIdValue coins profilePicUrl bio percentage className internshipsDone coursesCompleted areaOfInterest"
+    );
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const quizAttempts = await QuizAttempt.find({ userId: studentId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("assignmentId", "originalName");
+
+    const tasks = await StudentAnswer.find({ studentId })
+      .populate("taskId", "originalName fileUrl uploadedAt");
+
+    res.json({
+      success: true,
+      student,
+      quizAttempts,
+      tasks
+    });
+  } catch (err) {
+    console.error("Error fetching student details:", err);
+    res.status(500).json({ error: "Failed to fetch student details" });
+  }
+});
+
+// ---------------------------
+// Theme
+// ---------------------------
+app.get("/api/theme", async (req, res) => {
+  try {
+    let settings = await ThemeSettings.findOne({});
+    res.json({ theme: settings?.globalTheme || "default" });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to fetch theme" });
+  }
+});
+
+app.post("/api/admin/theme", authenticateJWT, (req, res, next) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Admin only" });
+  next();
+}, async (req, res) => {
+  try {
+    const { theme } = req.body;
+    if (!["default", "dark", "blue"].includes(theme))
+      return res.status(400).json({ error: "Invalid theme" });
+    let settings = await ThemeSettings.findOne({});
+    if (!settings) settings = new ThemeSettings();
+    settings.globalTheme = theme;
+    await settings.save();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to update theme" });
+  }
+});
+
+// ---------------------------
+// Misc endpoints (Coursera)
+app.get("/api/coursera-courses", async (req, res) => {
+  try {
+    const response = await axios.get("https://api.coursera.org/api/courses.v1", {
+      params: {
+        includes: "partnerIds,categories",
+        limit: 20,
+      },
+    });
+
+    const courses = response.data.elements.map(course => ({
+      id: course.id,
+      name: course.name,
+      description: course.description || "",
+      photoUrl: course.photoUrl || "https://via.placeholder.com/120x80?text=No+Image",
+      slug: course.slug,
+      courseUrl: `https://www.coursera.org/learn/${course.slug}`,
+    }));
+
+    res.json({ courses });
+  } catch (error) {
+    console.error("Coursera fetch error:", error.message);
+    res.status(500).json({ error: "Failed to fetch Coursera courses" });
+  }
+});
+
+// ---------------------------
+// Student quiz performance
+app.get("/api/student/quiz-performance", authenticateJWT, async (req, res) => {
+  try {
+    const quizAttempts = await QuizAttempt.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .populate("assignmentId");
+
+    const formatted = quizAttempts.map(q => ({
+      date: q.createdAt,
+      score: q.score,
+      total: q.answers ? Object.keys(q.answers).length : 10,
+      topics: q.assignmentId?.topics || [],
+      assignmentTitle: q.assignmentId?.originalName || 'Quiz',
+    }));
+
+    res.json(formatted.reverse());
+  } catch (err) {
+    console.error("Quiz performance fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch quiz performance" });
+  }
+});
+
+// ---------------------------
+// Student Connections UI endpoints (for StudentConnections.jsx) - example endpoints that call the student-connection system
+// - GET /api/student-connections/sent (alias)
+// - GET /api/student-connections/received (alias)
+app.get("/api/student-connections/sent", authenticateJWT, async (req, res) => {
+  // alias to student-connection/requests/sent
+  try {
+    const data = await StudentConnection.find({ senderId: req.user._id, status: "pending" })
+      .populate("receiverId", "firstName lastName email roleIdValue profilePicUrl className");
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
+});
+app.get("/api/student-connections/received", authenticateJWT, async (req, res) => {
+  try {
+    const data = await StudentConnection.find({ receiverId: req.user._id, status: "pending" })
+      .populate("senderId", "firstName lastName email roleIdValue profilePicUrl className");
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
+});
+
+// ---------------------------
+// Fallback route
+app.get("/", (req, res) => {
+  res.send("Backend is working 🚀");
+});
+
+// ---------------------------
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
