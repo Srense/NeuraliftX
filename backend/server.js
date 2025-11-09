@@ -16,7 +16,6 @@ const PDFDocument = require('pdfkit');
 
 
 
-
 // Load environment variables
 const {
   PORT = 4000,
@@ -656,7 +655,6 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
 });
 
 
-
 // Signup
 app.post("/api/signup", async (req, res) => {
   try {
@@ -1286,6 +1284,7 @@ app.get('/api/faculty-answers/:taskId', authenticateJWT, async (req, res) => {
 
 
 
+
 app.delete("/api/tasks/:id", authenticateJWT, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -1305,7 +1304,6 @@ app.delete("/api/tasks/:id", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to delete task" });
   }
 });
-
 
 
 // Get current global theme (accessible to all users, no auth required)
@@ -2417,6 +2415,8 @@ app.put("/api/connect/student/requests/:id",
     }
   }
 );
+
+
 
 
 // Start server

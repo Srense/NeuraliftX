@@ -1,116 +1,231 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import "./Student.css";
 
-const StudentConnections = ({ token }) => {
-  const [requests, setRequests] = useState([]);
+/**
+ * StudentConnections Component
+ * ---------------------------------------
+ * Handles:
+ * - Viewing sent + received connection requests
+ * - Accepting / Rejecting incoming requests
+ * - Showing connected students list
+ * - Unified design consistent with Student dashboard
+ */
+export default function StudentConnections({ token }) {
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
-  const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+  const [view, setView] = useState("connections"); // 'connections' | 'received' | 'sent'
 
-  // Fetch incoming requests
-  const fetchRequests = async () => {
+  useEffect(() => {
+    if (!token) return;
+    fetchAllData();
+  }, [token]);
+
+  async function fetchAllData() {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await fetch(`${BASE_URL}/api/connect/student/requests`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setRequests(data.requests);
-      } else {
-        setRequests([]);
-      }
-    } catch (err) {
-      console.error("❌ Failed to load connection requests:", err);
+      const [reqRes, connRes, sentRes] = await Promise.all([
+        fetch("https://neuraliftx.onrender.com/api/student/requests", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("https://neuraliftx.onrender.com/api/student/connections", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("https://neuraliftx.onrender.com/api/student/requests/sent", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const [requestsData, connectionsData, sentData] = await Promise.all([
+        reqRes.ok ? reqRes.json() : [],
+        connRes.ok ? connRes.json() : [],
+        sentRes.ok ? sentRes.json() : [],
+      ]);
+
+      setPendingRequests(Array.isArray(requestsData) ? requestsData : []);
+      setConnections(Array.isArray(connectionsData) ? connectionsData : []);
+      setSentRequests(Array.isArray(sentData) ? sentData : []);
+    } catch (e) {
+      console.error("Error fetching connections data", e);
+      alert("Error loading connection data. Please try again later.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
-
-  // Handle Accept / Reject
   const handleAction = async (id, action) => {
     try {
-      setProcessingId(id);
-      const res = await fetch(`${BASE_URL}/api/connect/student/requests/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setRequests((prev) => prev.filter((req) => req._id !== id));
-      } else {
-        alert(data.error || "Failed to update request");
-      }
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/student/requests/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: action }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to update request");
+      alert(`Request ${action}ed successfully.`);
+      fetchAllData(); // Refresh all data
     } catch (err) {
-      console.error("Error updating request:", err);
-    } finally {
-      setProcessingId(null);
+      alert(err.message);
     }
   };
 
-  if (loading) {
-    return <div className="text-center py-8 text-gray-500">Loading requests...</div>;
-  }
+  const handleRemoveConnection = async (connectionId) => {
+    if (!window.confirm("Are you sure you want to remove this connection?"))
+      return;
+    try {
+      const res = await fetch(
+        `https://neuraliftx.onrender.com/api/student/connections/${connectionId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to remove connection");
+      alert("Connection removed successfully.");
+      fetchAllData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
-  if (!requests.length) {
-    return <div className="text-center py-8 text-gray-500">No new connection requests ✨</div>;
-  }
+  const getProfileImageUrl = (url) =>
+    url
+      ? `https://neuraliftx.onrender.com${url}`
+      : "https://via.placeholder.com/50";
 
-  return (
-    <div className="p-6 bg-white rounded-2xl shadow-md">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Incoming Connection Requests</h2>
-      <div className="space-y-4">
-        {requests.map((req) => (
-          <div
-            key={req._id}
-            className="flex items-center justify-between border p-4 rounded-xl hover:shadow-sm transition-all"
-          >
-            <div className="flex items-center gap-4">
-              <img
-                src={req.studentId?.profilePicUrl || "/default-avatar.png"}
-                alt="Student"
-                className="w-12 h-12 rounded-full border"
-              />
-              <div>
-                <h3 className="font-semibold text-gray-800">
-                  {req.studentId?.firstName} {req.studentId?.lastName}
-                </h3>
-                <p className="text-sm text-gray-600">{req.studentId?.email}</p>
-                <p className="text-xs text-gray-500">
-                  UID: {req.studentId?.roleIdValue} | Class: {req.studentId?.className || "N/A"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleAction(req._id, "accept")}
-                disabled={processingId === req._id}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => handleAction(req._id, "reject")}
-                disabled={processingId === req._id}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        ))}
+  const renderCard = (person, actions) => (
+    <div key={person._id || Math.random()} className="request-card">
+      <img
+        src={getProfileImageUrl(person.profilePicUrl)}
+        alt="Profile"
+        className="request-avatar"
+      />
+      <div className="request-info">
+        <p>
+          <strong>
+            {person.firstName} {person.lastName}
+          </strong>
+        </p>
+        <p>{person.email}</p>
+        {person.className && <p>Class: {person.className}</p>}
       </div>
+      <div className="request-actions">{actions}</div>
     </div>
   );
-};
 
-export default StudentConnections;
+  const renderView = () => {
+    if (loading) return <p>Loading connections...</p>;
+
+    switch (view) {
+      case "connections":
+        return (
+          <>
+            <h3>Connected Students</h3>
+            {connections.length === 0 ? (
+              <p>No active connections.</p>
+            ) : (
+              <div className="requests-list">
+                {connections.map((c) =>
+                  renderCard(c.connectedStudent || c.studentId || c.alumniId, (
+                    <button
+                      onClick={() => handleRemoveConnection(c._id)}
+                      className="reject-btn"
+                    >
+                      Remove
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </>
+        );
+
+      case "received":
+        return (
+          <>
+            <h3>Pending Requests (Received)</h3>
+            {pendingRequests.length === 0 ? (
+              <p>No pending requests.</p>
+            ) : (
+              <div className="requests-list">
+                {pendingRequests.map((r) =>
+                  renderCard(r.studentId, (
+                    <>
+                      <button
+                        onClick={() => handleAction(r._id, "accepted")}
+                        className="accept-btn"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleAction(r._id, "rejected")}
+                        className="reject-btn"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  ))
+                )}
+              </div>
+            )}
+          </>
+        );
+
+      case "sent":
+        return (
+          <>
+            <h3>Sent Requests</h3>
+            {sentRequests.length === 0 ? (
+              <p>No sent requests.</p>
+            ) : (
+              <div className="requests-list">
+                {sentRequests.map((r) =>
+                  renderCard(r.receiverId || r.studentId || {}, (
+                    <span className="pending-tag">Pending</span>
+                  ))
+                )}
+              </div>
+            )}
+          </>
+        );
+
+      default:
+        return <p>Invalid view selected.</p>;
+    }
+  };
+
+  return (
+    <div className="connections-container">
+      <h2>Student Connections</h2>
+
+      <div className="connections-tabs">
+        <button
+          className={`tab-btn ${view === "connections" ? "active" : ""}`}
+          onClick={() => setView("connections")}
+        >
+          Connections
+        </button>
+        <button
+          className={`tab-btn ${view === "received" ? "active" : ""}`}
+          onClick={() => setView("received")}
+        >
+          Received Requests
+        </button>
+        <button
+          className={`tab-btn ${view === "sent" ? "active" : ""}`}
+          onClick={() => setView("sent")}
+        >
+          Sent Requests
+        </button>
+      </div>
+
+      <div className="connections-content">{renderView()}</div>
+    </div>
+  );
+}
