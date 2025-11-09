@@ -1,221 +1,236 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { UserPlus2, Check, XCircle, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
 
-const StudentConnections = ({ token }) => {
-  const [sentRequests, setSentRequests] = useState([]);
-  const [receivedRequests, setReceivedRequests] = useState([]);
+const BASE_API = "https://neuraliftx.onrender.com"; // Change if running locally
+
+export default function StudentConnections({ token }) {
+  const [incoming, setIncoming] = useState([]);
+  const [sent, setSent] = useState([]);
   const [connections, setConnections] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState("connections");
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const headers = { Authorization: `Bearer ${token}` };
+  const safeArray = (val) =>
+    Array.isArray(val)
+      ? val
+      : Array.isArray(val?.requests)
+      ? val.requests
+      : Array.isArray(val?.connections)
+      ? val.connections
+      : [];
 
-  const fetchAll = async () => {
-    try {
-      setLoading(true);
-      const [sent, received, connected] = await Promise.all([
-        axios.get("/api/student-connection/requests/sent", { headers }),
-        axios.get("/api/student-connection/requests", { headers }),
-        axios.get("/api/student-connection/connections", { headers }),
-      ]);
-      setSentRequests(sent.data);
-      setReceivedRequests(received.data);
-      setConnections(connected.data);
-    } catch (err) {
-      console.error("Error fetching connections:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const refresh = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
-    fetchAll();
-  }, []);
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const [incomingRes, sentRes, connRes] = await Promise.all([
+          fetch(`${BASE_API}/api/connect/student/requests`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${BASE_API}/api/connect/student/requests/sent`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${BASE_API}/api/students/connections`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-  const handleAction = async (id, status) => {
+        const incomingJson = await incomingRes.json().catch(() => []);
+        const sentJson = await sentRes.json().catch(() => []);
+        const connJson = await connRes.json().catch(() => []);
+
+        setIncoming(safeArray(incomingJson));
+        setSent(safeArray(sentJson));
+        setConnections(safeArray(connJson));
+      } catch (err) {
+        console.error("Error fetching connections:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [token, refreshKey]);
+
+  const handleAction = async (id, action) => {
+    setProcessingId(id);
     try {
-      await axios.put(`/api/student-connection/requests/${id}`, { status }, { headers });
-      fetchAll();
+      const res = await fetch(`${BASE_API}/api/connect/student/requests/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Action failed");
+      alert(`Request ${action}ed successfully.`);
+      refresh();
     } catch (err) {
-      console.error("Error updating request:", err);
+      alert(err.message);
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  const handleRemove = async (id) => {
-    try {
-      await axios.delete(`/api/student-connection/connections/${id}`, { headers });
-      fetchAll();
-    } catch (err) {
-      console.error("Error removing connection:", err);
-    }
-  };
+  const getImage = (url) =>
+    url ? `${BASE_API}${url}` : "https://via.placeholder.com/50";
 
   if (loading)
     return (
       <div className="flex justify-center items-center h-64 text-gray-500">
-        <Loader2 className="animate-spin mr-2" /> Loading connections...
+        Loading connections...
       </div>
     );
 
   return (
     <div className="p-6 bg-white rounded-2xl shadow-md border">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+      <h2 className="text-2xl font-semibold mb-6 text-gray-800">
         Student Connections
       </h2>
 
-      <div className="flex gap-3 mb-4">
-        {["connections", "sent", "received"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-full ${
-              tab === t ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            {t === "connections"
-              ? "Connected"
-              : t === "sent"
-              ? "Sent Requests"
-              : "Received Requests"}
-          </button>
-        ))}
-      </div>
-
-      {tab === "connections" && (
-        <div>
-          {connections.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">
-              No connections yet.
-            </p>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {connections.map((conn) => {
-                const partner =
-                  conn.senderId._id === conn.receiverId._id
-                    ? conn.senderId
-                    : conn.senderId._id === token.id
-                    ? conn.receiverId
-                    : conn.senderId;
-                const p = partner || {};
-                return (
-                  <div
-                    key={conn._id}
-                    className="border rounded-xl p-4 shadow-sm hover:shadow-md transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={p.profilePicUrl || "/default-avatar.png"}
-                        alt=""
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="font-semibold text-gray-800">
-                          {p.firstName} {p.lastName}
-                        </p>
-                        <p className="text-sm text-gray-500">{p.roleIdValue}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemove(conn._id)}
-                      className="mt-3 text-sm text-red-600 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "sent" && (
-        <div>
-          {sentRequests.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">
-              No sent requests yet.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {sentRequests.map((req) => (
+      {/* Incoming Requests */}
+      <section className="mb-8">
+        <h3 className="text-lg font-semibold mb-3 text-blue-600">
+          Incoming Requests
+        </h3>
+        {incoming.length === 0 ? (
+          <p className="text-gray-500 text-sm">No incoming requests.</p>
+        ) : (
+          <div className="space-y-3">
+            {incoming.map((req) => {
+              const sender = req.studentId || req.senderId || {};
+              return (
                 <div
                   key={req._id}
-                  className="flex justify-between items-center border rounded-xl p-3"
+                  className="flex items-center justify-between border rounded-xl p-3 hover:bg-blue-50 transition"
                 >
                   <div className="flex items-center gap-3">
                     <img
-                      src={req.receiverId.profilePicUrl || "/default-avatar.png"}
-                      className="w-10 h-10 rounded-full object-cover"
-                      alt=""
+                      src={getImage(sender.profilePicUrl)}
+                      alt="profile"
+                      className="w-12 h-12 rounded-full object-cover"
                     />
                     <div>
                       <p className="font-semibold text-gray-800">
-                        {req.receiverId.firstName} {req.receiverId.lastName}
+                        {sender.firstName} {sender.lastName}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {req.receiverId.roleIdValue}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-yellow-600 font-medium">Pending...</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "received" && (
-        <div>
-          {receivedRequests.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">
-              No received requests.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {receivedRequests.map((req) => (
-                <div
-                  key={req._id}
-                  className="flex justify-between items-center border rounded-xl p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={req.senderId.profilePicUrl || "/default-avatar.png"}
-                      className="w-10 h-10 rounded-full object-cover"
-                      alt=""
-                    />
-                    <div>
-                      <p className="font-semibold text-gray-800">
-                        {req.senderId.firstName} {req.senderId.lastName}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {req.senderId.roleIdValue}
+                        {sender.email || "No email"}
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleAction(req._id, "accepted")}
-                      className="bg-green-600 text-white px-3 py-1 rounded-full hover:bg-green-700"
+                      onClick={() => handleAction(req._id, "accept")}
+                      disabled={processingId === req._id}
+                      className="px-4 py-1 bg-green-600 text-white text-sm rounded-full hover:bg-green-700 transition"
                     >
-                      <Check className="w-4 h-4 inline-block" />
+                      Accept
                     </button>
                     <button
-                      onClick={() => handleAction(req._id, "rejected")}
-                      className="bg-red-600 text-white px-3 py-1 rounded-full hover:bg-red-700"
+                      onClick={() => handleAction(req._id, "reject")}
+                      disabled={processingId === req._id}
+                      className="px-4 py-1 bg-red-600 text-white text-sm rounded-full hover:bg-red-700 transition"
                     >
-                      <XCircle className="w-4 h-4 inline-block" />
+                      Reject
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Sent Requests */}
+      <section className="mb-8">
+        <h3 className="text-lg font-semibold mb-3 text-blue-600">
+          Sent Requests
+        </h3>
+        {sent.length === 0 ? (
+          <p className="text-gray-500 text-sm">No sent requests.</p>
+        ) : (
+          <div className="space-y-3">
+            {sent.map((req) => {
+              const receiver = req.receiverId || req.alumniId || {};
+              return (
+                <div
+                  key={req._id}
+                  className="flex items-center justify-between border rounded-xl p-3 hover:bg-blue-50 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={getImage(receiver.profilePicUrl)}
+                      alt="profile"
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {receiver.firstName} {receiver.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {receiver.email || "No email"}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-yellow-600 text-sm font-medium capitalize">
+                    {req.status || "pending"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Connections */}
+      <section>
+        <h3 className="text-lg font-semibold mb-3 text-blue-600">
+          Connected Students
+        </h3>
+        {connections.length === 0 ? (
+          <p className="text-gray-500 text-sm">No connections yet.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {connections.map((conn) => {
+              const partner =
+                conn.alumniId || conn.receiverId || conn.studentId || {};
+              return (
+                <div
+                  key={conn._id}
+                  className="border rounded-xl p-4 flex items-center gap-3 hover:shadow-md transition"
+                >
+                  <img
+                    src={getImage(partner.profilePicUrl)}
+                    alt="profile"
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      {partner.firstName} {partner.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {partner.email || "No email"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <div className="text-center mt-6">
+        <button
+          onClick={refresh}
+          className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
+        >
+          Refresh
+        </button>
+      </div>
     </div>
   );
-};
-
-export default StudentConnections;
+}
