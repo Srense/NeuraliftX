@@ -1576,27 +1576,37 @@ export default function Student() {
         </nav>
 
         <main className="student-content">
-          {loadingSocial ? (
-            <div className="loader-container">
-              <div className="spinner"></div>
-              <p>Loading...</p>
-            </div>
-          ) : showSocial ? (
-            <Suspense
-              fallback={
-                <div className="loader-container">
-                  <div className="spinner"></div>
-                  <p>Loading...</p>
-                </div>
-              }
-            >
-              <StudentConnections token={token} />
+         {loadingSocial ? (
+  <div className="loader-container">
+    <div className="spinner"></div>
+    <p>Loading...</p>
+  </div>
+) : showSocial ? (
+  <div className="social-overlay">
+    <div className="social-panel">
+      <button
+        className="close-social-btn"
+        onClick={() => setShowSocial(false)}
+      >
+        ✕
+      </button>
 
-              <Social />
-            </Suspense>
-          ) : (
-            contentArea
-          )}
+      <Suspense
+        fallback={
+          <div className="loader-container">
+            <div className="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        }
+      >
+        <Social token={token} />
+      </Suspense>
+    </div>
+  </div>
+) : (
+  contentArea
+)}
+
         </main>
 
       </div>

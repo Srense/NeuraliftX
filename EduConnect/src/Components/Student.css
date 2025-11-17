@@ -898,3 +898,40 @@ body {
     transform: rotate(360deg);
   }
 }
+.social-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.social-panel {
+  width: 380px;
+  height: 100%;
+  background: #fff;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+  animation: slideIn .3s ease;
+  position: relative;
+  z-index: 2001;
+}
+
+.close-social-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 2002;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
